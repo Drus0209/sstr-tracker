@@ -752,9 +752,7 @@ function startApp(mode){
   `;
   document.body.appendChild(mid);
 
-  // 読み上げ終わったらGPS取得済みならmidを消す
-  let gpsReady=false,ttsReady=false;
-  function tryShowMain(){if(gpsReady&&ttsReady&&mid.parentNode)mid.remove();}
+  const msg=title+'が選択されました。GPS情報取得までお待ちください。';
 
   // TTS読み上げ
   setTimeout(()=>{
@@ -767,10 +765,18 @@ function startApp(mode){
 
   function showMain(){if(mid.parentNode)mid.remove();}
 
-  // GPS取得できたら即表示
+  if(mode==='nippon1'||mode==='nippon2'){
+    setTimeout(()=>{
+      showMain();
+      document.getElementById('hdr-area').innerHTML=`<div class="hdr"><div><h1>🇯🇵 にっぽん応援ツーリング</h1></div></div>`;
+      document.getElementById('top').innerHTML=`<div style="text-align:center;padding:60px 20px;color:#666680;font-size:14px;">ルートデータ準備中です<br>もうしばらくお待ちください 🙏</div>`;
+    },3000);
+    return;
+  }
+
+  // GPS取得できたら即表示、最大10秒で強制表示
   loc(()=>showMain());
-  // 最大10秒で強制表示
-  setTimeout(showMain, 10000);
+  setTimeout(showMain,10000);
 }
 </script>
 </body>
