@@ -329,8 +329,8 @@ function updateMap(lat,lng,stops,nI){
     lastRouteNI=nI;
     // Auto-zoom on stop change based on distance
     const tDist=dK(lat,lng,tS.lat,tS.lng);
-    let zoom=21.8;
-    if(tDist>50)zoom=14;else if(tDist>30)zoom=15;else if(tDist>15)zoom=16;else if(tDist>5)zoom=17;else if(tDist>1)zoom=18;else if(tDist>0.3)zoom=20;
+    let zoom=18;
+    if(tDist>50)zoom=13;else if(tDist>30)zoom=14;else if(tDist>15)zoom=15;else if(tDist>5)zoom=16;else if(tDist>1)zoom=17;else if(tDist>0.3)zoom=18;
     map.setZoom(zoom);
     if(mTgt){mTgt.setMap(null);}
     mStops.forEach(m=>m.setMap(null));mStops=[];
