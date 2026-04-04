@@ -717,15 +717,15 @@ function startApp(mode){
 
   // 中間画面
   const mid=document.createElement('div');
-  mid.style.cssText='position:fixed;inset:0;background:#06060c;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:80px;';
+  mid.style.cssText='position:fixed;inset:0;background:#06060c;z-index:9998;';
   mid.innerHTML=`
     <div style="position:absolute;inset:0;background-image:url(bg2.jpg);background-size:cover;background-position:center 70%;"></div>
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.5) 100%);"></div>
-    <div style="position:relative;z-index:1;text-align:center;">
-      <div style="font-family:'Outfit';font-size:24px;font-weight:900;color:#00d4ff;margin-bottom:8px;">${title}</div>
-      <div style="font-size:14px;color:#ccc;margin-bottom:24px;">が選択されました</div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
-        <div style="width:8px;height:8px;border-radius:50%;background:#00d4ff;animation:pulse 1s infinite;"></div>
+    <div style="position:absolute;top:40px;left:24px;z-index:1;">
+      <div style="font-family:'Outfit';font-size:26px;font-weight:900;color:#00d4ff;margin-bottom:4px;">${title}</div>
+      <div style="font-size:13px;color:#ccc;margin-bottom:20px;">が選択されました</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#00d4ff;animation:pulse 1s infinite;flex-shrink:0;"></div>
         <div style="font-size:13px;color:#00d4ff;">GPS情報取得までお待ちください</div>
       </div>
     </div>
