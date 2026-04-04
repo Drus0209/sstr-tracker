@@ -557,7 +557,7 @@ function rnd(){
     <button class="cb ${iM?'':'act'}" onclick="iM=!iM;rnd();">${iM?'🔇':'🔊'}</button>
     <label class="cb" style="border-color:var(--pk);color:var(--pk);">🎵 BGM<input type="file" accept="audio/*" onchange="lBGM(event)" style="display:none;"></label>
     <button class="cb ${sFl?'act':''}" onclick="sFl=!sFl;rnd();">📋 全リスト</button>
-    <button class="cb" onclick="testJump()" style="border-color:#666;color:#666;">🧪 テスト</button>
+    <button class="cb" onclick="testJump()" style="display:none;"></button>
   </div>
   <div id="bi" style="display:${bgm?'block':'none'};text-align:center;font-size:11px;color:var(--pk);padding:2px;"></div>
   <div class="gps">${gSt}</div>
