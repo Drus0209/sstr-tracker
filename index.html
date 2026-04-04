@@ -231,7 +231,7 @@ let map=null,mMe=null,mTgt=null,mStops=[];
 function initMap(){
   if(map)return;
   map=new google.maps.Map(document.getElementById('map'),{
-    center:{lat:35.69,lng:139.84},zoom:16,
+    center:{lat:35.69,lng:139.84},zoom:16,maxZoom:22,
     disableDefaultUI:true,zoomControl:true,
     styles:[{featureType:'poi',stylers:[{visibility:'off'}]}]
   });
@@ -294,21 +294,11 @@ function updateMap(lat,lng,stops,nI){
       });
     }
   }
-  // Always center on user - use max available zoom
+  // Always center on user
   const tDist=dK(lat,lng,tS.lat,tS.lng);
-  let zoom=21;
-  if(tDist>50)zoom=14;else if(tDist>30)zoom=15;else if(tDist>15)zoom=16;else if(tDist>5)zoom=17;else if(tDist>1)zoom=18;else if(tDist>0.3)zoom=19;
-  // Check max zoom for this location and use it if closer
-  const mzs=new google.maps.MaxZoomService();
-  mzs.getMaxZoomAtLatLng({lat,lng},(r)=>{
-    if(r.status==='OK'){
-      const maxZ=r.zoom;
-      map.setCenter({lat,lng});
-      map.setZoom(Math.min(zoom,maxZ));
-    } else {
-      map.setCenter({lat,lng});map.setZoom(zoom);
-    }
-  });
+  let zoom=22;
+  if(tDist>50)zoom=14;else if(tDist>30)zoom=15;else if(tDist>15)zoom=16;else if(tDist>5)zoom=17;else if(tDist>1)zoom=18;else if(tDist>0.3)zoom=20;
+  map.setCenter({lat,lng});map.setZoom(zoom);
 }
 
 // === AUDIO ===
