@@ -167,11 +167,31 @@ function isRallyDay(){
 function fD(m){const a=Math.abs(m),h=Math.floor(a/60),n=a%60;return h>0?h+'h'+n.toString().padStart(2,'0')+'m':n+'m';}
 function dK(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,z=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(z),Math.sqrt(1-z));}
 
-let cDay='day1',gLat=null,gLng=null,gSt='',sFl=false,iM=false,bgm=null,vM='list';
+let cDay='day1',gLat=null,gLng=null,gSt='',sFl=false,iM=false,bgm=null,vM='list',mapZoom='nav',showMapMenu=false;
 
-// === VIEW TOGGLE ===
+function selectMapZoom(zoom){
+  mapZoom=zoom;showMapMenu=false;vM='map';lastRouteNI=-1;
+  initMap();
+  const mw=document.getElementById('mapWrap');
+  mw.style.display='block';mw.className='full';
+  const st=STOPS[cDay];
+  const zoomLevels={nav:17,area:13,all:8};
+  if(zoom==='all'){
+    showRouteOnly(st);
+  } else if(gLat){
+    const ni=fN(st);
+    updateMap(gLat,gLng,st,ni.i);
+    if(map)map.setZoom(zoomLevels[zoom]);
+  } else {
+    showRouteOnly(st);
+    if(map)map.setZoom(zoomLevels[zoom]);
+  }
+  rnd();
+}
+
 function setView(mode){
-  vM=mode;lastRouteNI=-1;
+  if(mode==='map'){showMapMenu=true;vM='map';rnd();return;}
+  showMapMenu=false;vM=mode;lastRouteNI=-1;
   if(mode==='map'){
     initMap();
     const mw=document.getElementById('mapWrap');
@@ -542,7 +562,22 @@ function rnd(){
     <div class="vtabs">
       <div class="vtab ${vM==='list'?'act':''}" onclick="setView('list')">📋 リスト</div>
       <div class="vtab ${vM==='map'?'act':''}" onclick="setView('map')">🗺️ 地図</div>
-    </div>`;
+    </div>
+    ${showMapMenu?`<div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;" onclick="showMapMenu=false;rnd();">
+      <div style="font-size:12px;color:#666680;letter-spacing:2px;margin-bottom:8px;">地図の縮尺を選択</div>
+      <button onclick="event.stopPropagation();selectMapZoom('nav')" style="width:260px;background:#0a1a2a;border:2px solid #00d4ff;border-radius:16px;padding:18px 24px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;">
+        <div style="font-family:'Outfit';font-size:18px;font-weight:900;color:#fff;">🔍 ナビ</div>
+        <div style="font-size:11px;color:#666680;margin-top:4px;">現在地周辺・最大ズーム</div>
+      </button>
+      <button onclick="event.stopPropagation();selectMapZoom('area')" style="width:260px;background:#0a1a2a;border:2px solid #666680;border-radius:16px;padding:18px 24px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;">
+        <div style="font-family:'Outfit';font-size:18px;font-weight:900;color:#fff;">📍 エリア</div>
+        <div style="font-size:11px;color:#666680;margin-top:4px;">周辺エリアを確認</div>
+      </button>
+      <button onclick="event.stopPropagation();selectMapZoom('all')" style="width:260px;background:#0a1a2a;border:2px solid #666680;border-radius:16px;padding:18px 24px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;">
+        <div style="font-family:'Outfit';font-size:18px;font-weight:900;color:#fff;">🗺️ 全体</div>
+        <div style="font-size:11px;color:#666680;margin-top:4px;">ルート全体を表示</div>
+      </button>
+    </div>`:''}`;
   }
 
   // 全リストモード
