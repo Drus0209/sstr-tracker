@@ -55,7 +55,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .fl{margin:0 10px 10px;background:var(--card);border:1px solid var(--bdr);border-radius:14px;max-height:300px;overflow-y:auto;display:none;}
 .fl.show{display:block;}
 .fl .fh{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:2px;padding:10px 12px 6px;position:sticky;top:0;background:var(--card);z-index:1;}
-.fi{display:flex;align-items:center;padding:6px 12px;font-size:12px;border-bottom:1px solid #0e0e18;}
+.fi{display:flex;align-items:center;padding:6px 12px;font-size:12px;border-bottom:1px solid #0e0e18;background:var(--card);border-radius:8px;margin-bottom:4px;}
 .fi.pst{opacity:0.35;}.fi.cur{background:rgba(0,212,255,0.06);}
 .fi .dot{width:8px;height:8px;border-radius:50%;margin-right:8px;flex-shrink:0;}
 .fi .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -447,14 +447,34 @@ function rnd(){
   const tc={move:'dv',michi:'dm',noto:'dn',goal:'dg',qk:'dq',gs:'ds',other:'do'};
 
   // Header
-  document.getElementById('hdr-area').innerHTML=`<div class="hdr">
-    <div><h1>SSTR 🏍️ <span style="font-size:9px;color:#666">v5</span></h1><span class="bdg ${dc}">${dt}</span></div>
-    <div style="text-align:right"><div class="now">${nH}:${nM}</div><div class="date">${nw.getMonth()+1}/${nw.getDate()} ${['日','月','火','水','木','金','土'][nw.getDay()]}</div></div>
-  </div>
-  <div class="vtabs">
-    <div class="vtab ${vM==='list'?'act':''}" onclick="setView('list')">📋 リスト</div>
-    <div class="vtab ${vM==='map'?'act':''}" onclick="setView('map')">🗺️ 地図</div>
-  </div>`;
+  if(sFl){
+    document.getElementById('hdr-area').innerHTML=`<div class="hdr">
+      <button class="cb" onclick="sFl=false;rnd();" style="border-color:var(--ac);color:var(--ac);padding:6px 16px;font-size:13px;font-weight:800;">← 戻る</button>
+      <div style="font-size:13px;font-weight:700;color:var(--sub)">📋 全リスト</div>
+      <div style="text-align:right"><div class="now">${nH}:${nM}</div></div>
+    </div>`;
+  } else {
+    document.getElementById('hdr-area').innerHTML=`<div class="hdr">
+      <div><h1>SSTR 🏍️ <span style="font-size:9px;color:#666">v5</span></h1><span class="bdg ${dc}">${dt}</span></div>
+      <div style="text-align:right"><div class="now">${nH}:${nM}</div><div class="date">${nw.getMonth()+1}/${nw.getDate()} ${['日','月','火','水','木','金','土'][nw.getDay()]}</div></div>
+    </div>
+    <div class="vtabs">
+      <div class="vtab ${vM==='list'?'act':''}" onclick="setView('list')">📋 リスト</div>
+      <div class="vtab ${vM==='map'?'act':''}" onclick="setView('map')">🗺️ 地図</div>
+    </div>`;
+  }
+
+  // 全リストモード
+  if(sFl){
+    document.getElementById('top').style.display='none';
+    document.getElementById('mapWrap').style.display='none';
+    const tc2={move:'dv',michi:'dm',noto:'dn',goal:'dg',qk:'dq',gs:'ds',other:'do'};
+    let fl=`<div style="padding:0 10px 20px;">`;
+    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';fl+=`<div class="fi ${c}"><div class="dot ${tc2[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}<span class="tm">${s.time}</span></div>`;});
+    fl+=`</div>`;
+    document.getElementById('btm').innerHTML=fl;
+    return;
+  }
 
   // Map mode toggle
   const mw=document.getElementById('mapWrap');
