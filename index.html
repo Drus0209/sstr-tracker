@@ -418,7 +418,7 @@ function fN(stops){
 }
 function ann(stops,ni,df){
   // 表示と同じロジック: 近くにいる(1km未満)ならそのストップ、遠いなら次のストップが現在ターゲット
-  const tI=ni.d<0.5?ni.i:Math.min(ni.i+1,stops.length-1);
+  const tI=ni.i;
   const s=stops[tI];
   const rally=isRallyDay();
   if(s.name.includes('GOAL')&&ni.d<2){sGoal();if(bgm)bgm.volume=0.8;}
@@ -553,7 +553,7 @@ function rnd(){
   let dc=!rally?'ot':Math.abs(df)<=5?'ot':df<0?'ah':'bh';
   let dt=!rally?'':Math.abs(df)<=5?'±0':((df>0?'+':'-')+fD(df));
   if(!gLat){dc='ot';dt='--';}
-  let cI=gLat?(nD<0.5?nI:Math.min(nI+1,st.length-1)):0;
+  let cI=gLat?nI:0;
   const cS=st[cI],cD=gLat?dK(gLat,gLng,cS.lat,cS.lng):0;
   if(gLat&&cI!==lastRoadDistCI){lastRoadDistCI=cI;roadDist=null;fetchRoadDist(gLat,gLng,cS);}
   const dispDist=roadDist!==null?roadDist:cD;
