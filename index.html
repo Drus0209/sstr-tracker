@@ -323,7 +323,7 @@ function updateMap(lat,lng,stops,nI){
       fillColor:'#00d4ff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,
       rotation:gHeading});
   }
-  const tI=Math.min(nI+1,stops.length-1),tS=stops[tI];
+  const tI=nI,tS=stops[tI];
   // Rebuild when nearest stop changes
   if(nI!==lastRouteNI){
     lastRouteNI=nI;
