@@ -411,9 +411,11 @@ function spk(t){if(iM)return;if('speechSynthesis'in window){if(bgm&&!bgm.paused)
 // Optimized: only search ±3 stops from last known position (100km/h × 5s = 140m max)
 function fN(stops){
   if(!gLat)return{i:0,d:0};
-  const start=Math.max(0,(lastNI>0?lastNI-2:0));
-  const end=Math.min(stops.length,(lastNI>=0?lastNI+4:stops.length));
-  let m=Infinity,x=lastNI>=0?lastNI:0;
+  // 初回(lastNI=-1)はstop[0]固定でスタート
+  if(lastNI===-1){const d=dK(gLat,gLng,stops[0].lat,stops[0].lng);return{i:0,d};}
+  const start=Math.max(0,lastNI-2);
+  const end=Math.min(stops.length,lastNI+4);
+  let m=Infinity,x=lastNI;
   for(let i=start;i<end;i++){const d=dK(gLat,gLng,stops[i].lat,stops[i].lng);if(d<m){m=d;x=i;}}
   return{i:x,d:m};
 }
