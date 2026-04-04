@@ -270,22 +270,45 @@ function ann(stops,ni,df){
   if(ni.i<stops.length-1){const nx=stops[ni.i+1],nd=dK(gLat,gLng,nx.lat,nx.lng),nm=nx.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim();m+='次は、'+nm+'。約'+Math.round(nd)+'キロ先です。';}
   setTimeout(()=>spk(m),1000);
 }
+let watchId=null;
+let lastNI=-1;
+
+function onGpsUpdate(p,announce_it){
+  gLat=p.coords.latitude;gLng=p.coords.longitude;
+  gSt='📍 追尾中 ('+gLat.toFixed(4)+', '+gLng.toFixed(4)+')';
+  const st=STOPS[cDay],ni=fN(st);
+  rnd();
+  updateMap(gLat,gLng,st,ni.i);
+  // Announce only on button press or when nearest stop changes
+  if(announce_it || (lastNI!==-1 && ni.i!==lastNI)){
+    sGps();
+    const nw=new Date(),nm=nw.getHours()*60+nw.getMinutes();
+    ann(st,ni,nm-pT(st[ni.i].time));
+  }
+  lastNI=ni.i;
+}
+
 function loc(){
   if(!navigator.geolocation){gSt='❌ GPS非対応';rnd();return;}
   gSt='📡 取得中...';rnd();
+  // First: get immediate position with announcement
   navigator.geolocation.getCurrentPosition(p=>{
-    gLat=p.coords.latitude;gLng=p.coords.longitude;
-    gSt='✅ '+gLat.toFixed(4)+', '+gLng.toFixed(4);
-    rnd();sGps();
-    const st=STOPS[cDay],ni=fN(st),nw=new Date(),nm=nw.getHours()*60+nw.getMinutes();
-    ann(st,ni,nm-pT(st[ni.i].time));
-    updateMap(gLat,gLng,st,ni.i);
+    onGpsUpdate(p,true);
   },e=>{
-    const msgs={1:'❌ 位置情報を許可してください（ブラウザ設定）',2:'❌ 位置情報を取得できません',3:'❌ タイムアウト。再試行してください'};
+    const msgs={1:'❌ 位置情報を許可してください',2:'❌ 位置取得できません',3:'❌ タイムアウト'};
     gSt=msgs[e.code]||'❌ '+e.message;
-    if(location.protocol==='file:')gSt='⚠️ ローカルファイルではGPS使えません。Webサーバーから開くかHTTPSが必要です';
     rnd();
-  },{enableHighAccuracy:true,timeout:15000,maximumAge:30000});
+  },{enableHighAccuracy:true,timeout:15000});
+  // Then: start continuous watch (silent updates)
+  if(watchId)navigator.geolocation.clearWatch(watchId);
+  watchId=navigator.geolocation.watchPosition(p=>{
+    onGpsUpdate(p,false);
+  },()=>{},{enableHighAccuracy:true,maximumAge:5000});
+}
+
+function stopWatch(){
+  if(watchId){navigator.geolocation.clearWatch(watchId);watchId=null;}
+  gSt='⏹ 追尾停止';rnd();
 }
 
 // Test: jump to a stop location for PC testing
@@ -375,7 +398,7 @@ function rnd(){
     if(cDay==='day1'){const pc=Math.min(100,Math.round(pPt/15*100));b+=`<div class="ptbar"><div><div class="tot">${pPt}</div><div class="lb">獲得pt</div></div><div class="prg"><div class="pf" style="width:${pc}%"></div></div><div style="text-align:right"><div class="tot" style="font-size:16px">${tPt}</div><div class="lb">MAX</div></div></div>`;}
   }
   b+=`<div class="ctrls">
-    <button class="cb pri" onclick="loc()">📍 現在地</button>
+    <button class="cb pri" onclick="${watchId?'stopWatch()':'loc()'}">📍 ${watchId?'追尾中…⏹':'現在地'}</button>
     <button class="cb ${iM?'':'act'}" onclick="iM=!iM;rnd();">${iM?'🔇':'🔊'}</button>
     <label class="cb" style="border-color:var(--pk);color:var(--pk);">🎵 BGM<input type="file" accept="audio/*" onchange="lBGM(event)" style="display:none;"></label>
     <button class="cb ${sFl?'act':''}" onclick="sFl=!sFl;rnd();">📋 全リスト</button>
@@ -391,8 +414,16 @@ function rnd(){
   }
   document.getElementById('btm').innerHTML=b;
 }
-setInterval(rnd,30000);rnd();
-// Auto GPS on load
+setInterval(rnd,30000);
+// Auto detect Day1 (5/23) or Day2 (5/24)
+(function(){
+  const now=new Date();
+  const m=now.getMonth()+1,d=now.getDate();
+  if(m===5&&d===24)cDay='day2';
+  else cDay='day1'; // Default day1 (including 5/23 and testing)
+})();
+rnd();
+// Auto start GPS tracking on load
 setTimeout(loc,500);
 </script>
 </body>
