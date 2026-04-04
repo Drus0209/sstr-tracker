@@ -353,6 +353,29 @@ function updateMap(lat,lng,stops,nI){
   map.panTo({lat,lng});
 }
 
+let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
+function setZoomMode(m){zoomMode=m;applyZoomMode();rnd();}
+function applyZoomMode(){
+  if(!map||!gLat)return;
+  const st=STOPS[cDay],ni=fN(st);
+  if(zoomMode===0){
+    // 最大ズーム・現在地中心
+    map.setZoom(19);map.panTo({lat:gLat,lng:gLng});
+  } else if(zoomMode===1){
+    // 3ストップ先まで収まるようfitBounds
+    const bounds=new google.maps.LatLngBounds();
+    bounds.extend({lat:gLat,lng:gLng});
+    for(let i=ni.i;i<=Math.min(ni.i+3,st.length-1);i++)bounds.extend({lat:st[i].lat,lng:st[i].lng});
+    map.fitBounds(bounds,{top:60,bottom:120,left:40,right:40});
+  } else {
+    // 全体ルート
+    const bounds=new google.maps.LatLngBounds();
+    bounds.extend({lat:gLat,lng:gLng});
+    st.forEach(s=>bounds.extend({lat:s.lat,lng:s.lng}));
+    map.fitBounds(bounds,{top:60,bottom:120,left:40,right:40});
+  }
+}
+
 // === AUDIO ===
 const aC=new(window.AudioContext||window.webkitAudioContext)();
 document.addEventListener('touchstart',()=>{if(aC.state!=='running')aC.resume();},{passive:true});
@@ -549,7 +572,12 @@ function rnd(){
         <button onclick="toggleNight();event.stopPropagation();" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:${nightMode?'var(--ylw)':'var(--sub)'};font-size:18px;padding:4px 8px;cursor:pointer;">${nightMode?'🌙':'☀️'}</button>
       </div>
       ${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
-      <div class="inf"><div>${gLat?cD.toFixed(1):'--'}km<span>距離</span></div><div>${cS.time}<span>予定</span></div><div>${gLat?eH+':'+eM:'--:--'}<span>${rally?'到着予想':'予定時刻'}</span></div>${cS.pt?'<div style="color:var(--grn)">+'+cS.pt+'pt<span>獲得</span></div>':''}</div>`;
+      <div class="inf"><div>${gLat?cD.toFixed(1):'--'}km<span>距離</span></div><div>${cS.time}<span>予定</span></div><div>${gLat?eH+':'+eM:'--:--'}<span>${rally?'到着予想':'予定時刻'}</span></div>${cS.pt?'<div style="color:var(--grn)">+'+cS.pt+'pt<span>獲得</span></div>':''}</div>
+      <div style="display:flex;gap:6px;margin-top:8px;">
+        <button onclick="setZoomMode(0);event.stopPropagation();" style="flex:1;background:${zoomMode===0?'var(--ac)':'none'};border:1px solid ${zoomMode===0?'var(--ac)':'var(--bdr)'};border-radius:8px;color:${zoomMode===0?'#000':'var(--sub)'};padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;">🔍 近接</button>
+        <button onclick="setZoomMode(1);event.stopPropagation();" style="flex:1;background:${zoomMode===1?'var(--ac)':'none'};border:1px solid ${zoomMode===1?'var(--ac)':'var(--bdr)'};border-radius:8px;color:${zoomMode===1?'#000':'var(--sub)'};padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;">📍 3先</button>
+        <button onclick="setZoomMode(2);event.stopPropagation();" style="flex:1;background:${zoomMode===2?'var(--ac)':'none'};border:1px solid ${zoomMode===2?'var(--ac)':'var(--bdr)'};border-radius:8px;color:${zoomMode===2?'#000':'var(--sub)'};padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;">🗺️ 全体</button>
+      </div>`;
     if(map)google.maps.event.trigger(map,'resize');
   } else {
     mw.className='';
