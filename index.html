@@ -85,9 +85,9 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 <div id="btm"></div>
 <script>
 const STOPS={day1:[
-{time:"04:10",name:"🏨 リフレフォーラム大島",lat:35.6918,lng:139.8420,pt:0,type:"move",memo:"出発！"},
-{time:"04:28",name:"☀️ 暁ふ頭公園 START",lat:35.6082,lng:139.7914,pt:0,type:"goal",memo:"海バック写真→スタート登録"},
-{time:"04:35",name:"⛽ apollostation有明",lat:35.6404,lng:139.7943,pt:0,type:"gs",memo:"2台とも満タン🔶"},
+{time:"04:10",name:"🏨 リフレフォーラム大島",lat:35.6918,lng:139.8420,pt:0,type:"move",memo:"出発！",noHwy:true},
+{time:"04:28",name:"☀️ 暁ふ頭公園 START",lat:35.6082,lng:139.7914,pt:0,type:"goal",memo:"海バック写真→スタート登録",noHwy:true},
+{time:"04:35",name:"⛽ apollostation有明",lat:35.6404,lng:139.7943,pt:0,type:"gs",memo:"2台とも満タン🔶",noHwy:true},
 {time:"05:25",name:"🚀 練馬IC",lat:35.7717,lng:139.6318,pt:0,type:"move",memo:"関越道へ"},
 {time:"05:45",name:"🍑 けつQK 上里SA",lat:36.2415,lng:139.1230,pt:1,type:"qk",memo:"けつQK＋1pt"},
 {time:"06:30",name:"⬇️ 下仁田IC",lat:36.2262,lng:138.8067,pt:0,type:"move",memo:"IC降りる"},
@@ -194,22 +194,33 @@ function clearMap(){
 function fetchGoogleRoute(stops){
   if(stops.length<2)return;
   const ds=new google.maps.DirectionsService();
-  // Split into chunks of 25 waypoints (Google limit)
-  for(let i=0;i<stops.length-1;i+=24){
-    const chunk=stops.slice(i,Math.min(i+25,stops.length));
-    const origin={lat:chunk[0].lat,lng:chunk[0].lng};
-    const dest={lat:chunk[chunk.length-1].lat,lng:chunk[chunk.length-1].lng};
-    const waypoints=chunk.slice(1,-1).map(s=>({location:{lat:s.lat,lng:s.lng},stopover:true}));
-    ds.route({origin,destination:dest,waypoints,travelMode:'DRIVING'},
-      (result,status)=>{
-        if(status==='OK'){
-          const dr=new google.maps.DirectionsRenderer({map:map,
-            suppressMarkers:true,preserveViewport:true,
-            polylineOptions:{strokeColor:'#00d4ff',strokeWeight:3,strokeOpacity:0.6}});
-          dr.setDirections(result);
-          mPolylines.push(dr);
-        }
-      });
+  // Split into noHwy and highway segments
+  let segStart=0;
+  for(let i=0;i<stops.length-1;i++){
+    const curNoHwy=!!stops[i].noHwy;
+    const nextNoHwy=!!stops[i+1].noHwy;
+    // When noHwy flag changes or at end, make a route request for this segment
+    if(curNoHwy!==nextNoHwy || i===stops.length-2){
+      const segEnd=i+1;
+      const seg=stops.slice(segStart,segEnd+1);
+      if(seg.length>=2){
+        const origin={lat:seg[0].lat,lng:seg[0].lng};
+        const dest={lat:seg[seg.length-1].lat,lng:seg[seg.length-1].lng};
+        const waypoints=seg.slice(1,-1).map(s=>({location:{lat:s.lat,lng:s.lng},stopover:true}));
+        const req={origin,destination:dest,waypoints,travelMode:'DRIVING'};
+        if(curNoHwy)req.avoidHighways=true;
+        ds.route(req,(result,status)=>{
+          if(status==='OK'){
+            const dr=new google.maps.DirectionsRenderer({map:map,
+              suppressMarkers:true,preserveViewport:true,
+              polylineOptions:{strokeColor:'#00d4ff',strokeWeight:3,strokeOpacity:0.6}});
+            dr.setDirections(result);
+            mPolylines.push(dr);
+          }
+        });
+      }
+      segStart=i+1;
+    }
   }
 }
 
@@ -254,7 +265,10 @@ function updateMap(lat,lng,stops,nI){
       title:tS.name});
     // Google Directions: current pos → next stop (road-following route!)
     const ds=new google.maps.DirectionsService();
-    ds.route({origin:{lat,lng},destination:{lat:tS.lat,lng:tS.lng},travelMode:'DRIVING'},
+    const curStop=stops[nI];
+    const dReq={origin:{lat,lng},destination:{lat:tS.lat,lng:tS.lng},travelMode:'DRIVING'};
+    if(curStop.noHwy)dReq.avoidHighways=true;
+    ds.route(dReq,
       (result,status)=>{
         if(status==='OK'){
           const dr=new google.maps.DirectionsRenderer({map:map,
