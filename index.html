@@ -343,7 +343,7 @@ function sBhd(){tn(400,.15,'square',0);tn(350,.15,'square',.12);tn(300,.2,'squar
 function sOnt(){tn(700,.12,'sine',0);tn(700,.12,'sine',.15);}
 function sGoal(){tn(523,.15,'sine',0);tn(659,.15,'sine',.12);tn(784,.15,'sine',.24);tn(1047,.3,'sine',.36);tn(784,.1,'sine',.56);tn(1047,.4,'sine',.66);}
 function lBGM(e){const f=e.target.files[0];if(!f)return;if(bgm)bgm.pause();bgm=new Audio(URL.createObjectURL(f));bgm.volume=0.5;bgm.play();document.getElementById('bi').textContent='🎵 '+f.name;document.getElementById('bi').style.display='block';}
-function spk(t){if(iM)return;if('speechSynthesis'in window){speechSynthesis.cancel();if(bgm&&!bgm.paused)bgm.volume=0.1;const u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';u.rate=1.1;u.onend=()=>{if(bgm)bgm.volume=0.5;};speechSynthesis.speak(u);}}
+function spk(t){if(iM)return;if('speechSynthesis'in window){if(bgm&&!bgm.paused)bgm.volume=0.1;const u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';u.rate=1.1;u.onend=()=>{if(bgm)bgm.volume=0.5;};speechSynthesis.speak(u);}}
 // Optimized: only search ±3 stops from last known position (100km/h × 5s = 140m max)
 function fN(stops){
   if(!gLat)return{i:0,d:0};
@@ -601,7 +601,7 @@ function startApp(mode){
   document.body.appendChild(mid);
 
   // 読み上げ
-  setTimeout(()=>spk(title+'が選択されました。GPS情報取得までお待ちください。'),300);
+  setTimeout(()=>spk(title+'が選択されました。GPS情報取得までお待ちください。'),1000);
 
   if(mode==='nippon1'||mode==='nippon2'){
     setTimeout(()=>{
