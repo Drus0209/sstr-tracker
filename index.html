@@ -38,7 +38,8 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .pc .pb{display:flex;justify-content:center;margin-top:10px;}
 .pc .ptb{background:#1a2a1a;border:1px solid var(--grn);color:var(--grn);padding:4px 16px;border-radius:20px;font-weight:800;font-family:'Outfit';font-size:16px;}
 #mapWrap{display:none;margin:8px 10px;border-radius:14px;overflow:hidden;border:2px solid var(--bdr);position:relative;}
-#map{height:200px;width:100%;background:#e8e8e8;}
+#map{height:60vh;width:100%;background:#e8e8e8;transition:transform 1s ease;}
+#mapWrap.heading #map{height:70vh;transform-origin:center center;}
 .leaflet-container{background:#e8e8e8!important;}
 .leaflet-popup-content-wrapper{background:#fff;color:#333;border-radius:8px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
 .leaflet-popup-tip{background:#fff;}
@@ -133,6 +134,13 @@ const STOPS={day1:[
 ]};
 
 function pT(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
+// Check if today is the actual rally day for the selected day
+function isRallyDay(){
+  const now=new Date(),m=now.getMonth()+1,d=now.getDate();
+  if(cDay==='day1')return m===5&&d===23;
+  if(cDay==='day2')return m===5&&d===24;
+  return false;
+}
 function fD(m){const a=Math.abs(m),h=Math.floor(a/60),n=a%60;return h>0?h+'h'+n.toString().padStart(2,'0')+'m':n+'m';}
 function dK(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,z=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(z),Math.sqrt(1-z));}
 
@@ -140,7 +148,7 @@ let cDay='day1',gLat=null,gLng=null,gSt='',sFl=false,iM=false,bgm=null,vM='list'
 
 // === VIEW TOGGLE ===
 function setView(mode){
-  vM=mode;
+  vM=mode;lastRouteNI=-1;
   if(mode==='map'){
     initMap();
     const mw=document.getElementById('mapWrap');
@@ -173,80 +181,65 @@ function showRouteOnly(stops){
     mStops.push(mk);
   });
   // Fetch real road route via OSRM
-  fetchRoute(stops.map(s=>[s.lng,s.lat]),'#00d4ff',2,0.5);
-  map.fitBounds(L.latLngBounds(rc),{padding:[40,40],maxZoom:11});
+  drawRoute(stops.map(s=>[s.lng,s.lat]),'#00d4ff',2,0.5);
+  map.fitBounds(L.latLngBounds(rc),{padding:[40,40],maxZoom:13});
   setTimeout(()=>map.invalidateSize(),100);
 }
 
-// OSRM routing
+// Route display (straight lines - navigation is via Google Maps, not this tracker)
+// OSRM removed: Japanese one-way street data was inaccurate causing illegal route suggestions
 let mRealRoutes=[];
 function clearRoutes(){mRealRoutes.forEach(r=>map.removeLayer(r));mRealRoutes=[];}
-function fetchRoute(coords,color,weight,opacity){
-  // OSRM limit, split into chunks of 25
-  const chunks=[];
-  for(let i=0;i<coords.length;i+=24){
-    const chunk=coords.slice(i,Math.min(i+25,coords.length));
-    if(i>0)chunk.unshift(coords[i]);
-    chunks.push(chunk);
-  }
-  chunks.forEach(chunk=>{
-    const str=chunk.map(c=>c[0]+','+c[1]).join(';');
-    fetch('https://router.project-osrm.org/route/v1/driving/'+str+'?overview=full&geometries=geojson')
-    .then(r=>r.json()).then(data=>{
-      if(data.routes&&data.routes[0]){
-        const line=L.geoJSON(data.routes[0].geometry,{style:{color:color,weight:weight,opacity:opacity}}).addTo(map);
-        mRealRoutes.push(line);
-      }
-    }).catch(()=>{
-      // Fallback: straight line
-      const latlngs=chunk.map(c=>[c[1],c[0]]);
-      const line=L.polyline(latlngs,{color:color,weight:weight,opacity:opacity,dashArray:'6,8'}).addTo(map);
-      mRealRoutes.push(line);
-    });
-  });
+function drawRoute(coords,color,weight,opacity){
+  const latlngs=coords.map(c=>[c[1],c[0]]);
+  const line=L.polyline(latlngs,{color:color,weight:weight,opacity:opacity}).addTo(map);
+  mRealRoutes.push(line);
 }
 
 // === MAP ===
 let map=null,mMe=null,mTgt=null,mLine=null,mRoute=null,mStops=[];
 function initMap(){
   if(map)return;
-  map=L.map('map',{zoomControl:false,attributionControl:false}).setView([35.69,139.84],10);
-  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxZoom:18,attribution:'国土地理院'}).addTo(map);
+  map=L.map('map',{zoomControl:true,attributionControl:false}).setView([35.69,139.84],16);
+  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{maxZoom:18,attribution:'国土地理院'}).addTo(map);
 }
+let lastRouteNI=-1;
 function updateMap(lat,lng,stops,nI){
   initMap();
   document.getElementById('mapWrap').style.display='block';
-  if(mMe)map.removeLayer(mMe);if(mTgt)map.removeLayer(mTgt);if(mLine)map.removeLayer(mLine);if(mRoute)map.removeLayer(mRoute);
-  mStops.forEach(m=>map.removeLayer(m));mStops=[];clearRoutes();
-  const meIc=L.divIcon({className:'',html:'<div style="width:14px;height:14px;background:#00d4ff;border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px rgba(0,212,255,0.7);"></div>',iconSize:[14,14],iconAnchor:[7,7]});
+  // Always update my position marker
+  if(mMe)map.removeLayer(mMe);
+  const meIc=L.divIcon({className:'',html:'<div style="width:20px;height:20px;background:#00d4ff;border:3px solid #fff;border-radius:50%;box-shadow:0 0 16px rgba(0,212,255,0.8);"></div>',iconSize:[20,20],iconAnchor:[10,10]});
   mMe=L.marker([lat,lng],{icon:meIc}).addTo(map);
   const tI=Math.min(nI+1,stops.length-1),tS=stops[tI];
-  const tIc=L.divIcon({className:'',html:'<div style="width:12px;height:12px;background:#ff9100;border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(255,145,0,0.5);"></div>',iconSize:[12,12],iconAnchor:[6,6]});
-  mTgt=L.marker([tS.lat,tS.lng],{icon:tIc}).addTo(map).bindPopup(tS.name);
-  
-  // Real road route: current pos → next stop (bright)
-  fetchRoute([[lng,lat],[tS.lng,tS.lat]],'#00d4ff',3,0.8);
-  
-  // Remaining route (dim)
-  const remaining=[];for(let i=nI;i<stops.length;i++)remaining.push([stops[i].lng,stops[i].lat]);
-  if(remaining.length>1)fetchRoute(remaining,'#444',2,0.4);
-  
-  // All stop markers in map mode
-  if(vM==='map'){
-    const cols={noto:'#4caf50',michi:'#2196f3',goal:'#ff9100',qk:'#ff9100',gs:'#e85300',move:'#666',other:'#9e9e9e'};
-    stops.forEach((s,i)=>{
-      if(i===tI)return;
-      const c=cols[s.type]||'#666',op=i<nI?0.3:0.8,sz=i<nI?6:8;
-      const ic=L.divIcon({className:'',html:'<div style="width:'+sz+'px;height:'+sz+'px;background:'+c+';border:1px solid #fff;border-radius:50%;opacity:'+op+';"></div>',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});
-      const mk=L.marker([s.lat,s.lng],{icon:ic}).addTo(map).bindPopup(s.name+'<br>'+s.time);
-      mStops.push(mk);
-    });
-    const all=[[lat,lng]];stops.forEach((s,i)=>{if(i>=nI)all.push([s.lat,s.lng]);});
-    map.fitBounds(L.latLngBounds(all),{padding:[40,40],maxZoom:11});
-  } else {
-    map.fitBounds(L.latLngBounds([[lat,lng],[tS.lat,tS.lng]]),{padding:[30,30],maxZoom:12});
+  // Only rebuild routes + stop markers when nearest stop changes
+  if(nI!==lastRouteNI){
+    lastRouteNI=nI;
+    if(mTgt)map.removeLayer(mTgt);if(mLine)map.removeLayer(mLine);if(mRoute)map.removeLayer(mRoute);
+    mStops.forEach(m=>map.removeLayer(m));mStops=[];clearRoutes();
+    const tIc=L.divIcon({className:'',html:'<div style="width:12px;height:12px;background:#ff9100;border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(255,145,0,0.5);"></div>',iconSize:[12,12],iconAnchor:[6,6]});
+    mTgt=L.marker([tS.lat,tS.lng],{icon:tIc}).addTo(map).bindPopup(tS.name);
+    // OSRM routes - only on stop change
+    drawRoute([[lng,lat],[tS.lng,tS.lat]],'#00d4ff',3,0.8);
+    const remaining=[];for(let i=nI;i<stops.length;i++)remaining.push([stops[i].lng,stops[i].lat]);
+    if(remaining.length>1)drawRoute(remaining,'#444',2,0.4);
+    if(vM==='map'){
+      const cols={noto:'#4caf50',michi:'#2196f3',goal:'#ff9100',qk:'#ff9100',gs:'#e85300',move:'#666',other:'#9e9e9e'};
+      stops.forEach((s,i)=>{
+        if(i===tI)return;
+        const c=cols[s.type]||'#666',op=i<nI?0.3:0.8,sz=i<nI?6:8;
+        const ic=L.divIcon({className:'',html:'<div style="width:'+sz+'px;height:'+sz+'px;background:'+c+';border:1px solid #fff;border-radius:50%;opacity:'+op+';"></div>',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});
+        const mk=L.marker([s.lat,s.lng],{icon:ic}).addTo(map).bindPopup(s.name+'<br>'+s.time);
+        mStops.push(mk);
+      });
+    }
   }
-  setTimeout(()=>map.invalidateSize(),100);
+  // Always center on user - nav-style zoom
+  const tDist=dK(lat,lng,tS.lat,tS.lng);
+  let zoom=16; // default: street level
+  if(tDist>30)zoom=12;else if(tDist>15)zoom=13;else if(tDist>5)zoom=14;else if(tDist>1)zoom=15;
+  if(hMode && gHeading!==null)zoom=Math.max(zoom,16);
+  map.setView([lat,lng],zoom,{animate:false});
 }
 
 // === AUDIO ===
@@ -259,34 +252,77 @@ function sOnt(){tn(700,.12,'sine',0);tn(700,.12,'sine',.15);}
 function sGoal(){tn(523,.15,'sine',0);tn(659,.15,'sine',.12);tn(784,.15,'sine',.24);tn(1047,.3,'sine',.36);tn(784,.1,'sine',.56);tn(1047,.4,'sine',.66);}
 function lBGM(e){const f=e.target.files[0];if(!f)return;if(bgm)bgm.pause();bgm=new Audio(URL.createObjectURL(f));bgm.volume=0.5;bgm.play();document.getElementById('bi').textContent='🎵 '+f.name;document.getElementById('bi').style.display='block';}
 function spk(t){if(iM)return;if('speechSynthesis'in window){speechSynthesis.cancel();if(bgm&&!bgm.paused)bgm.volume=0.1;const u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';u.rate=1.1;u.onend=()=>{if(bgm)bgm.volume=0.5;};speechSynthesis.speak(u);}}
-function fN(stops){if(!gLat)return{i:0,d:0};let m=Infinity,x=0;stops.forEach((s,i)=>{const d=dK(gLat,gLng,s.lat,s.lng);if(d<m){m=d;x=i;}});return{i:x,d:m};}
+// Optimized: only search ±3 stops from last known position (100km/h × 5s = 140m max)
+function fN(stops){
+  if(!gLat)return{i:0,d:0};
+  const start=Math.max(0,(lastNI>0?lastNI-2:0));
+  const end=Math.min(stops.length,(lastNI>=0?lastNI+4:stops.length));
+  let m=Infinity,x=lastNI>=0?lastNI:0;
+  for(let i=start;i<end;i++){const d=dK(gLat,gLng,stops[i].lat,stops[i].lng);if(d<m){m=d;x=i;}}
+  return{i:x,d:m};
+}
 function ann(stops,ni,df){
   const s=stops[ni.i];
+  const rally=isRallyDay();
   if(s.name.includes('GOAL')&&ni.d<2){sGoal();if(bgm)bgm.volume=0.8;}
+  else if(!rally)sOnt();
   else if(Math.abs(df)<=5)sOnt();else if(df<0)sAhd();else sBhd();
-  let m='';if(Math.abs(df)<=5)m='ほぼ予定通りです。';
-  else if(df<0)m='予定より'+Math.abs(df)+'分早いです。';
-  else{m='予定より'+df+'分遅れています。';if(df>30)m+='巻いていきましょう！';}
+  let m='';
+  if(rally){
+    if(Math.abs(df)<=5)m='ほぼ予定通りです。';
+    else if(df<0)m='予定より'+Math.abs(df)+'分早いです。';
+    else{m='予定より'+df+'分遅れています。';if(df>30)m+='巻いていきましょう！';}
+  }
   if(ni.i<stops.length-1){const nx=stops[ni.i+1],nd=dK(gLat,gLng,nx.lat,nx.lng),nm=nx.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim();m+='次は、'+nm+'。約'+Math.round(nd)+'キロ先です。';}
   setTimeout(()=>spk(m),1000);
 }
 let watchId=null;
 let lastNI=-1;
+let lastUpdate=0;
+let pendingPos=null;
+let gHeading=null; // GPS heading for map rotation
+let hMode=true; // heading mode on by default
+
+// Fast: just move the marker without rebuilding everything
+function moveMarker(lat,lng){
+  if(mMe)mMe.setLatLng([lat,lng]);
+  const wrap=document.getElementById('mapWrap');
+  if(wrap){wrap.classList.toggle('heading',hMode&&gHeading!==null);}
+  if(hMode && gHeading!==null && map){
+    document.getElementById('map').style.transform='rotate('+(-gHeading)+'deg)';
+    document.getElementById('map').style.transformOrigin='center center';
+    map.panTo([lat,lng],{animate:true,duration:1});
+  }
+}
 
 function onGpsUpdate(p,announce_it){
   gLat=p.coords.latitude;gLng=p.coords.longitude;
-  gSt='📍 追尾中 ('+gLat.toFixed(4)+', '+gLng.toFixed(4)+')';
+  // Store heading (null when stationary)
+  if(p.coords.heading!==null && !isNaN(p.coords.heading) && p.coords.speed>1){
+    gHeading=p.coords.heading;
+  }
+  // Always move marker immediately (fast)
+  moveMarker(gLat,gLng);
+  // Throttle everything else to 5 seconds
+  const now=Date.now();
+  if(!announce_it && now-lastUpdate<5000){pendingPos=p;return;}
+  lastUpdate=now;pendingPos=null;
+  gSt='📍 追尾中 ('+gLat.toFixed(4)+', '+gLng.toFixed(4)+')'+(gHeading!==null?' 🧭'+Math.round(gHeading)+'°':'');
   const st=STOPS[cDay],ni=fN(st);
   rnd();
-  updateMap(gLat,gLng,st,ni.i);
-  // Announce only on button press or when nearest stop changes
-  if(announce_it || (lastNI!==-1 && ni.i!==lastNI)){
-    sGps();
-    const nw=new Date(),nm=nw.getHours()*60+nw.getMinutes();
-    ann(st,ni,nm-pT(st[ni.i].time));
+  // Only full map update when nearest stop changes or first time
+  if(announce_it || lastNI===-1 || ni.i!==lastNI){
+    updateMap(gLat,gLng,st,ni.i);
+    if(announce_it || (lastNI!==-1 && ni.i!==lastNI)){
+      sGps();
+      const nw=new Date(),nm=nw.getHours()*60+nw.getMinutes();
+      ann(st,ni,nm-pT(st[ni.i].time));
+    }
+    lastNI=ni.i;
   }
-  lastNI=ni.i;
 }
+// Process any pending position every 5s
+setInterval(()=>{if(pendingPos){onGpsUpdate(pendingPos,false);pendingPos=null;}},5000);
 
 function loc(){
   if(!navigator.geolocation){gSt='❌ GPS非対応';rnd();return;}
@@ -303,7 +339,7 @@ function loc(){
   if(watchId)navigator.geolocation.clearWatch(watchId);
   watchId=navigator.geolocation.watchPosition(p=>{
     onGpsUpdate(p,false);
-  },()=>{},{enableHighAccuracy:true,maximumAge:5000});
+  },()=>{},{enableHighAccuracy:true,maximumAge:3000,timeout:10000});
 }
 
 function stopWatch(){
@@ -331,13 +367,14 @@ function rnd(){
   const nH=nw.getHours().toString().padStart(2,'0'),nM=nw.getMinutes().toString().padStart(2,'0');
   const nwM=nw.getHours()*60+nw.getMinutes();
   const ni=fN(st),nI=gLat?ni.i:0,nD=gLat?ni.d:0;
-  const pl=pT(st[nI].time),df=gLat?(nwM-pl):0;
-  let dc=Math.abs(df)<=5?'ot':df<0?'ah':'bh';
-  let dt=Math.abs(df)<=5?'±0':((df>0?'+':'-')+fD(df));
+  const pl=pT(st[nI].time),df=gLat&&isRallyDay()?(nwM-pl):0;
+  const rally=isRallyDay();
+  let dc=!rally?'ot':Math.abs(df)<=5?'ot':df<0?'ah':'bh';
+  let dt=!rally?'テスト':Math.abs(df)<=5?'±0':((df>0?'+':'-')+fD(df));
   if(!gLat){dc='ot';dt='--';}
   let cI=gLat?(nD<1?nI:Math.min(nI+1,st.length-1)):0;
   const cS=st[cI],cD=gLat?dK(gLat,gLng,cS.lat,cS.lng):0;
-  const cP=pT(cS.time),eta=gLat?cP+df:cP;
+  const cP=pT(cS.time),eta=gLat&&rally?cP+df:cP;
   const eH=Math.floor(((eta%1440)+1440)%1440/60).toString().padStart(2,'0'),eM=(((eta%1440)+1440)%1440%60).toString().padStart(2,'0');
   const xI=Math.min(cI+1,st.length-1),xS=st[xI],xD=gLat?dK(gLat,gLng,xS.lat,xS.lng):0;
   let pPt=0;st.forEach((s,i)=>{if(gLat&&i<nI)pPt+=s.pt;});
@@ -365,7 +402,7 @@ function rnd(){
     if(!ov){ov=document.createElement('div');ov.id='mapOv';ov.className='map-overlay';mw.style.position='relative';mw.appendChild(ov);}
     ov.innerHTML=`<div class="nm">${cS.name}</div>
       ${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
-      <div class="inf"><div>${gLat?cD.toFixed(1):'--'}km<span>距離</span></div><div>${cS.time}<span>予定</span></div><div>${gLat?eH+':'+eM:'--:--'}<span>到着予想</span></div>${cS.pt?'<div style="color:var(--grn)">+'+cS.pt+'pt<span>獲得</span></div>':''}</div>`;
+      <div class="inf"><div>${gLat?cD.toFixed(1):'--'}km<span>距離</span></div><div>${cS.time}<span>予定</span></div><div>${gLat?eH+':'+eM:'--:--'}<span>${rally?'到着予想':'予定時刻'}</span></div>${cS.pt?'<div style="color:var(--grn)">+'+cS.pt+'pt<span>獲得</span></div>':''}</div>`;
     if(map)setTimeout(()=>map.invalidateSize(),50);
   } else {
     mw.className='';
@@ -386,7 +423,7 @@ function rnd(){
     <div class="nm">${cS.name}</div>${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
     <div class="sts"><div class="st"><div class="v">${gLat?cD.toFixed(1):'--'}</div><div class="l">km先</div></div>
     <div class="st"><div class="v">${cS.time}</div><div class="l">予定</div></div>
-    <div class="st"><div class="v">${gLat?eH+':'+eM:'--:--'}</div><div class="l">到着予想</div></div></div>
+    <div class="st"><div class="v">${gLat?eH+':'+eM:'--:--'}</div><div class="l">${rally?'到着予想':'予定時刻'}</div></div></div>
     ${cS.pt?'<div class="pb"><div class="ptb">+'+cS.pt+'pt</div></div>':''}
   </div>`;
   document.getElementById('top').innerHTML=t;
@@ -403,6 +440,7 @@ function rnd(){
     <label class="cb" style="border-color:var(--pk);color:var(--pk);">🎵 BGM<input type="file" accept="audio/*" onchange="lBGM(event)" style="display:none;"></label>
     <button class="cb ${sFl?'act':''}" onclick="sFl=!sFl;rnd();">📋 全リスト</button>
     <button class="cb" onclick="testJump()" style="border-color:#666;color:#666;">🧪 テスト</button>
+    <button class="cb ${hMode?'act':''}" onclick="hMode=!hMode;if(!hMode){document.getElementById('map').style.transform='';gHeading=null;}rnd();">🧭 ${hMode?'回転ON':'回転OFF'}</button>
   </div>
   <div id="bi" style="display:${bgm?'block':'none'};text-align:center;font-size:11px;color:var(--pk);padding:2px;"></div>
   <div class="gps">${gSt}</div>
