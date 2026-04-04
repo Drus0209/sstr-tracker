@@ -761,6 +761,8 @@ function startApp(mode){
 
   // GPS開始、取得できたら中間画面を消す
   loc(()=>{gpsReady=true;tryShowMain();});
+  // TTS終了後さらに5秒待っても画面が切り替わらなければ強制表示
+  setTimeout(()=>{if(mid.parentNode)mid.remove();},estimatedMs+5500);
 }
 </script>
 </body>
