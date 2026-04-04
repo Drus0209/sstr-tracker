@@ -437,8 +437,22 @@ let watchId=null;
 let lastNI=-1;
 let lastUpdate=0;
 let pendingPos=null;
-let gHeading=null; // GPS heading for map rotation
-let hMode=true; // heading mode on by default
+let gHeading=null;
+let hMode=true;
+let roadDist=null,lastRoadDistCI=-1;
+
+function fetchRoadDist(lat,lng,stop){
+  try{
+    const ds=new google.maps.DirectionsService();
+    ds.route({origin:{lat,lng},destination:{lat:stop.lat,lng:stop.lng},
+      travelMode:'DRIVING',avoidHighways:!!stop.noHwy},
+      (result,status)=>{
+        if(status==='OK'){
+          roadDist=result.routes[0].legs.reduce((s,l)=>s+l.distance.value,0)/1000;
+        }
+      });
+  }catch(e){}
+}
 
 // Fast: just move the marker without rebuilding everything
 function moveMarker(lat,lng){
@@ -541,6 +555,8 @@ function rnd(){
   if(!gLat){dc='ot';dt='--';}
   let cI=gLat?(nD<0.5?nI:Math.min(nI+1,st.length-1)):0;
   const cS=st[cI],cD=gLat?dK(gLat,gLng,cS.lat,cS.lng):0;
+  if(gLat&&cI!==lastRoadDistCI){lastRoadDistCI=cI;roadDist=null;fetchRoadDist(gLat,gLng,cS);}
+  const dispDist=roadDist!==null?roadDist:cD;
   const cP=pT(cS.time),eta=gLat&&rally?cP+df:cP;
   const eH=Math.floor(((eta%1440)+1440)%1440/60).toString().padStart(2,'0'),eM=(((eta%1440)+1440)%1440%60).toString().padStart(2,'0');
   const xI=Math.min(cI+1,st.length-1),xS=st[xI],xD=gLat?dK(gLat,gLng,xS.lat,xS.lng):0;
@@ -611,7 +627,7 @@ function rnd(){
         <button onclick="toggleNight();event.stopPropagation();" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:${nightMode?'var(--ylw)':'var(--sub)'};font-size:18px;padding:4px 8px;cursor:pointer;">${nightMode?'🌙':'☀️'}</button>
       </div>
       ${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
-      <div class="inf"><div>${gLat?cD.toFixed(1):'--'}km<span>距離</span></div><div>${cS.time}<span>予定</span></div><div>${gLat?eH+':'+eM:'--:--'}<span>${rally?'到着予想':'予定時刻'}</span></div>${cS.pt?'<div style="color:var(--grn)">+'+cS.pt+'pt<span>獲得</span></div>':''}</div>
+      <div class="inf"><div>${gLat?dispDist.toFixed(1):'--'}km<span>距離</span></div><div>${cS.time}<span>予定</span></div><div>${gLat?eH+':'+eM:'--:--'}<span>${rally?'到着予想':'予定時刻'}</span></div>${cS.pt?'<div style="color:var(--grn)">+'+cS.pt+'pt<span>獲得</span></div>':''}</div>
       <div style="display:flex;gap:6px;margin-top:8px;">
         <button onclick="setZoomMode(0);event.stopPropagation();" style="flex:1;background:${zoomMode===0?'var(--ac)':'none'};border:1px solid ${zoomMode===0?'var(--ac)':'var(--bdr)'};border-radius:8px;color:${zoomMode===0?'#000':'var(--sub)'};padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;">🔍 近接</button>
         <button onclick="setZoomMode(1);event.stopPropagation();" style="flex:1;background:${zoomMode===1?'var(--ac)':'none'};border:1px solid ${zoomMode===1?'var(--ac)':'var(--bdr)'};border-radius:8px;color:${zoomMode===1?'#000':'var(--sub)'};padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;">📍 3先</button>
@@ -635,7 +651,7 @@ function rnd(){
   // Current
   t+=`<div class="pnl pc"><div class="lb">▶ いま向かっている場所</div>
     <div class="nm">${cS.name}</div>${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
-    <div class="sts"><div class="st"><div class="v">${gLat?cD.toFixed(1):'--'}</div><div class="l">km先</div></div>
+    <div class="sts"><div class="st"><div class="v">${gLat?dispDist.toFixed(1):'--'}</div><div class="l">km先</div></div>
     <div class="st"><div class="v">${cS.time}</div><div class="l">予定</div></div>
     <div class="st"><div class="v">${gLat?eH+':'+eM:'--:--'}</div><div class="l">${rally?'到着予想':'予定時刻'}</div></div></div>
     ${cS.pt?'<div class="pb"><div class="ptb">+'+cS.pt+'pt</div></div>':''}
