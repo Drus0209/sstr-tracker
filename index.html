@@ -296,8 +296,8 @@ function updateMap(lat,lng,stops,nI){
   }
   // Always center on user
   const tDist=dK(lat,lng,tS.lat,tS.lng);
-  let zoom=17;
-  if(tDist>50)zoom=12;else if(tDist>30)zoom=13;else if(tDist>15)zoom=14;else if(tDist>5)zoom=15;else if(tDist>1)zoom=16;
+  let zoom=18;
+  if(tDist>50)zoom=13;else if(tDist>30)zoom=14;else if(tDist>15)zoom=15;else if(tDist>5)zoom=16;else if(tDist>1)zoom=17;
   map.setCenter({lat,lng});map.setZoom(zoom);
 }
 
