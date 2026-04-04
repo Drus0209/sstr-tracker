@@ -558,7 +558,7 @@ function rnd(){
   let cI=gLat?(nD<0.5?nI:Math.min(nI+1,st.length-1)):0;
   const cS=st[cI],cD=gLat?dK(gLat,gLng,cS.lat,cS.lng):0;
   // cIが変わったときだけDirections APIで道路距離を取得
-  if(gLat&&cI!==lastRoadDistCI){lastRoadDistCI=cI;roadDist=null;fetchRoadDist(gLat,gLng,cS);}
+  if(gLat&&cI!==lastRoadDistCI){lastRoadDistCI=cI;roadDist=null;try{fetchRoadDist(gLat,gLng,cS);}catch(e){}}
   const dispDist=roadDist!==null?roadDist:cD; // 道路距離があればそちらを使用
   const cP=pT(cS.time),eta=gLat&&rally?cP+df:cP;
   const eH=Math.floor(((eta%1440)+1440)%1440/60).toString().padStart(2,'0'),eM=(((eta%1440)+1440)%1440%60).toString().padStart(2,'0');
