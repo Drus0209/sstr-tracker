@@ -326,7 +326,7 @@ function updateMap(lat,lng,stops,nI){
 // === AUDIO ===
 const aC=new(window.AudioContext||window.webkitAudioContext)();
 document.addEventListener('touchstart',()=>{if(aC.state!=='running')aC.resume();},{passive:true});
-function tn(f,d,t,dl){if(iM)return;const o=aC.createOscillator(),g=aC.createGain();o.type=t||'sine';o.frequency.value=f;g.gain.setValueAtTime(0.25,aC.currentTime+dl);g.gain.exponentialRampToValueAtTime(0.001,aC.currentTime+dl+d);o.connect(g);g.connect(aC.destination);o.start(aC.currentTime+dl);o.stop(aC.currentTime+dl+d);}
+function tn(f,d,t,dl){if(iM)return;const o=aC.createOscillator(),g=aC.createGain();o.type=t||'sine';o.frequency.value=f;g.gain.setValueAtTime(0.8,aC.currentTime+dl);g.gain.exponentialRampToValueAtTime(0.001,aC.currentTime+dl+d);o.connect(g);g.connect(aC.destination);o.start(aC.currentTime+dl);o.stop(aC.currentTime+dl+d);}
 function sGps(){aC.resume();setTimeout(()=>{tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.12,'sine',.2);tn(1047,.12,'sine',.3);tn(784,.08,'sine',.42);tn(1047,.35,'sine',.5);},150);}
 function sNext(){tn(523,.1,'sine',0);tn(784,.1,'sine',.1);tn(1047,.1,'sine',.2);tn(1319,.25,'sine',.3);} // ストップ切替チャイム
 function sAhd(){tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.15,'sine',.2);}
