@@ -80,7 +80,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 </style>
 </head>
 <body>
-<div id="splash" style="position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:40% 75%;">
+<div id="splash" style="position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:center 70%;">
   <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.15) 50%,rgba(6,6,12,0.7) 100%);"></div>
   <div style="position:absolute;top:20px;left:20px;z-index:2;">
     <div style="font-family:'Outfit';font-size:10px;font-weight:700;color:#aaa;letter-spacing:4px;text-transform:uppercase;">GPS Tracker</div>
@@ -191,7 +191,7 @@ function selectMapZoom(zoom){
 }
 
 function setView(mode){
-  if(mode==='map'){showMapMenu=true;vM='map';rnd();return;}
+  if(mode==='map'){selectMapZoom(mapZoom);return;}
   showMapMenu=false;vM=mode;lastRouteNI=-1;
   if(mode==='map'){
     initMap();
@@ -582,18 +582,10 @@ function rnd(){
     <div class="vtabs">
       <div class="vtab ${vM==='list'?'act':''}" onclick="setView('list')">📋 リスト</div>
       <div class="vtab ${vM==='map'?'act':''}" onclick="setView('map')">🗺️ 地図</div>
-    </div>
-    ${showMapMenu?`<div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;gap:20px;" onclick="showMapMenu=false;rnd();">
-      <button onclick="event.stopPropagation();selectMapZoom('nav')" style="background:#0a1a2a;border:2px solid #00d4ff;border-radius:16px;padding:20px;cursor:pointer;color:inherit;font-family:inherit;text-align:center;min-width:80px;">
-        <div style="font-size:28px;">🔍</div><div style="font-size:11px;color:#00d4ff;margin-top:4px;font-weight:700;">ナビ</div>
-      </button>
-      <button onclick="event.stopPropagation();selectMapZoom('area')" style="background:#0a1a2a;border:2px solid #666;border-radius:16px;padding:20px;cursor:pointer;color:inherit;font-family:inherit;text-align:center;min-width:80px;">
-        <div style="font-size:28px;">📍</div><div style="font-size:11px;color:#aaa;margin-top:4px;font-weight:700;">エリア</div>
-      </button>
-      <button onclick="event.stopPropagation();selectMapZoom('all')" style="background:#0a1a2a;border:2px solid #666;border-radius:16px;padding:20px;cursor:pointer;color:inherit;font-family:inherit;text-align:center;min-width:80px;">
-        <div style="font-size:28px;">🗺️</div><div style="font-size:11px;color:#aaa;margin-top:4px;font-weight:700;">全体</div>
-      </button>
-    </div>`:''}`;
+      ${vM==='map'?`<div class="vtab ${mapZoom==='nav'?'act':''}" onclick="selectMapZoom('nav')">🔍</div>
+      <div class="vtab ${mapZoom==='area'?'act':''}" onclick="selectMapZoom('area')">📍</div>
+      <div class="vtab ${mapZoom==='all'?'act':''}" onclick="selectMapZoom('all')">🗺</div>`:''}
+    </div>`;
   }
 
   // 全リストモード
@@ -692,7 +684,7 @@ function goHome(){
   // 選択画面を再表示
   const sp=document.createElement('div');
   sp.id='splash';
-  sp.style.cssText='position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:40% 75%;';
+  sp.style.cssText='position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:center 70%;';
   sp.innerHTML=`
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.15) 50%,rgba(6,6,12,0.8) 100%);"></div>
     <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;">
@@ -731,7 +723,7 @@ function startApp(mode){
   const mid=document.createElement('div');
   mid.style.cssText='position:fixed;inset:0;background:#06060c;z-index:9998;';
   mid.innerHTML=`
-    <div style="position:absolute;inset:0;background-image:url(bg2.jpg);background-size:cover;background-position:40% 75%;"></div>
+    <div style="position:absolute;inset:0;background-image:url(bg2.jpg);background-size:cover;background-position:center 70%;"></div>
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.5) 100%);"></div>
     <div style="position:absolute;top:40%;left:0;right:0;z-index:1;text-align:center;padding:0 24px;">
       <div style="font-family:'Outfit';font-size:26px;font-weight:900;color:#00d4ff;margin-bottom:4px;">${title}</div>
