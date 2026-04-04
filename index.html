@@ -80,7 +80,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 </style>
 </head>
 <body>
-<div id="splash" style="position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:center 70%;">
+<div id="splash" style="position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:40% 75%;">
   <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.15) 50%,rgba(6,6,12,0.7) 100%);"></div>
   <div style="position:absolute;top:20px;left:20px;z-index:2;">
     <div style="font-family:'Outfit';font-size:10px;font-weight:700;color:#aaa;letter-spacing:4px;text-transform:uppercase;">GPS Tracker</div>
@@ -698,7 +698,7 @@ function goHome(){
   // 選択画面を再表示
   const sp=document.createElement('div');
   sp.id='splash';
-  sp.style.cssText='position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:center 70%;';
+  sp.style.cssText='position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:40% 75%;';
   sp.innerHTML=`
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.15) 50%,rgba(6,6,12,0.8) 100%);"></div>
     <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;">
@@ -737,7 +737,7 @@ function startApp(mode){
   const mid=document.createElement('div');
   mid.style.cssText='position:fixed;inset:0;background:#06060c;z-index:9998;';
   mid.innerHTML=`
-    <div style="position:absolute;inset:0;background-image:url(bg2.jpg);background-size:cover;background-position:center 70%;"></div>
+    <div style="position:absolute;inset:0;background-image:url(bg2.jpg);background-size:cover;background-position:40% 75%;"></div>
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.5) 100%);"></div>
     <div style="position:absolute;top:20%;left:0;right:0;z-index:1;text-align:center;padding:0 24px;">
       <div style="font-family:'Outfit';font-size:26px;font-weight:900;color:#00d4ff;margin-bottom:4px;">${title}</div>
