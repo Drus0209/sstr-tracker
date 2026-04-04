@@ -417,12 +417,13 @@ function onGpsUpdate(p,announce_it){
 // Process any pending position every 5s
 setInterval(()=>{if(pendingPos){onGpsUpdate(pendingPos,false);pendingPos=null;}},5000);
 
-function loc(){
-  aC.resume(); // ユーザー操作の同期タイミングでAudioContext起動
+function loc(cb){
+  aC.resume();
   if(!navigator.geolocation){gSt='❌ GPS非対応';rnd();return;}
   gSt='📡 取得中...';rnd();
   // First: get immediate position with announcement
   navigator.geolocation.getCurrentPosition(p=>{
+    if(cb)cb();
     onGpsUpdate(p,true);
   },e=>{
     const msgs={1:'❌ 位置情報を許可してください',2:'❌ 位置取得できません',3:'❌ タイムアウト'};
@@ -580,12 +581,39 @@ function startApp(mode){
   if(!sp)return;
   aC.resume();
   sp.remove();
+
+  const titles={sstr:'SSTR 2026',nippon1:'にっぽん応援ツーリング 2026 ①',nippon2:'にっぽん応援ツーリング 2026 ②'};
+  const title=titles[mode]||'SSTR 2026';
+
+  // 中間画面
+  const mid=document.createElement('div');
+  mid.style.cssText='position:fixed;inset:0;background:#06060c;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+  mid.innerHTML=`
+    <div style="font-size:48px;">🏍️</div>
+    <div style="font-family:'Outfit';font-size:22px;font-weight:900;color:#00d4ff;text-align:center;padding:0 24px;">${title}</div>
+    <div style="font-size:14px;color:#666680;">が選択されました</div>
+    <div style="margin-top:16px;display:flex;align-items:center;gap:10px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:#00d4ff;animation:pulse 1s infinite;"></div>
+      <div style="font-size:13px;color:#00d4ff;">GPS情報取得までお待ちください</div>
+    </div>
+    <style>@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.2;}}</style>
+  `;
+  document.body.appendChild(mid);
+
+  // 読み上げ
+  setTimeout(()=>spk(title+'が選択されました。GPS情報取得までお待ちください。'),300);
+
   if(mode==='nippon1'||mode==='nippon2'){
-    document.getElementById('hdr-area').innerHTML=`<div class="hdr"><div><h1>🇯🇵 にっぽん応援ツーリング</h1></div><div style="text-align:right"><div class="now" style="font-size:20px">準備中</div></div></div>`;
-    document.getElementById('top').innerHTML=`<div style="text-align:center;padding:60px 20px;color:#666680;font-size:14px;">ルートデータ準備中です<br>もうしばらくお待ちください 🙏</div>`;
+    setTimeout(()=>{
+      mid.remove();
+      document.getElementById('hdr-area').innerHTML=`<div class="hdr"><div><h1>🇯🇵 にっぽん応援ツーリング</h1></div></div>`;
+      document.getElementById('top').innerHTML=`<div style="text-align:center;padding:60px 20px;color:#666680;font-size:14px;">ルートデータ準備中です<br>もうしばらくお待ちください 🙏</div>`;
+    },3000);
     return;
   }
-  loc();
+
+  // GPS開始、取得できたら中間画面を消す
+  loc(()=>mid.remove());
 }
 </script>
 </body>
