@@ -369,7 +369,7 @@ function ann(stops,ni,df){
     else if(df<0)m='予定より'+Math.abs(df)+'分早いです。';
     else{m='予定より'+df+'分遅れています。';if(df>30)m+='巻いていきましょう！';}
   }
-  if(tI<stops.length-1){const nx=stops[tI+1],nd=dK(gLat,gLng,nx.lat,nx.lng),nm=nx.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim();m+='次は、'+nm+'。約'+Math.round(nd)+'キロ先です。';}
+  if(tI<stops.length){const nd=dK(gLat,gLng,s.lat,s.lng),nm=s.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim();m+='次の目的地は、'+nm+'。約'+Math.round(nd)+'キロ先です。';}
   setTimeout(()=>spk(m),1000);
 }
 let watchId=null;
