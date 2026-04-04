@@ -356,7 +356,9 @@ function fN(stops){
   return{i:x,d:m};
 }
 function ann(stops,ni,df){
-  const s=stops[ni.i];
+  // 表示と同じロジック: 近くにいる(1km未満)ならそのストップ、遠いなら次のストップが現在ターゲット
+  const tI=ni.d<1?ni.i:Math.min(ni.i+1,stops.length-1);
+  const s=stops[tI];
   const rally=isRallyDay();
   if(s.name.includes('GOAL')&&ni.d<2){sGoal();if(bgm)bgm.volume=0.8;}
   else if(!rally)sOnt();
@@ -367,7 +369,7 @@ function ann(stops,ni,df){
     else if(df<0)m='予定より'+Math.abs(df)+'分早いです。';
     else{m='予定より'+df+'分遅れています。';if(df>30)m+='巻いていきましょう！';}
   }
-  if(ni.i<stops.length-1){const nx=stops[ni.i+1],nd=dK(gLat,gLng,nx.lat,nx.lng),nm=nx.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim();m+='次は、'+nm+'。約'+Math.round(nd)+'キロ先です。';}
+  if(tI<stops.length-1){const nx=stops[tI+1],nd=dK(gLat,gLng,nx.lat,nx.lng),nm=nx.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim();m+='次は、'+nm+'。約'+Math.round(nd)+'キロ先です。';}
   setTimeout(()=>spk(m),1000);
 }
 let watchId=null;
