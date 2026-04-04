@@ -556,7 +556,7 @@ function rnd(){
     </div>`;
   } else {
     document.getElementById('hdr-area').innerHTML=`<div class="hdr">
-      <div onclick="goHome()" style="cursor:pointer;"><h1>SSTR 🏍️ <span style="font-size:9px;color:#666">v5</span></h1><span class="bdg ${dc}">${dt}</span></div>
+      <div onclick="goHome()" style="cursor:pointer;"><h1>SSTR 🏍️</h1><span class="bdg ${dc}">${dt}</span></div>
       <div style="text-align:center;flex:1;padding:0 8px;">
         ${gLat?`${(()=>{const now=new Date();const nwS=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();const etaS=eta*60;let remS=((etaS-nwS)+86400)%86400;const rh=Math.floor(remS/3600),rm=Math.floor((remS%3600)/60),rs=remS%60;return `<div style="font-family:'Outfit';font-size:10px;color:var(--sub);letter-spacing:1px;">残り</div><div style="font-family:'Outfit';font-size:45px;font-weight:900;color:var(--ac);line-height:1;letter-spacing:2px;">${rh.toString().padStart(2,'0')}:${rm.toString().padStart(2,'0')}:${rs.toString().padStart(2,'0')}</div><div style="font-size:9px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()}</div>`;})()}`:''}
       </div>
