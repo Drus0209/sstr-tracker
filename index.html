@@ -463,10 +463,10 @@ function rnd(){
     ov.innerHTML=`<div class="nm">${cS.name}</div>
       ${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
       <div class="inf"><div>${gLat?cD.toFixed(1):'--'}km<span>距離</span></div><div>${cS.time}<span>予定</span></div><div>${gLat?eH+':'+eM:'--:--'}<span>${rally?'到着予想':'予定時刻'}</span></div>${cS.pt?'<div style="color:var(--grn)">+'+cS.pt+'pt<span>獲得</span></div>':''}</div>`;
-    if(map)setTimeout(()=>map.invalidateSize(),50);
+    if(map)google.maps.event.trigger(map,'resize');
   } else {
     mw.className='';
-    if(gLat){mw.style.display='block';}else{mw.style.display='none';}
+    mw.style.display='none';
     document.getElementById('top').style.display='block';
     const ov=document.getElementById('mapOv');if(ov)ov.remove();
   }
