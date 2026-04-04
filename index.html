@@ -443,6 +443,7 @@ function playAppBgm(){
 }
 function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 
+let watchId=null;
 let lastNI=-1;
 let lastUpdate=0;
 let pendingPos=null;
