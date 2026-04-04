@@ -515,6 +515,7 @@ function loc(cb){
   },e=>{
     const msgs={1:'❌ 位置情報を許可してください',2:'❌ 位置取得できません',3:'❌ タイムアウト'};
     gSt=msgs[e.code]||'❌ '+e.message;
+    if(cb)cb();
     rnd();
   },{enableHighAccuracy:true,timeout:15000});
   // Then: start continuous watch (silent updates)
@@ -779,6 +780,8 @@ function startApp(mode){
 
   // GPS開始、取得できたら中間画面を消す
   loc(()=>{gpsReady=true;tryShowMain();});
+  // 最大15秒でタイムアウト強制表示
+  setTimeout(()=>{if(mid.parentNode)mid.remove();},15000);
 }
 </script>
 </body>
