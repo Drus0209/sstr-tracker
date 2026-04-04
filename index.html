@@ -70,7 +70,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .vtab{flex:1;padding:7px;text-align:center;font-size:11px;font-weight:700;color:var(--sub);cursor:pointer;border:none;background:none;font-family:inherit;}
 .vtab.act{background:rgba(0,212,255,0.1);color:var(--ac);}
 #mapWrap.full{margin:8px 10px;}
-#mapWrap.full #map{height:calc(100vh - 160px);min-height:400px;}
+#mapWrap.full #map{height:calc(100vh - 100px);min-height:500px;}
 .map-overlay{position:absolute;bottom:10px;left:10px;right:10px;z-index:1000;background:rgba(8,20,40,0.92);border:1px solid var(--ac);border-radius:12px;padding:12px 14px;backdrop-filter:blur(8px);}
 .map-overlay .nm{font-size:16px;font-weight:900;}
 .map-overlay .mm{font-size:11px;color:var(--org);margin-top:2px;}
@@ -218,7 +218,7 @@ let map=null,mMe=null,mTgt=null,mStops=[];
 function initMap(){
   if(map)return;
   map=new google.maps.Map(document.getElementById('map'),{
-    center:{lat:35.69,lng:139.84},zoom:14,
+    center:{lat:35.69,lng:139.84},zoom:16,
     disableDefaultUI:true,zoomControl:true,
     styles:[{featureType:'poi',stylers:[{visibility:'off'}]}]
   });
@@ -279,8 +279,8 @@ function updateMap(lat,lng,stops,nI){
   }
   // Always center on user
   const tDist=dK(lat,lng,tS.lat,tS.lng);
-  let zoom=16;
-  if(tDist>30)zoom=12;else if(tDist>15)zoom=13;else if(tDist>5)zoom=14;else if(tDist>1)zoom=15;
+  let zoom=17;
+  if(tDist>50)zoom=12;else if(tDist>30)zoom=13;else if(tDist>15)zoom=14;else if(tDist>5)zoom=15;else if(tDist>1)zoom=16;
   map.setCenter({lat,lng});map.setZoom(zoom);
 }
 
