@@ -536,7 +536,7 @@ function rnd(){
   const pl=pT(st[nI].time),df=gLat&&isRallyDay()?(nwM-pl):0;
   const rally=isRallyDay();
   let dc=!rally?'ot':Math.abs(df)<=5?'ot':df<0?'ah':'bh';
-  let dt=!rally?'テスト':Math.abs(df)<=5?'±0':((df>0?'+':'-')+fD(df));
+  let dt=!rally?'':Math.abs(df)<=5?'±0':((df>0?'+':'-')+fD(df));
   if(!gLat){dc='ot';dt='--';}
   let cI=gLat?(nD<0.5?nI:Math.min(nI+1,st.length-1)):0;
   const cS=st[cI],cD=gLat?dK(gLat,gLng,cS.lat,cS.lng):0;
