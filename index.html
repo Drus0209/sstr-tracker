@@ -80,6 +80,11 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 </style>
 </head>
 <body>
+<div id="splash" style="position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;" onclick="startApp()">
+  <div style="font-size:56px;">🏍️</div>
+  <div style="font-family:'Outfit';font-size:28px;font-weight:900;color:#00d4ff;letter-spacing:2px;">SSTR 2026</div>
+  <div style="font-size:13px;color:#666680;margin-top:8px;">タップしてスタート</div>
+</div>
 <div id="hdr-area"></div>
 <div id="top"></div>
 <div id="mapWrap"><div id="map"></div></div>
@@ -550,8 +555,13 @@ setInterval(rnd,30000);
   else cDay='day1'; // Default day1 (including 5/23 and testing)
 })();
 rnd();
-// Auto start GPS tracking on load
-setTimeout(loc,500);
+function startApp(){
+  const sp=document.getElementById('splash');
+  if(!sp)return;
+  aC.resume();
+  sp.remove();
+  loc();
+}
 </script>
 </body>
 </html>
