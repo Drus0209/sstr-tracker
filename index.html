@@ -259,6 +259,11 @@ function updateMap(lat,lng,stops,nI){
   // Rebuild when nearest stop changes
   if(nI!==lastRouteNI){
     lastRouteNI=nI;
+    // Auto-zoom on stop change based on distance
+    const tDist=dK(lat,lng,tS.lat,tS.lng);
+    let zoom=22;
+    if(tDist>50)zoom=14;else if(tDist>30)zoom=15;else if(tDist>15)zoom=16;else if(tDist>5)zoom=17;else if(tDist>1)zoom=18;else if(tDist>0.3)zoom=20;
+    map.setZoom(zoom);
     if(mTgt){mTgt.setMap(null);}
     mStops.forEach(m=>m.setMap(null));mStops=[];
     mPolylines.forEach(p=>{if(p.setMap)p.setMap(null);});mPolylines=[];
@@ -295,12 +300,10 @@ function updateMap(lat,lng,stops,nI){
       });
     }
   }
-  // Always center on user
+  // Center on user - only auto-zoom when stop changes
+  // Otherwise keep user's manual zoom level
   const tDist=dK(lat,lng,tS.lat,tS.lng);
-  let zoom=22;
-  if(tDist>50)zoom=14;else if(tDist>30)zoom=15;else if(tDist>15)zoom=16;else if(tDist>5)zoom=17;else if(tDist>1)zoom=18;else if(tDist>0.3)zoom=20;
-  map.setCenter({lat,lng});map.setZoom(zoom);
-  gSt='📍 追尾中 z'+map.getZoom()+' ('+gLat.toFixed(4)+', '+gLng.toFixed(4)+')'+(gHeading!==null?' 🧭'+Math.round(gHeading)+'°':'');
+  map.panTo({lat,lng});
 }
 
 // === AUDIO ===
