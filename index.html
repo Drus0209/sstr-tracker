@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>SSTR2026 🏍️</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBwPBSu3pJ7LBsQ7WvSbTWiQsFY0R8cREY&language=ja"></script>
 <style>
 :root{--bg:#06060c;--card:#111118;--bdr:#1e1e2e;--txt:#e8e8f0;--sub:#666680;--ac:#00d4ff;--grn:#00e676;--red:#ff4444;--org:#ff9100;--ylw:#ffd740;--pk:#ff6b9d;--noto:#4caf50;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -39,9 +38,6 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .pc .ptb{background:#1a2a1a;border:1px solid var(--grn);color:var(--grn);padding:4px 16px;border-radius:20px;font-weight:800;font-family:'Outfit';font-size:16px;}
 #mapWrap{display:none;margin:8px 10px;border-radius:14px;overflow:hidden;border:2px solid var(--bdr);position:relative;}
 #map{height:80vh;width:100%;background:#e8e8e8;}
-.leaflet-container{background:#e8e8e8!important;}
-.leaflet-popup-content-wrapper{background:#fff;color:#333;border-radius:8px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
-.leaflet-popup-tip{background:#fff;}
 .pn{background:var(--card);border:1px solid var(--bdr);padding:14px 16px;display:flex;align-items:center;gap:12px;}
 .pn .ar{font-size:28px;color:var(--sub);flex-shrink:0;}
 .pn .lb{font-size:9px;color:var(--sub);text-transform:uppercase;letter-spacing:2px;margin-bottom:2px;}
@@ -168,79 +164,124 @@ function setView(mode){
 function showRouteOnly(stops){
   initMap();
   document.getElementById('mapWrap').style.display='block';
-  if(mMe)map.removeLayer(mMe);if(mTgt)map.removeLayer(mTgt);if(mLine)map.removeLayer(mLine);if(mRoute)map.removeLayer(mRoute);
-  mStops.forEach(m=>map.removeLayer(m));mStops=[];clearRoutes();
+  clearMap();
   const cols={noto:'#4caf50',michi:'#2196f3',goal:'#ff9100',qk:'#ff9100',gs:'#e85300',move:'#666',other:'#9e9e9e'};
-  const rc=[];
+  const bounds=new google.maps.LatLngBounds();
   stops.forEach((s,i)=>{
-    rc.push([s.lat,s.lng]);
     const c=cols[s.type]||'#666';
-    const ic=L.divIcon({className:'',html:'<div style="width:8px;height:8px;background:'+c+';border:1px solid #fff;border-radius:50%;"></div>',iconSize:[8,8],iconAnchor:[4,4]});
-    const mk=L.marker([s.lat,s.lng],{icon:ic}).addTo(map).bindPopup(s.name+'<br>'+s.time);
+    const mk=new google.maps.Marker({position:{lat:s.lat,lng:s.lng},map:map,
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:5,fillColor:c,fillOpacity:1,strokeColor:'#fff',strokeWeight:1},
+      title:s.name});
+    mk.addListener('click',()=>{new google.maps.InfoWindow({content:s.name+'<br>'+s.time}).open(map,mk);});
     mStops.push(mk);
+    bounds.extend({lat:s.lat,lng:s.lng});
   });
-  // Fetch real road route via OSRM
-  drawRoute(stops.map(s=>[s.lng,s.lat]),'#00d4ff',2,0.5);
-  map.fitBounds(L.latLngBounds(rc),{padding:[40,40],maxZoom:13});
-  setTimeout(()=>map.invalidateSize(),100);
+  // Draw route via Directions API
+  fetchGoogleRoute(stops);
+  map.fitBounds(bounds,{top:40,bottom:40,left:40,right:40});
 }
 
-// Route display (straight lines - navigation is via Google Maps, not this tracker)
-// OSRM removed: Japanese one-way street data was inaccurate causing illegal route suggestions
-let mRealRoutes=[];
-function clearRoutes(){mRealRoutes.forEach(r=>map.removeLayer(r));mRealRoutes=[];}
-function drawRoute(coords,color,weight,opacity){
-  const latlngs=coords.map(c=>[c[1],c[0]]);
-  const line=L.polyline(latlngs,{color:color,weight:weight,opacity:opacity}).addTo(map);
-  mRealRoutes.push(line);
+// Google Directions route
+let mDirectionsRenderer=null;
+let mPolylines=[];
+function clearMap(){
+  if(mMe){mMe.setMap(null);mMe=null;}
+  if(mTgt){mTgt.setMap(null);mTgt=null;}
+  mStops.forEach(m=>m.setMap(null));mStops=[];
+  if(mDirectionsRenderer){mDirectionsRenderer.setMap(null);mDirectionsRenderer=null;}
+  mPolylines.forEach(p=>p.setMap(null));mPolylines=[];
+}
+function fetchGoogleRoute(stops){
+  if(stops.length<2)return;
+  const ds=new google.maps.DirectionsService();
+  // Split into chunks of 25 waypoints (Google limit)
+  for(let i=0;i<stops.length-1;i+=24){
+    const chunk=stops.slice(i,Math.min(i+25,stops.length));
+    const origin={lat:chunk[0].lat,lng:chunk[0].lng};
+    const dest={lat:chunk[chunk.length-1].lat,lng:chunk[chunk.length-1].lng};
+    const waypoints=chunk.slice(1,-1).map(s=>({location:{lat:s.lat,lng:s.lng},stopover:true}));
+    ds.route({origin,destination:dest,waypoints,travelMode:'DRIVING'},
+      (result,status)=>{
+        if(status==='OK'){
+          const dr=new google.maps.DirectionsRenderer({map:map,
+            suppressMarkers:true,preserveViewport:true,
+            polylineOptions:{strokeColor:'#00d4ff',strokeWeight:3,strokeOpacity:0.6}});
+          dr.setDirections(result);
+          mPolylines.push(dr);
+        }
+      });
+  }
 }
 
 // === MAP ===
-let map=null,mMe=null,mTgt=null,mLine=null,mRoute=null,mStops=[];
+let map=null,mMe=null,mTgt=null,mStops=[];
 function initMap(){
   if(map)return;
-  map=L.map('map',{zoomControl:true,attributionControl:false}).setView([35.69,139.84],16);
-  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{maxZoom:18,attribution:'国土地理院'}).addTo(map);
+  map=new google.maps.Map(document.getElementById('map'),{
+    center:{lat:35.69,lng:139.84},zoom:14,
+    disableDefaultUI:true,zoomControl:true,
+    styles:[{featureType:'poi',stylers:[{visibility:'off'}]}]
+  });
 }
 let lastRouteNI=-1;
 function updateMap(lat,lng,stops,nI){
   initMap();
   document.getElementById('mapWrap').style.display='block';
-  // Always update my position marker
-  if(mMe)map.removeLayer(mMe);
-  const arrowSvg=gHeading!==null?
-    '<svg width="28" height="28" viewBox="0 0 28 28" style="transform:rotate('+gHeading+'deg)"><polygon points="14,2 24,24 14,18 4,24" fill="#00d4ff" stroke="#fff" stroke-width="2"/></svg>':
-    '<div style="width:16px;height:16px;background:#00d4ff;border:3px solid #fff;border-radius:50%;box-shadow:0 0 16px rgba(0,212,255,0.8);"></div>';
-  const meIc=L.divIcon({className:'',html:arrowSvg,iconSize:[28,28],iconAnchor:[14,14]});
-  mMe=L.marker([lat,lng],{icon:meIc}).addTo(map);
+  // Update my position marker
+  if(!mMe){
+    mMe=new google.maps.Marker({map:map,zIndex:100,
+      icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
+        fillColor:'#00d4ff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,
+        rotation:gHeading||0}});
+  }
+  mMe.setPosition({lat,lng});
+  if(gHeading!==null){
+    mMe.setIcon({path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
+      fillColor:'#00d4ff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,
+      rotation:gHeading});
+  }
   const tI=Math.min(nI+1,stops.length-1),tS=stops[tI];
-  // Only rebuild routes + stop markers when nearest stop changes
+  // Rebuild when nearest stop changes
   if(nI!==lastRouteNI){
     lastRouteNI=nI;
-    if(mTgt)map.removeLayer(mTgt);if(mLine)map.removeLayer(mLine);if(mRoute)map.removeLayer(mRoute);
-    mStops.forEach(m=>map.removeLayer(m));mStops=[];clearRoutes();
-    const tIc=L.divIcon({className:'',html:'<div style="width:12px;height:12px;background:#ff9100;border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(255,145,0,0.5);"></div>',iconSize:[12,12],iconAnchor:[6,6]});
-    mTgt=L.marker([tS.lat,tS.lng],{icon:tIc}).addTo(map).bindPopup(tS.name);
-    // OSRM routes - only on stop change
-    drawRoute([[lng,lat],[tS.lng,tS.lat]],'#00d4ff',3,0.8);
-    const remaining=[];for(let i=nI;i<stops.length;i++)remaining.push([stops[i].lng,stops[i].lat]);
-    if(remaining.length>1)drawRoute(remaining,'#444',2,0.4);
+    if(mTgt){mTgt.setMap(null);}
+    mStops.forEach(m=>m.setMap(null));mStops=[];
+    mPolylines.forEach(p=>{if(p.setMap)p.setMap(null);});mPolylines=[];
+    // Next stop marker
+    mTgt=new google.maps.Marker({position:{lat:tS.lat,lng:tS.lng},map:map,
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,
+        fillColor:'#ff9100',fillOpacity:1,strokeColor:'#fff',strokeWeight:2},
+      title:tS.name});
+    // Google Directions: current pos → next stop (road-following route!)
+    const ds=new google.maps.DirectionsService();
+    ds.route({origin:{lat,lng},destination:{lat:tS.lat,lng:tS.lng},travelMode:'DRIVING'},
+      (result,status)=>{
+        if(status==='OK'){
+          const dr=new google.maps.DirectionsRenderer({map:map,
+            suppressMarkers:true,preserveViewport:true,
+            polylineOptions:{strokeColor:'#00d4ff',strokeWeight:4,strokeOpacity:0.8}});
+          dr.setDirections(result);
+          mPolylines.push(dr);
+        }
+      });
+    // Remaining stops markers
     if(vM==='map'){
       const cols={noto:'#4caf50',michi:'#2196f3',goal:'#ff9100',qk:'#ff9100',gs:'#e85300',move:'#666',other:'#9e9e9e'};
       stops.forEach((s,i)=>{
         if(i===tI)return;
-        const c=cols[s.type]||'#666',op=i<nI?0.3:0.8,sz=i<nI?6:8;
-        const ic=L.divIcon({className:'',html:'<div style="width:'+sz+'px;height:'+sz+'px;background:'+c+';border:1px solid #fff;border-radius:50%;opacity:'+op+';"></div>',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]});
-        const mk=L.marker([s.lat,s.lng],{icon:ic}).addTo(map).bindPopup(s.name+'<br>'+s.time);
+        const c=cols[s.type]||'#666',op=i<nI?0.3:0.8;
+        const mk=new google.maps.Marker({position:{lat:s.lat,lng:s.lng},map:map,opacity:op,
+          icon:{path:google.maps.SymbolPath.CIRCLE,scale:i<nI?4:5,
+            fillColor:c,fillOpacity:1,strokeColor:'#fff',strokeWeight:1}});
         mStops.push(mk);
       });
     }
   }
-  // Always center on user - auto zoom by distance
+  // Always center on user
   const tDist=dK(lat,lng,tS.lat,tS.lng);
   let zoom=16;
   if(tDist>30)zoom=12;else if(tDist>15)zoom=13;else if(tDist>5)zoom=14;else if(tDist>1)zoom=15;
-  map.setView([lat,lng],zoom,{animate:false});
+  map.setCenter({lat,lng});map.setZoom(zoom);
 }
 
 // === AUDIO ===
@@ -287,13 +328,14 @@ let hMode=true; // heading mode on by default
 // Fast: just move the marker without rebuilding everything
 function moveMarker(lat,lng){
   if(mMe){
-    mMe.setLatLng([lat,lng]);
+    mMe.setPosition({lat,lng});
     if(gHeading!==null){
-      const svg=mMe.getElement()?.querySelector('svg');
-      if(svg)svg.style.transform='rotate('+gHeading+'deg)';
+      mMe.setIcon({path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
+        fillColor:'#00d4ff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,
+        rotation:gHeading});
     }
   }
-  if(map)map.panTo([lat,lng],{animate:true,duration:1});
+  if(map)map.panTo({lat,lng});
 }
 
 function onGpsUpdate(p,announce_it){
