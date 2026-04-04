@@ -433,23 +433,8 @@ function ann(stops,ni,df){
   if(tI<stops.length){const nd=dK(gLat,gLng,s.lat,s.lng),nm=s.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim();m+='次の目的地は、'+nm+'。約'+Math.round(nd)+'キロ先です。';}
   setTimeout(()=>spk(m),1000);
 }
-let roadDist=null,lastRoadDistCI=-1;
-
-function fetchRoadDist(lat,lng,stop){
-  const ds=new google.maps.DirectionsService();
-  ds.route({
-    origin:{lat,lng},
-    destination:{lat:stop.lat,lng:stop.lng},
-    travelMode:'DRIVING',
-    avoidHighways:!!stop.noHwy
-  },(result,status)=>{
-    if(status==='OK'){
-      const meters=result.routes[0].legs.reduce((s,l)=>s+l.distance.value,0);
-      roadDist=(meters/1000);
-    }
-  });
-}
-
+let watchId=null;
+let lastNI=-1;
 let lastUpdate=0;
 let pendingPos=null;
 let gHeading=null; // GPS heading for map rotation
@@ -515,7 +500,6 @@ function loc(cb){
   },e=>{
     const msgs={1:'❌ 位置情報を許可してください',2:'❌ 位置取得できません',3:'❌ タイムアウト'};
     gSt=msgs[e.code]||'❌ '+e.message;
-    if(cb)cb();
     rnd();
   },{enableHighAccuracy:true,timeout:15000});
   // Then: start continuous watch (silent updates)
@@ -557,9 +541,6 @@ function rnd(){
   if(!gLat){dc='ot';dt='--';}
   let cI=gLat?(nD<0.5?nI:Math.min(nI+1,st.length-1)):0;
   const cS=st[cI],cD=gLat?dK(gLat,gLng,cS.lat,cS.lng):0;
-  // cIが変わったときだけDirections APIで道路距離を取得
-  if(gLat&&cI!==lastRoadDistCI){lastRoadDistCI=cI;roadDist=null;try{fetchRoadDist(gLat,gLng,cS);}catch(e){}}
-  const dispDist=roadDist!==null?roadDist:cD; // 道路距離があればそちらを使用
   const cP=pT(cS.time),eta=gLat&&rally?cP+df:cP;
   const eH=Math.floor(((eta%1440)+1440)%1440/60).toString().padStart(2,'0'),eM=(((eta%1440)+1440)%1440%60).toString().padStart(2,'0');
   const xI=Math.min(cI+1,st.length-1),xS=st[xI],xD=gLat?dK(gLat,gLng,xS.lat,xS.lng):0;
@@ -630,7 +611,7 @@ function rnd(){
         <button onclick="toggleNight();event.stopPropagation();" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:${nightMode?'var(--ylw)':'var(--sub)'};font-size:18px;padding:4px 8px;cursor:pointer;">${nightMode?'🌙':'☀️'}</button>
       </div>
       ${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
-      <div class="inf"><div>${gLat?dispDist.toFixed(1):'--'}km<span>距離</span></div><div>${cS.time}<span>予定</span></div><div>${gLat?eH+':'+eM:'--:--'}<span>${rally?'到着予想':'予定時刻'}</span></div>${cS.pt?'<div style="color:var(--grn)">+'+cS.pt+'pt<span>獲得</span></div>':''}</div>
+      <div class="inf"><div>${gLat?cD.toFixed(1):'--'}km<span>距離</span></div><div>${cS.time}<span>予定</span></div><div>${gLat?eH+':'+eM:'--:--'}<span>${rally?'到着予想':'予定時刻'}</span></div>${cS.pt?'<div style="color:var(--grn)">+'+cS.pt+'pt<span>獲得</span></div>':''}</div>
       <div style="display:flex;gap:6px;margin-top:8px;">
         <button onclick="setZoomMode(0);event.stopPropagation();" style="flex:1;background:${zoomMode===0?'var(--ac)':'none'};border:1px solid ${zoomMode===0?'var(--ac)':'var(--bdr)'};border-radius:8px;color:${zoomMode===0?'#000':'var(--sub)'};padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;">🔍 近接</button>
         <button onclick="setZoomMode(1);event.stopPropagation();" style="flex:1;background:${zoomMode===1?'var(--ac)':'none'};border:1px solid ${zoomMode===1?'var(--ac)':'var(--bdr)'};border-radius:8px;color:${zoomMode===1?'#000':'var(--sub)'};padding:6px 4px;font-size:11px;font-weight:700;cursor:pointer;">📍 3先</button>
@@ -654,7 +635,7 @@ function rnd(){
   // Current
   t+=`<div class="pnl pc"><div class="lb">▶ いま向かっている場所</div>
     <div class="nm">${cS.name}</div>${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
-    <div class="sts"><div class="st"><div class="v">${gLat?dispDist.toFixed(1):'--'}</div><div class="l">km先</div></div>
+    <div class="sts"><div class="st"><div class="v">${gLat?cD.toFixed(1):'--'}</div><div class="l">km先</div></div>
     <div class="st"><div class="v">${cS.time}</div><div class="l">予定</div></div>
     <div class="st"><div class="v">${gLat?eH+':'+eM:'--:--'}</div><div class="l">${rally?'到着予想':'予定時刻'}</div></div></div>
     ${cS.pt?'<div class="pb"><div class="ptb">+'+cS.pt+'pt</div></div>':''}
@@ -743,7 +724,7 @@ function startApp(mode){
     <div style="position:absolute;top:40%;left:0;right:0;z-index:1;text-align:center;padding:0 24px;">
       <div style="font-family:'Outfit';font-size:26px;font-weight:900;color:#00d4ff;margin-bottom:4px;">${title}</div>
       <div style="font-size:13px;color:#ccc;margin-bottom:20px;">が選択されました</div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;">
         <div style="width:8px;height:8px;border-radius:50%;background:#00d4ff;animation:pulse 1s infinite;flex-shrink:0;"></div>
         <div style="font-size:13px;color:#00d4ff;">GPS情報取得までお待ちください</div>
       </div>
@@ -752,31 +733,34 @@ function startApp(mode){
   `;
   document.body.appendChild(mid);
 
-  const msg=title+'が選択されました。GPS情報取得までお待ちください。';
+  // 読み上げ終わったらGPS取得済みならmidを消す
+  let gpsReady=false,ttsReady=false;
+  function tryShowMain(){if(gpsReady&&ttsReady&&mid.parentNode)mid.remove();}
 
-  // TTS読み上げ
+  const msg=title+'が選択されました。GPS情報取得までお待ちください。';
+  // 文字数から読み上げ時間を推定（1文字約150ms、rate1.1で割る）
+  const estimatedMs=Math.ceil(msg.length*150/1.1)+500;
   setTimeout(()=>{
     if(!iM&&'speechSynthesis'in window){
       const u=new SpeechSynthesisUtterance(msg);
       u.lang='ja-JP';u.rate=1.1;
       speechSynthesis.speak(u);
     }
+    // 推定時間後にttsReady
+    setTimeout(()=>{ttsReady=true;tryShowMain();},estimatedMs);
   },500);
-
-  function showMain(){if(mid.parentNode)mid.remove();}
 
   if(mode==='nippon1'||mode==='nippon2'){
     setTimeout(()=>{
-      showMain();
+      mid.remove();
       document.getElementById('hdr-area').innerHTML=`<div class="hdr"><div><h1>🇯🇵 にっぽん応援ツーリング</h1></div></div>`;
       document.getElementById('top').innerHTML=`<div style="text-align:center;padding:60px 20px;color:#666680;font-size:14px;">ルートデータ準備中です<br>もうしばらくお待ちください 🙏</div>`;
     },3000);
     return;
   }
 
-  // GPS取得できたら即表示、最大10秒で強制表示
-  loc(()=>showMain());
-  setTimeout(showMain,10000);
+  // GPS開始、取得できたら中間画面を消す
+  loc(()=>{gpsReady=true;tryShowMain();});
 }
 </script>
 </body>
