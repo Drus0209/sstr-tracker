@@ -749,7 +749,8 @@ function startApp(mode){
 
   // 読み上げ終わったらGPS取得済みならmidを消す
   let gpsReady=false,ttsReady=false;
-  function tryShowMain(){if(gpsReady&&ttsReady&&mid.parentNode)mid.remove();}
+  function fadeBgm(){if(appBgm){let v=appBgm.volume;const f=setInterval(()=>{v=Math.max(0,v-0.05);appBgm.volume=v;if(v<=0){stopAppBgm();clearInterval(f);}},80);}}
+  function tryShowMain(){if(gpsReady&&ttsReady&&mid.parentNode){fadeBgm();mid.remove();}}
 
   const msg=title+'が選択されました。GPS情報取得までお待ちください。';
   // 文字数から読み上げ時間を推定（1文字約150ms、rate1.1で割る）
@@ -776,7 +777,7 @@ function startApp(mode){
   // GPS開始、取得できたら中間画面を消す
   loc(()=>{gpsReady=true;tryShowMain();});
   // TTS終了後さらに5秒待っても画面が切り替わらなければ強制表示
-  setTimeout(()=>{if(mid.parentNode)mid.remove();},estimatedMs+5500);
+  setTimeout(()=>{if(mid.parentNode){fadeBgm();mid.remove();}},estimatedMs+5500);
 }
 </script>
 </body>
