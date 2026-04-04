@@ -310,6 +310,7 @@ function updateMap(lat,lng,stops,nI){
 const aC=new(window.AudioContext||window.webkitAudioContext)();
 function tn(f,d,t,dl){if(iM)return;const o=aC.createOscillator(),g=aC.createGain();o.type=t||'sine';o.frequency.value=f;g.gain.setValueAtTime(0.25,aC.currentTime+dl);g.gain.exponentialRampToValueAtTime(0.001,aC.currentTime+dl+d);o.connect(g);g.connect(aC.destination);o.start(aC.currentTime+dl);o.stop(aC.currentTime+dl+d);}
 function sGps(){tn(880,.1,'sine',0);tn(1100,.12,'sine',.08);}
+function sNext(){tn(523,.1,'sine',0);tn(784,.1,'sine',.1);tn(1047,.1,'sine',.2);tn(1319,.25,'sine',.3);} // ストップ切替チャイム
 function sAhd(){tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.15,'sine',.2);}
 function sBhd(){tn(400,.15,'square',0);tn(350,.15,'square',.12);tn(300,.2,'square',.24);}
 function sOnt(){tn(700,.12,'sine',0);tn(700,.12,'sine',.15);}
@@ -379,7 +380,7 @@ function onGpsUpdate(p,announce_it){
   if(announce_it || lastNI===-1 || ni.i!==lastNI){
     updateMap(gLat,gLng,st,ni.i);
     if(announce_it || (lastNI!==-1 && ni.i!==lastNI)){
-      sGps();
+      if(lastNI!==-1 && ni.i!==lastNI) sNext(); else sGps();
       const nw=new Date(),nm=nw.getHours()*60+nw.getMinutes();
       ann(st,ni,nm-pT(st[ni.i].time));
     }
