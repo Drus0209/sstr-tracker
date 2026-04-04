@@ -606,15 +606,18 @@ function startApp(mode){
   let gpsReady=false,ttsReady=false;
   function tryShowMain(){if(gpsReady&&ttsReady&&mid.parentNode)mid.remove();}
 
+  const msg=title+'が選択されました。GPS情報取得までお待ちください。';
+  // 文字数から読み上げ時間を推定（1文字約150ms、rate1.1で割る）
+  const estimatedMs=Math.ceil(msg.length*150/1.1)+500;
   setTimeout(()=>{
-    if(iM){ttsReady=true;tryShowMain();return;}
-    if('speechSynthesis'in window){
-      const u=new SpeechSynthesisUtterance(title+'が選択されました。GPS情報取得までお待ちください。');
+    if(!iM&&'speechSynthesis'in window){
+      const u=new SpeechSynthesisUtterance(msg);
       u.lang='ja-JP';u.rate=1.1;
-      u.onend=()=>{ttsReady=true;tryShowMain();};
       speechSynthesis.speak(u);
-    } else {ttsReady=true;tryShowMain();}
-  },1000);
+    }
+    // 推定時間後にttsReady
+    setTimeout(()=>{ttsReady=true;tryShowMain();},estimatedMs);
+  },500);
 
   if(mode==='nippon1'||mode==='nippon2'){
     setTimeout(()=>{
