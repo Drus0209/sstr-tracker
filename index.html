@@ -155,9 +155,10 @@ function setView(mode){
       const ni=fN(st);
       updateMap(gLat,gLng,st,ni.i);
     } else {
-      // No GPS yet - show full route
       showRouteOnly(st);
     }
+  } else {
+    document.getElementById('mapWrap').style.display='none';
   }
   rnd();
 }
@@ -238,6 +239,7 @@ function initMap(){
 let lastRouteNI=-1;
 function updateMap(lat,lng,stops,nI){
   initMap();
+  if(vM!=='map'){document.getElementById('mapWrap').style.display='none';return;}
   document.getElementById('mapWrap').style.display='block';
   // Update my position marker
   if(!mMe){
