@@ -232,6 +232,7 @@ function initMap(){
   if(map)return;
   map=new google.maps.Map(document.getElementById('map'),{
     center:{lat:35.69,lng:139.84},zoom:16,maxZoom:22,
+    isFractionalZoomEnabled:true,
     disableDefaultUI:true,zoomControl:true,
     styles:[{featureType:'poi',stylers:[{visibility:'off'}]}]
   });
@@ -299,6 +300,7 @@ function updateMap(lat,lng,stops,nI){
   let zoom=22;
   if(tDist>50)zoom=14;else if(tDist>30)zoom=15;else if(tDist>15)zoom=16;else if(tDist>5)zoom=17;else if(tDist>1)zoom=18;else if(tDist>0.3)zoom=20;
   map.setCenter({lat,lng});map.setZoom(zoom);
+  gSt='📍 追尾中 z'+map.getZoom()+' ('+gLat.toFixed(4)+', '+gLng.toFixed(4)+')'+(gHeading!==null?' 🧭'+Math.round(gHeading)+'°':'');
 }
 
 // === AUDIO ===
@@ -443,7 +445,7 @@ function rnd(){
 
   // Header
   document.getElementById('hdr-area').innerHTML=`<div class="hdr">
-    <div><h1>SSTR 🏍️</h1><span class="bdg ${dc}">${dt}</span></div>
+    <div><h1>SSTR 🏍️ <span style="font-size:9px;color:#666">v5</span></h1><span class="bdg ${dc}">${dt}</span></div>
     <div style="text-align:right"><div class="now">${nH}:${nM}</div><div class="date">${nw.getMonth()+1}/${nw.getDate()} ${['日','月','火','水','木','金','土'][nw.getDay()]}</div></div>
   </div>
   <div class="vtabs">
