@@ -418,7 +418,7 @@ function testJump(){
   rnd();sGps();
   const ni=fN(st),nw=new Date(),nm=nw.getHours()*60+nw.getMinutes();
   ann(st,ni,nm-pT(st[ni.i].time));
-  updateMap(gLat,gLng,st,ni.i);
+  if(vM==='map')updateMap(gLat,gLng,st,ni.i);
 }
 
 // === RENDER (split: hdr-area, top, btm) ===
