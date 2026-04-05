@@ -633,7 +633,11 @@ function rnd(){
     if(!ov){ov=document.createElement('div');ov.id='mapOv';ov.className='map-overlay';mw.style.position='relative';mw.appendChild(ov);}
     ov.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <div class="nm">${cS.name}</div>
-        <button onclick="toggleNight();event.stopPropagation();" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:${nightMode?'var(--ylw)':'var(--sub)'};font-size:18px;padding:4px 8px;cursor:pointer;">${nightMode?'🌙':'☀️'}</button>
+        <div style="display:flex;gap:6px;">
+          <button onclick="${watchId?'stopWatch()':'loc()'};event.stopPropagation();" style="background:none;border:1px solid ${watchId?'var(--grn)':'var(--bdr)'};border-radius:8px;color:${watchId?'var(--grn)':'var(--sub)'};font-size:18px;padding:4px 8px;cursor:pointer;">📍</button>
+          <button onclick="iM=!iM;rnd();event.stopPropagation();" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:${iM?'var(--sub)':'var(--ac)'};font-size:18px;padding:4px 8px;cursor:pointer;">${iM?'🔇':'🔊'}</button>
+          <button onclick="toggleNight();event.stopPropagation();" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:${nightMode?'var(--ylw)':'var(--sub)'};font-size:18px;padding:4px 8px;cursor:pointer;">${nightMode?'🌙':'☀️'}</button>
+        </div>
       </div>
       ${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
       <div class="inf"><div>${gLat?dispDist.toFixed(1):'--'}km<span>距離</span></div><div>${cS.time}<span>予定</span></div><div>${gLat?eH+':'+eM:'--:--'}<span>${rally?'到着予想':'予定時刻'}</span></div>${cS.pt?'<div style="color:var(--grn)">+'+cS.pt+'pt<span>獲得</span></div>':''}</div>
@@ -672,20 +676,21 @@ function rnd(){
   if(vM==='list'){
     if(xI!==cI)b+=`<div class="pnl pn"><div class="ar">›</div><div><div class="lb">その次</div><div class="nm">${xS.name}</div><div class="dt">${xS.time}${gLat?' ・ 約'+xD.toFixed(0)+'km':''}${xS.pt?' ・ +'+xS.pt+'pt':''}</div></div></div>`;
     if(cDay==='day1'){const pc=Math.min(100,Math.round(pPt/15*100));b+=`<div class="ptbar"><div><div class="tot">${pPt}</div><div class="lb">獲得pt</div></div><div class="prg"><div class="pf" style="width:${pc}%"></div></div><div style="text-align:right"><div class="tot" style="font-size:16px">${tPt}</div><div class="lb">MAX</div></div></div>`;}
-  }
-  b+=`<div class="ctrls">
-    <button class="cb pri" onclick="${watchId?'stopWatch()':'loc()'}">📍 ${watchId?'追尾中…⏹':'現在地'}</button>
-    <button class="cb ${iM?'':'act'}" onclick="iM=!iM;rnd();">${iM?'🔇':'🔊'}</button>
-    <label class="cb" style="border-color:var(--pk);color:var(--pk);">🎵 BGM<input type="file" accept="audio/*" onchange="lBGM(event)" style="display:none;"></label>
-    <button class="cb ${sFl?'act':''}" onclick="sFl=!sFl;rnd();">📋 全リスト</button>
-  </div>
-  <div id="bi" style="display:${bgm?'block':'none'};text-align:center;font-size:11px;color:var(--pk);padding:2px;"></div>
-  <div class="gps">${gSt}</div>
-  <div class="dtabs"><div class="dtab ${cDay==='day1'?'act':''}" onclick="cDay='day1';rnd();">Day1 (5/23)</div><div class="dtab ${cDay==='day2'?'act':''}" onclick="cDay='day2';rnd();">Day2 (5/24)</div></div>`;
-  if(vM==='list'){
+    b+=`<div class="ctrls">
+      <button class="cb pri" onclick="${watchId?'stopWatch()':'loc()'}">📍 ${watchId?'追尾中…⏹':'現在地'}</button>
+      <button class="cb ${iM?'':'act'}" onclick="iM=!iM;rnd();">${iM?'🔇':'🔊'}</button>
+      <label class="cb" style="border-color:var(--pk);color:var(--pk);">🎵 BGM<input type="file" accept="audio/*" onchange="lBGM(event)" style="display:none;"></label>
+      <button class="cb ${sFl?'act':''}" onclick="sFl=!sFl;rnd();">📋 全リスト</button>
+    </div>
+    <div id="bi" style="display:${bgm?'block':'none'};text-align:center;font-size:11px;color:var(--pk);padding:2px;"></div>
+    <div class="gps">${gSt}</div>
+    <div class="dtabs"><div class="dtab ${cDay==='day1'?'act':''}" onclick="cDay='day1';rnd();">Day1 (5/23)</div><div class="dtab ${cDay==='day2'?'act':''}" onclick="cDay='day2';rnd();">Day2 (5/24)</div></div>`;
     b+=`<div class="fl ${sFl?'show':''}"><div class="fh">📋 全ストップ</div>`;
     st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';b+=`<div class="fi ${c}"><div class="dot ${tc[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}<span class="tm">${s.time}</span></div>`;});
     b+=`</div>`;
+  } else {
+    // 地図タブ: GPSステータスのみ
+    b+=`<div class="gps">${gSt}</div>`;
   }
   document.getElementById('btm').innerHTML=b;
 }
