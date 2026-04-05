@@ -1,4 +1,4 @@
-const CACHE = 'sstr-2026-v1';
+const CACHE = 'sstr-2026-v2';
 const FILES = [
   '/sstr-tracker/',
   '/sstr-tracker/index.html',
