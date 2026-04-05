@@ -1,6 +1,6 @@
 {
-  "name": "SSTR 2026 GPS Tracker",
-  "short_name": "SSTR 2026",
+  "name": "GPS Tracker 2026",
+  "short_name": "GPS Tracker",
   "description": "Sunrise Sunset Rally 2026 GPS Tracker",
   "start_url": "/sstr-tracker/",
   "display": "standalone",
