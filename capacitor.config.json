@@ -1,0 +1,17 @@
+{
+  "appId": "jp.drus.sstrtracker",
+  "appName": "GPS Tracker 2026",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#06060c"
+  }
+}
