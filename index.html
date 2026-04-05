@@ -709,7 +709,23 @@ setInterval(rnd,1000);
   else cDay='day1'; // Default day1 (including 5/23 and testing)
 })();
 rnd();
-if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    reg.addEventListener('updatefound',()=>{
+      const nw=reg.installing;
+      nw.addEventListener('statechange',()=>{
+        if(nw.state==='activated'){
+          // 新バージョンが有効化されたら自動リロード
+          window.location.reload();
+        }
+      });
+    });
+  });
+  // 既存のSWが更新を持っている場合
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    window.location.reload();
+  });
+}
 function goHome(){
   if(watchId){navigator.geolocation.clearWatch(watchId);watchId=null;}
   speechSynthesis.cancel();
