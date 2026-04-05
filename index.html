@@ -604,9 +604,6 @@ function rnd(){
     <div class="vtabs">
       <div class="vtab ${vM==='list'?'act':''}" onclick="setView('list')">📋 リスト</div>
       <div class="vtab ${vM==='map'?'act':''}" onclick="setView('map')">🗺️ 地図</div>
-      ${vM==='map'?`<div class="vtab ${mapZoom==='nav'?'act':''}" onclick="selectMapZoom('nav')">🔍</div>
-      <div class="vtab ${mapZoom==='area'?'act':''}" onclick="selectMapZoom('area')">📍</div>
-      <div class="vtab ${mapZoom==='all'?'act':''}" onclick="selectMapZoom('all')">🗺</div>`:''}
     </div>`;
   }
 
