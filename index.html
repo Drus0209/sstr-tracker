@@ -452,9 +452,12 @@ function ann(stops,ni,df){
   }
 }
 let appBgm=null;
+// ページロード時にMP3を先読み
+const _bgmPreload=new Audio('maou_bgm_neorock83.mp3');
+_bgmPreload.preload='auto';
 function playAppBgm(){
   if(appBgm)return;
-  appBgm=new Audio('maou_bgm_neorock83.mp3');
+  appBgm=_bgmPreload;
   appBgm.loop=true;
   appBgm.volume=0.4;
   appBgm.play().catch(()=>{});
