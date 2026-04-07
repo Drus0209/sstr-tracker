@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- 枝豆ベースのずんだもん風アイコン -->
+  <!-- 顔（枝豆型） -->
+  <ellipse cx="50" cy="50" rx="30" ry="38" fill="#8fc31f"/>
+  <ellipse cx="50" cy="50" rx="28" ry="36" fill="#a5d63f"/>
+  <!-- 目 -->
+  <ellipse cx="40" cy="42" rx="7" ry="8" fill="#fff"/>
+  <ellipse cx="60" cy="42" rx="7" ry="8" fill="#fff"/>
+  <circle cx="41" cy="43" r="4" fill="#2d2d2d"/>
+  <circle cx="61" cy="43" r="4" fill="#2d2d2d"/>
+  <circle cx="43" cy="41" r="1.5" fill="#fff"/>
+  <circle cx="63" cy="41" r="1.5" fill="#fff"/>
+  <!-- 口 -->
+  <path d="M42 58 Q50 66 58 58" fill="none" stroke="#2d2d2d" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- ほっぺ -->
+  <ellipse cx="30" cy="52" rx="6" ry="4" fill="#ff9" opacity="0.4"/>
+  <ellipse cx="70" cy="52" rx="6" ry="4" fill="#ff9" opacity="0.4"/>
+  <!-- 枝豆の葉っぱ（頭の上） -->
+  <path d="M50 12 Q38 8 42 20" fill="#5a9e3e" stroke="#4a8e2e" stroke-width="1"/>
+  <path d="M50 12 Q62 8 58 20" fill="#5a9e3e" stroke="#4a8e2e" stroke-width="1"/>
+  <circle cx="50" cy="14" r="2" fill="#4a8e2e"/>
+</svg>

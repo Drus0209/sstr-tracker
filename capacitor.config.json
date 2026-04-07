@@ -1,7 +1,7 @@
 {
-  "appId": "jp.drus.sstrtracker",
-  "appName": "GPS Tracker 2026",
-  "webDir": ".",
+  "appId": "com.sstr.tracker",
+  "appName": "Touring Tracker",
+  "webDir": "www",
   "server": {
     "androidScheme": "https"
   },
@@ -12,6 +12,7 @@
   },
   "android": {
     "allowMixedContent": true,
-    "backgroundColor": "#06060c"
+    "backgroundColor": "#06060c",
+    "webContentsDebuggingEnabled": true
   }
 }

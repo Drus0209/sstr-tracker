@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>GPS Tracker 2026</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00d4ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBwPBSu3pJ7LBsQ7WvSbTWiQsFY0R8cREY&language=ja"></script>
+<script src="capacitor.js"></script>
+<style>
+:root{--bg:#06060c;--card:#111118;--bdr:#1e1e2e;--txt:#e8e8f0;--sub:#666680;--ac:#00d4ff;--grn:#00e676;--red:#ff4444;--org:#ff9100;--ylw:#ffd740;--pk:#ff6b9d;--noto:#4caf50;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;-webkit-user-select:none;user-select:none;}
+#btm{overflow-y:auto;max-height:calc(100vh - 110px);}
+#mapWrap{touch-action:none;}
+.hdr{background:linear-gradient(135deg,#0a0a1a,#0f2040);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--ac);position:sticky;top:0;z-index:100;}
+.hdr h1{font-family:'Outfit';font-size:16px;font-weight:900;color:var(--ac);letter-spacing:1px;}
+.hdr .now{font-family:'Outfit';font-size:24px;font-weight:900;color:#fff;}
+.hdr .date{font-size:10px;color:var(--txt);opacity:0.7;}
+.bdg{display:inline-block;padding:4px 12px;border-radius:20px;font-size:14px;font-weight:800;font-family:'Outfit';}
+.bdg.ah{background:#003320;color:var(--grn);border:1px solid #005530;}
+.bdg.bh{background:#330011;color:var(--red);border:1px solid #550022;}
+.bdg.ot{background:#332200;color:var(--ylw);border:1px solid #554400;}
+.pnl{margin:6px 10px;border-radius:14px;overflow:hidden;}
+.pp{background:var(--card);border:1px solid var(--bdr);max-height:110px;overflow-y:auto;}
+.pp .ph{font-size:12px;color:var(--txt);letter-spacing:2px;padding:8px 12px 4px;position:sticky;top:0;background:var(--card);z-index:1;}
+.pi{display:flex;align-items:center;padding:4px 12px;font-size:12px;color:var(--txt);border-bottom:1px solid #0e0e18;}
+.pi .d{width:6px;height:6px;border-radius:50%;margin-right:8px;flex-shrink:0;background:var(--grn);}
+.pi .p{color:var(--grn);margin-left:auto;font-weight:700;font-size:10px;padding-left:8px;}
+.pi .t{color:var(--txt);margin-left:8px;font-family:'Outfit';font-size:11px;opacity:0.7;}
+.pc{background:linear-gradient(135deg,#0a1a2a,#081428);border:2px solid var(--ac);padding:14px 16px;position:relative;overflow:hidden;}
+.pc::before{content:'';position:absolute;top:-50%;right:-30%;width:200px;height:200px;background:radial-gradient(circle,rgba(0,212,255,0.08) 0%,transparent 70%);pointer-events:none;}
+.pc .lb{font-size:11px;color:var(--ac);text-transform:uppercase;letter-spacing:3px;margin-bottom:6px;font-weight:700;}
+.pc .nm{font-size:clamp(18px,5.5vw,32px);font-weight:900;line-height:1.2;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pc .mm{font-size:14px;color:var(--org);margin-bottom:12px;}
+.pc .sts{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.pc .st{text-align:center;background:rgba(0,0,0,0.3);border-radius:10px;padding:12px 10px;}
+.pc .st .v{font-family:'Outfit';font-size:42px;font-weight:900;color:var(--ac);}
+.pc .st .l{font-size:14px;color:var(--txt);letter-spacing:1px;margin-top:3px;font-weight:600;}
+.pc .pb{display:flex;justify-content:center;margin-top:10px;}
+.pc .ptb{background:#1a2a1a;border:1px solid var(--grn);color:var(--grn);padding:4px 16px;border-radius:20px;font-weight:800;font-family:'Outfit';font-size:16px;}
+#mapWrap{display:none;margin:8px 10px;border-radius:14px;overflow:hidden;border:2px solid var(--bdr);position:relative;}
+#map{height:80vh;width:100%;background:#e8e8e8;}
+.pn{background:var(--card);border:1px solid var(--bdr);padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.pn .ar{font-size:28px;color:var(--txt);flex-shrink:0;}
+.pn .lb{font-size:11px;color:var(--txt);letter-spacing:2px;margin-bottom:2px;}
+.pn .nm{font-size:16px;font-weight:700;}
+.pn .dt{font-size:12px;color:var(--txt);margin-top:2px;opacity:0.85;}
+.ptbar{margin:8px 10px;padding:8px 12px;background:var(--card);border:1px solid var(--bdr);border-radius:10px;display:flex;align-items:center;justify-content:space-between;}
+.ptbar .tot{font-family:'Outfit';font-size:24px;font-weight:900;color:var(--grn);}
+.ptbar .lb{font-size:11px;color:var(--txt);}
+.ptbar .prg{flex:1;margin:0 12px;height:6px;background:#1a1a2a;border-radius:3px;overflow:hidden;}
+.ptbar .pf{height:100%;background:var(--grn);border-radius:3px;transition:width 0.5s;}
+.ctrls{display:flex;gap:6px;margin:10px 10px;flex-wrap:wrap;justify-content:center;}
+.cb{background:none;border:1px solid var(--bdr);color:var(--sub);padding:8px 14px;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;}
+.cb.pri{background:linear-gradient(135deg,var(--ac),#0088cc);border-color:var(--ac);color:#000;font-weight:800;font-size:14px;padding:10px 20px;}
+.cb.act{border-color:var(--ac);color:var(--ac);}
+.fl{margin:0 10px 10px;background:var(--card);border:1px solid var(--bdr);border-radius:14px;max-height:300px;overflow-y:auto;display:none;}
+.fl.show{display:block;}
+.fl .fh{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:2px;padding:10px 12px 6px;position:sticky;top:0;background:var(--card);z-index:1;}
+.fi{display:flex;align-items:center;padding:6px 12px;font-size:12px;border-bottom:1px solid #0e0e18;background:var(--card);border-radius:8px;margin-bottom:4px;}
+.fi.pst{color:#2a2a3a;}.fi.pst .nm{color:#2a2a3a;}.fi.pst .tm{color:#1e2a33;}.fi.pst .dot{opacity:0.2;}.fi.pst .pt{color:#1a2a1a;}
+.fi.cur{background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.3);}
+.fi .dot{width:8px;height:8px;border-radius:50%;margin-right:8px;flex-shrink:0;}
+.fi .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fi .pt{color:var(--grn);font-weight:700;font-size:11px;margin-left:6px;}
+.fi .tm{font-family:'Outfit';font-size:11px;color:var(--ac);margin-left:8px;}
+.dn{background:var(--noto);}.dm{background:#2196f3;}.dg{background:var(--org);}.dq{background:var(--org);}.ds{background:#e85300;}.dv{background:var(--sub);}.do{background:#9e9e9e;}
+.gps{text-align:center;font-size:11px;color:var(--txt);padding:4px;opacity:0.7;}
+.dtabs{display:flex;gap:6px;margin:8px 10px 0;}
+.dtab{flex:1;padding:8px;text-align:center;border-radius:8px;background:var(--card);border:1px solid var(--bdr);font-size:12px;font-weight:700;color:var(--sub);cursor:pointer;}
+.dtab.act{border-color:var(--ac);color:var(--ac);}
+.vtabs{display:flex;margin:6px 10px 0;background:var(--card);border-radius:10px;overflow:hidden;border:1px solid var(--bdr);}
+.vtab{flex:1;padding:10px;text-align:center;font-size:16px;font-weight:700;color:var(--txt);cursor:pointer;border:none;background:none;font-family:inherit;}
+.vtab.act{background:rgba(0,212,255,0.1);color:var(--ac);}
+#mapWrap.full{margin:8px 10px;}
+#mapWrap.full #map{height:calc(100vh - 100px);min-height:500px;}
+.map-overlay{position:absolute;top:10px;left:10px;right:10px;z-index:1000;background:rgba(8,20,40,0.92);border:1px solid var(--ac);border-radius:12px;padding:12px 14px;backdrop-filter:blur(2px);}
+.map-overlay .nm{font-size:16px;font-weight:900;}
+.map-overlay .mm{font-size:11px;color:var(--org);margin-top:2px;}
+.map-overlay .inf{display:flex;gap:16px;margin-top:6px;font-family:'Outfit';font-size:14px;font-weight:800;color:var(--ac);}
+.map-overlay .inf span{font-size:11px;color:var(--txt);font-weight:400;display:block;}
+.sparkle{position:relative;display:inline-block;overflow:hidden;}
+.sparkle::after{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.5) 50%,transparent 70%);animation:sparkle 3s ease-in-out infinite;}
+@keyframes sparkle{0%,100%{left:-100%;}50%{left:150%;}}
+@keyframes orbisFlash{0%,100%{border-color:transparent;}50%{border-color:#ff4444;}}
+@keyframes zundaBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+#riderNameInput::placeholder{color:rgba(255,255,255,0.5);}
+#zundaOverlay{position:fixed;bottom:0;right:10px;z-index:10000;display:none;flex-direction:column;align-items:center;pointer-events:none;}
+#zundaOverlay.show{display:flex;}
+#zundaOverlay .bubble{background:rgba(134,193,102,0.95);color:#000;padding:10px 16px;border-radius:16px 16px 4px 16px;font-size:14px;font-weight:700;max-width:200px;margin-bottom:4px;text-align:center;}
+#zundaOverlay .avatar-wrap{position:relative;width:100px;height:100px;animation:zundaBob 1s ease-in-out infinite;}
+#zundaOverlay .avatar-wrap img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;}
+</style>
+</head>
+<body>
+<div id="splash" style="position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:48% 70%;" ontouchstart="aC&&aC.resume();">
+  <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.15) 50%,rgba(6,6,12,0.7) 100%);"></div>
+  <div style="position:absolute;top:20px;left:20px;z-index:2;" onclick="if(!window._atc)window._atc=0;window._atc++;clearTimeout(window._att);window._att=setTimeout(()=>{window._atc=0;},2000);if(window._atc>=5){window._atc=0;_isAdmin=!_isAdmin;localStorage.setItem('_isAdmin',_isAdmin?'1':'0');this.querySelector('.adm').textContent=_isAdmin?'🔑 ADMIN':'';}" >
+    <div style="font-family:'Outfit';font-size:10px;font-weight:700;color:#aaa;letter-spacing:4px;text-transform:uppercase;">GPS Tracker</div>
+    <div style="font-family:'Outfit';font-size:36px;font-weight:900;color:#00d4ff;letter-spacing:2px;line-height:1;">2026</div>
+    <div class="adm" style="font-family:'Outfit';font-size:10px;color:var(--ylw);margin-top:4px;"></div>
+  </div>
+  <div style="position:absolute;top:20px;right:20px;z-index:2;font-family:'Outfit';font-size:12px;color:#fff;letter-spacing:1px;text-align:right;">v.260406.7984474<div id="apiCntSplash" style="font-size:14px;font-weight:700;color:var(--ac);margin-top:4px;"></div></div>
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin-top:30px;">
+    <div style="width:100%;display:flex;flex-direction:column;gap:12px;">
+      <div id="riderNameBox" style="background:rgba(20,30,50,0.85);border:2px solid var(--org);border-radius:16px;padding:18px 20px;text-align:center;">
+        <div style="font-size:14px;color:var(--txt);font-weight:700;margin-bottom:10px;">ライダー名を入力（ひらがな）</div>
+        <input id="riderNameInput" type="text" placeholder="例: てつにん" value="" oncompositionend="this.value=this.value.replace(/[^\u3040-\u309F\u30FC]/g,'');" onblur="this.value=this.value.replace(/[^\u3040-\u309F\u30FC]/g,'');" style="background:rgba(255,255,255,0.15);border:2px solid var(--org);border-radius:12px;padding:14px 20px;color:#fff;font-size:22px;font-weight:700;font-family:inherit;width:100%;max-width:240px;text-align:center;outline:none;box-sizing:border-box;">
+        <button onclick="var v=document.getElementById('riderNameInput').value.trim();if(v){_myName=v;localStorage.setItem('_riderName',v);document.getElementById('riderNameBox').style.display='none';playEngineSound();_genWelcomeVoice(v);_firstTimeGps();}" style="display:block;margin:12px auto 0;background:var(--org);border:none;border-radius:10px;padding:12px 40px;color:#000;font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;">OK</button>
+      </div>
+      <button onclick="startApp('sstr')" id="cardSstr" style="display:none;background:rgba(6,6,12,0.15);border:2px solid #00d4ff;border-radius:16px;padding:20px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;width:100%;backdrop-filter:blur(2px);">
+        <div style="font-size:10px;color:#00d4ff;letter-spacing:3px;font-weight:700;margin-bottom:4px;">MAY 23–24</div>
+        <div class="sparkle"><img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:36px;" onerror="this.outerHTML='<span style=font-family:Outfit;font-size:20px;font-weight:900;color:#fff>SSTR 2026</span>'"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+          <div style="font-size:11px;color:#aaa;">Sunrise Sunset Rally　34pt目標</div>
+          <div style="font-size:10px;color:#444;font-family:'Outfit';">v.260406.7984474</div>
+        </div>
+      </button>
+
+      <button onclick="startApp('nippon1')" id="cardNippon1" style="display:none;background:rgba(6,6,12,0.15);border:2px solid #4caf50;border-radius:16px;padding:20px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;width:100%;backdrop-filter:blur(2px);">
+        <div style="font-size:10px;color:#4caf50;letter-spacing:3px;font-weight:700;margin-bottom:4px;">TBD</div>
+        <div class="sparkle"><img src="greenlabel_logo.png" style="height:60px;" onerror="this.outerHTML='<span style=font-size:20px;font-weight:900;color:#fff>にっぽん応援ツーリング 前半</span>'"></div>
+        <div style="font-size:11px;color:#aaa;margin-top:4px;">前半 ・ ルートデータ準備中…</div>
+      </button>
+
+      <button onclick="startApp('nippon2')" id="cardNippon2" style="display:none;background:rgba(6,6,12,0.15);border:2px solid #4caf50;border-radius:16px;padding:20px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;width:100%;backdrop-filter:blur(2px);">
+        <div style="font-size:10px;color:#4caf50;letter-spacing:3px;font-weight:700;margin-bottom:4px;">TBD</div>
+        <div class="sparkle"><img src="greenlabel_logo.png" style="height:60px;" onerror="this.outerHTML='<span style=font-size:20px;font-weight:900;color:#fff>にっぽん応援ツーリング 後半</span>'"></div>
+        <div style="font-size:11px;color:#aaa;margin-top:4px;">後半 ・ ルートデータ準備中…</div>
+      </button>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:1;padding:0 20px;">
+    <div style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.6;">
+      本アプリは個人利用を目的として作成されたものであり、商用利用を目的としたものではありません。<br>
+      <span style="color:rgba(255,255,255,0.35);">Credits: 音声合成 VOICEVOX（ずんだもん） / BGM 魔王魂 / 地図 Google Maps Platform / アイコン Microsoft Copilot</span>
+    </div>
+  </div>
+</div>
+<div id="hdr-area"></div>
+<div id="top"></div>
+<div id="zundaOverlay"><div class="bubble" id="zundaBubble"></div><div class="avatar-wrap"><img id="zundaMouthClose" src="zundamon_close.png"><img id="zundaMouthOpen" src="zundamon_open.png" style="opacity:0;"></div></div>
+<div id="mapWrap"><div id="map"></div></div>
+<div id="btm"></div>
+<script>
+const STOPS={day1:[
+{time:"04:20",name:"🌉 東京ゲートブリッジ",lat:35.6122,lng:139.8289,pt:0,type:"move",memo:"",noHwy:true,dur:2},
+{time:"04:31",name:"☀️ 暁ふ頭公園 START",lat:35.6082,lng:139.7914,pt:0,type:"goal",memo:"海バック写真→スタート登録",noHwy:true,dur:15},
+{time:"05:06",name:"⛽ apollostation環八谷原",lat:35.7483,lng:139.6178,pt:0,type:"gs",memo:"満タン🔶 24h営業",noHwy:true,dur:10},
+{time:"05:21",name:"🚀 練馬IC",lat:35.7546,lng:139.6073,pt:0,type:"move",memo:"関越道へ",dur:0},
+{time:"05:41",name:"🍑 おしり休息タイム 上里SA",lat:36.2542,lng:139.1192,pt:1,type:"qk",memo:"おしり休息タイム＋1pt",dur:5},
+{time:"06:26",name:"⬇️ 下仁田IC",lat:36.2262,lng:138.8067,pt:0,type:"move",memo:"IC降りる",dur:0},
+{time:"06:36",name:"⭐ 道の駅しもにた",lat:36.2238,lng:138.802,pt:3,type:"michi",memo:"指定道の駅① GPSチェックイン",dur:10},
+{time:"06:46",name:"⬆️ 下仁田IC乗る",lat:36.2262,lng:138.8067,pt:0,type:"move",memo:"上信越→北陸道",dur:0},
+{time:"07:46",name:"🍑 おしり休息タイム 妙高SA",lat:36.9290,lng:138.2117,pt:1,type:"qk",memo:"おしり休息タイム＋1pt",dur:5},
+{time:"08:46",name:"⬇️ 名立谷浜IC",lat:37.1634,lng:138.0867,pt:0,type:"move",memo:"IC降りる",dur:0},
+{time:"08:51",name:"⛽ ENEOS名立",lat:37.1699,lng:138.0918,pt:0,type:"gs",memo:"初給油🔴",dur:10},
+{time:"09:06",name:"⭐ うみてらす名立",lat:37.1634,lng:138.0867,pt:3,type:"michi",memo:"指定道の駅② 焼幻魚🐟",dur:10},
+{time:"09:26",name:"⬆️ 名立谷浜IC乗る",lat:37.1634,lng:138.0867,pt:0,type:"move",memo:"北陸道へ",dur:0},
+{time:"10:06",name:"🍑 おしり休息タイム 有磯海SA",lat:36.7704,lng:137.3996,pt:1,type:"qk",memo:"白エビかき揚げ🦐",dur:5},
+{time:"10:46",name:"⬇️ 小杉IC",lat:36.6912,lng:137.0815,pt:0,type:"move",memo:"IC降りる",dur:0},
+{time:"10:56",name:"⭐ 道の駅まるごと射水",lat:36.7520,lng:137.0851,pt:2,type:"other",memo:"白えび＋2pt",dur:10},
+{time:"11:11",name:"⛽ apollostation氷見",lat:36.8331,lng:136.9908,pt:0,type:"gs",memo:"給油🔶",dur:10},
+{time:"11:26",name:"⭐ 道の駅氷見 復興①",lat:36.864,lng:136.9873,pt:3,type:"noto",memo:"🍣海鮮丼🦪岩ガキ🥩氷見牛",dur:30},
+{time:"12:56",name:"⭐ 能登食祭市場 復興②",lat:37.0489,lng:136.9688,pt:3,type:"noto",memo:"🔥浜焼き！🦐🐚🦪",dur:10},
+{time:"13:36",name:"⭐ ロマン峠 復興③",lat:37.1305,lng:136.8634,pt:3,type:"noto",memo:"🎉15pt完走確定！",dur:10},
+{time:"14:26",name:"⭐ 織姫の里 復興④",lat:36.9698,lng:136.9048,pt:3,type:"noto",memo:"🍱手作り惣菜",dur:10},
+{time:"15:16",name:"⭐ とぎ海街道 復興⑤",lat:37.1402,lng:136.7253,pt:3,type:"noto",memo:"🪑世界一長いベンチ",dur:10},
+{time:"15:46",name:"⭐ ころ柿の里 復興⑥",lat:37.007,lng:136.7798,pt:3,type:"noto",memo:"🎫限定ステッカー",dur:10},
+{time:"16:16",name:"⭐ のと千里浜",lat:36.8858,lng:136.7688,pt:2,type:"other",memo:"その他道の駅",dur:10},
+{time:"16:51",name:"⭐ 内灘サンセットパーク 復興⑦",lat:36.6589,lng:136.6492,pt:3,type:"noto",memo:"🌅夕日の絶景",dur:10},
+{time:"17:21",name:"🏁 千里浜GOAL！",lat:36.8926,lng:136.7658,pt:0,type:"goal",memo:"🏆完走！！🎊",dur:0},
+{time:"18:36",name:"🏨 アパホテル金沢中央",lat:36.5599,lng:136.6532,pt:0,type:"move",memo:"乾杯🍻",dur:0},
+],day2:[
+{time:"08:00",name:"🏨 アパ チェックアウト",lat:36.5599,lng:136.6532,pt:0,type:"move",memo:"Day2😎"},
+{time:"08:15",name:"⛽ ENEOS鈴見SS",lat:36.5608,lng:136.6773,pt:0,type:"gs",memo:"満タン🔴"},
+{time:"09:00",name:"🍑 高岡PA",lat:36.6706,lng:137.0310,pt:0,type:"qk",memo:"おしり休息タイム"},
+{time:"11:00",name:"🌿 大王わさび農園",lat:36.3393,lng:137.9084,pt:0,type:"goal",memo:"90分！🥢🥔💧"},
+{time:"13:00",name:"🍑 諏訪湖SA",lat:36.0267,lng:138.0774,pt:0,type:"qk",memo:"おしり休息タイム"},
+{time:"14:30",name:"🍑 談合坂SA",lat:35.6283,lng:139.0470,pt:0,type:"qk",memo:"渋滞前に抜ける！"},
+{time:"15:30",name:"🍑 石川PA",lat:35.6799,lng:139.3746,pt:0,type:"qk",memo:"おしり休息タイム"},
+{time:"16:00",name:"🍑 代々木PA",lat:35.6812,lng:139.6981,pt:0,type:"qk",memo:"おしり休息タイム"},
+{time:"16:30",name:"🍑 幕張PA",lat:35.6709,lng:140.0538,pt:0,type:"qk",memo:"おしり休息タイム"},
+{time:"17:00",name:"🏠 セブンイレブン佐倉白銀",lat:35.7116,lng:140.2489,pt:0,type:"goal",memo:"おつかれ！🏁"},
+]};
+
+function pT(t){const[h,m]=t.split(':').map(Number);return h*60+m;}
+// Check if today is the actual rally day for the selected day
+function isRallyDay(){
+  const now=new Date(),m=now.getMonth()+1,d=now.getDate();
+  if(cDay==='day1')return m===5&&d===23;
+  if(cDay==='day2')return m===5&&d===24;
+  return false;
+}
+function fD(m){const a=Math.abs(m),h=Math.floor(a/60),n=a%60;return h>0?h+'h'+n.toString().padStart(2,'0')+'m':n+'m';}
+function dK(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,z=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(z),Math.sqrt(1-z));}
+
+let cDay='day1',gLat=null,gLng=null,gSpeed=0,gSt='',sFl=false,iM=false,bgm=null,vM='list',mapZoom='nav',showMapMenu=false;
+let _hdrMode=0;// 0=SSTR終了まで 1=次スポット距離 2=次スポット残り時間
+setInterval(function(){_hdrMode=(_hdrMode+1)%3;},5000);
+let _apiMaps=parseInt(localStorage.getItem('_apiMaps')||'0');
+let _apiDir=parseInt(localStorage.getItem('_apiDir')||'0');
+let _apiShow=false;
+let _isAdmin=localStorage.getItem('_isAdmin')==='1';
+function _apiSave(){localStorage.setItem('_apiMaps',_apiMaps);localStorage.setItem('_apiDir',_apiDir);}
+function _apiLocked(){return _apiDir>=9500||_apiMaps>=9500;}
+
+function selectMapZoom(zoom){
+  mapZoom=zoom;showMapMenu=false;vM='map';lastRouteNI=-1;
+  initMap();
+  const mw=document.getElementById('mapWrap');
+  mw.style.display='block';mw.className='full';
+  const st=STOPS[cDay];
+  const zoomLevels={nav:17,area:13,all:8};
+  if(zoom==='all'){
+    showRouteOnly(st);
+  } else if(gLat){
+    const ni=fN(st);
+    updateMap(gLat,gLng,st,ni.i);
+    if(map)map.setZoom(zoomLevels[zoom]);
+  } else {
+    showRouteOnly(st);
+    if(map)map.setZoom(zoomLevels[zoom]);
+  }
+  rnd();
+}
+
+function setView(mode){
+  showMapMenu=false;vM=mode;lastRouteNI=-1;
+  if(mode==='map'){
+    initMap();
+    const mw=document.getElementById('mapWrap');
+    mw.style.display='block';mw.className='full';
+    const st=STOPS[cDay];
+    if(gLat){
+      const ni=fN(st);
+      updateMap(gLat,gLng,st,ni.i);
+    } else {
+      showRouteOnly(st);
+    }
+  } else {
+    document.getElementById('mapWrap').style.display='none';
+  }
+  rnd();
+}
+
+function showRouteOnly(stops){
+  initMap();
+  document.getElementById('mapWrap').style.display='block';
+  clearMap();
+  const cols={noto:'#4caf50',michi:'#2196f3',goal:'#ff9100',qk:'#ff9100',gs:'#e85300',move:'#666',other:'#9e9e9e'};
+  const bounds=new google.maps.LatLngBounds();
+  stops.forEach((s,i)=>{
+    const c=cols[s.type]||'#666';
+    const mk=new google.maps.Marker({position:{lat:s.lat,lng:s.lng},map:map,
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:5,fillColor:c,fillOpacity:1,strokeColor:'#fff',strokeWeight:1},
+      title:s.name});
+    mk.addListener('click',()=>{new google.maps.InfoWindow({content:s.name+'<br>'+s.time}).open(map,mk);});
+    mStops.push(mk);
+    bounds.extend({lat:s.lat,lng:s.lng});
+  });
+  // Draw route via Directions API
+  fetchGoogleRoute(stops);
+  map.fitBounds(bounds,{top:40,bottom:40,left:40,right:40});
+  lastRouteNI=0;lastNI=0;
+}
+
+// Google Directions route
+let mPolylines=[];
+function clearMap(){
+  if(mMe){mMe.setMap(null);mMe=null;}
+  if(mTgt){mTgt.setMap(null);mTgt=null;}
+  mStops.forEach(m=>m.setMap(null));mStops=[];
+  mPolylines.forEach(p=>p.setMap(null));mPolylines=[];
+}
+function _drawRoute(result){
+  const path=result.routes[0].overview_path;
+  const pl=new google.maps.Polyline({
+    path,map,strokeColor:'#00d4ff',strokeWeight:5,strokeOpacity:0.8
+  });
+  mPolylines.push(pl);
+}
+function _routeReq(origin,dest,waypoints,noHwy){
+  return{origin,destination:dest,waypoints:waypoints||[],
+    travelMode:google.maps.TravelMode.DRIVING,
+    avoidFerries:true,avoidHighways:false,avoidTolls:!!noHwy};
+}
+// Fallback: route each pair 1-to-1
+function _route1to1(ds,chunk,delay){
+  for(let k=0;k<chunk.length-1;k++){
+    const a=chunk[k],b=chunk[k+1];
+    setTimeout(()=>{
+      const req=_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],a.noHwy||b.noHwy);
+      console.log('[Route:1to1] '+a.name+' → '+b.name);
+      _apiDir++;_apiSave();ds.route(req,(r,s)=>{
+        if(s==='OK'){console.log('[Route:1to1] OK '+r.routes[0].legs[0].distance.text);_drawRoute(r);}
+        else console.warn('[Route:1to1] FAILED '+s+': '+a.name+' → '+b.name);
+      });
+    },delay+k*500);
+  }
+}
+function fetchGoogleRoute(stops){
+  if(stops.length<2)return;
+  // Step 1: split at noHwy boundary so highway/local don't mix
+  const segs=[];let segStart=0;
+  for(let i=1;i<stops.length;i++){
+    if(!!stops[i].noHwy!==!!stops[segStart].noHwy){
+      segs.push({stops:stops.slice(segStart,i+1),noHwy:!!stops[segStart].noHwy});
+      segStart=i;
+    }
+  }
+  if(segStart<stops.length-1)segs.push({stops:stops.slice(segStart),noHwy:!!stops[segStart].noHwy});
+  // Step 2: chunk each segment (max 5 stops = 3 waypoints)
+  const chunks=[];
+  segs.forEach(seg=>{
+    for(let i=0;i<seg.stops.length-1;i+=4){
+      chunks.push({stops:seg.stops.slice(i,Math.min(i+5,seg.stops.length)),noHwy:seg.noHwy});
+    }
+  });
+  console.log('[Route] segs='+segs.length+' chunks='+chunks.length+' stops='+stops.length);
+  const ds=new google.maps.DirectionsService();
+  chunks.forEach((ch,idx)=>{
+    const s=ch.stops,oName=s[0].name,dName=s[s.length-1].name;
+    setTimeout(()=>{
+      const origin={lat:s[0].lat,lng:s[0].lng};
+      const dest={lat:s[s.length-1].lat,lng:s[s.length-1].lng};
+      const waypoints=s.slice(1,-1).map(p=>({location:{lat:p.lat,lng:p.lng},stopover:true}));
+      console.log('[Route] chunk '+idx+'/'+chunks.length+': '+oName+' → '+dName+' (wp='+waypoints.length+', noHwy='+ch.noHwy+')');
+      _apiDir++;_apiSave();ds.route(_routeReq(origin,dest,waypoints,ch.noHwy),(result,status)=>{
+        if(status==='OK'){console.log('[Route] chunk '+idx+' OK');_drawRoute(result);}
+        else{console.warn('[Route] chunk '+idx+' FAILED: '+status+', retrying 1-to-1');_route1to1(ds,s,0);}
+      });
+    },idx*500);
+  });
+}
+
+// === MAP ===
+let map=null,mMe=null,mTgt=null,mStops=[];
+let nightMode=false;
+const mapStyles={
+  day:[{featureType:'poi',stylers:[{visibility:'off'}]}],
+  night:[
+    {elementType:'geometry',stylers:[{color:'#1a1a2e'}]},
+    {elementType:'labels.text.fill',stylers:[{color:'#8ec3b9'}]},
+    {elementType:'labels.text.stroke',stylers:[{color:'#1a3646'}]},
+    {featureType:'road',elementType:'geometry',stylers:[{color:'#304a7d'}]},
+    {featureType:'road',elementType:'geometry.stroke',stylers:[{color:'#255763'}]},
+    {featureType:'road',elementType:'labels.text.fill',stylers:[{color:'#98a5be'}]},
+    {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#2c6675'}]},
+    {featureType:'road.highway',elementType:'geometry.stroke',stylers:[{color:'#255763'}]},
+    {featureType:'road.highway',elementType:'labels.text.fill',stylers:[{color:'#b0d5ce'}]},
+    {featureType:'water',elementType:'geometry',stylers:[{color:'#0e1626'}]},
+    {featureType:'water',elementType:'labels.text.fill',stylers:[{color:'#4e6d70'}]},
+    {featureType:'poi',stylers:[{visibility:'off'}]},
+    {featureType:'transit',stylers:[{visibility:'off'}]},
+  ]
+};
+function toggleNight(){nightMode=!nightMode;if(map)map.setOptions({styles:mapStyles[nightMode?'night':'day']});rnd();}
+function initMap(){
+  if(map)return;
+  _apiMaps++;_apiSave();
+  map=new google.maps.Map(document.getElementById('map'),{
+    center:{lat:35.69,lng:139.84},zoom:16,maxZoom:22,
+    isFractionalZoomEnabled:true,
+    disableDefaultUI:true,zoomControl:true,
+    styles:mapStyles[nightMode?'night':'day']
+  });
+  new google.maps.TrafficLayer().setMap(map);
+  fetchTraffic();
+  fetchWeather();
+}
+let lastRouteNI=-1;
+function updateMap(lat,lng,stops,nI){
+  initMap();
+  if(vM!=='map'){document.getElementById('mapWrap').style.display='none';return;}
+  document.getElementById('mapWrap').style.display='block';
+  // Update my position marker
+  if(!mMe){
+    mMe=new google.maps.Marker({map:map,zIndex:100,
+      icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
+        fillColor:'#00d4ff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,
+        rotation:gHeading||0}});
+  }
+  mMe.setPosition({lat,lng});
+  if(gHeading!==null){
+    mMe.setIcon({path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
+      fillColor:'#00d4ff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,
+      rotation:gHeading});
+  }
+  const tI=nI,tS=stops[tI];
+  // Rebuild when nearest stop changes
+  if(nI!==lastRouteNI){
+    lastRouteNI=nI;
+    // Auto-zoom on stop change based on distance
+    const tDist=dK(lat,lng,tS.lat,tS.lng);
+    let zoom=18;
+    if(tDist>50)zoom=13;else if(tDist>30)zoom=14;else if(tDist>15)zoom=15;else if(tDist>5)zoom=16;else if(tDist>1)zoom=17;else if(tDist>0.3)zoom=18;
+    map.setZoom(zoom);
+    if(mTgt){mTgt.setMap(null);}
+    mStops.forEach(m=>m.setMap(null));mStops=[];
+    mPolylines.forEach(p=>{if(p.setMap)p.setMap(null);});mPolylines=[];
+    // Next stop marker
+    mTgt=new google.maps.Marker({position:{lat:tS.lat,lng:tS.lng},map:map,
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,
+        fillColor:'#ff9100',fillOpacity:1,strokeColor:'#fff',strokeWeight:2},
+      title:tS.name});
+    // Current pos → next stop: road-following route
+    const ds=new google.maps.DirectionsService();
+    const curStop=stops[nI];
+    _apiDir++;_apiSave();ds.route({origin:{lat,lng},destination:{lat:tS.lat,lng:tS.lng},
+      travelMode:google.maps.TravelMode.DRIVING,
+      avoidFerries:true,avoidHighways:false,avoidTolls:!!curStop.noHwy
+    },(result,status)=>{
+      if(status==='OK'){
+        _drawRoute(result);
+      }
+    });
+    // Full route: all stops
+    fetchGoogleRoute(stops);
+    // Remaining stops markers
+    if(vM==='map'){
+      const cols={noto:'#4caf50',michi:'#2196f3',goal:'#ff9100',qk:'#ff9100',gs:'#e85300',move:'#666',other:'#9e9e9e'};
+      stops.forEach((s,i)=>{
+        if(i===tI)return;
+        const c=cols[s.type]||'#666',op=i<nI?0.3:0.8;
+        const mk=new google.maps.Marker({position:{lat:s.lat,lng:s.lng},map:map,opacity:op,
+          icon:{path:google.maps.SymbolPath.CIRCLE,scale:i<nI?4:5,
+            fillColor:c,fillOpacity:1,strokeColor:'#fff',strokeWeight:1}});
+        mStops.push(mk);
+      });
+    }
+  }
+  // Center on user only in street zoom mode
+  if(zoomMode===0)map.panTo({lat,lng});
+}
+
+let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
+function setZoomMode(m){zoomMode=m;applyZoomMode();if(m>=1&&!_rainOn)toggleRain();if(m===0&&_rainOn)toggleRain();rnd();}
+function applyZoomMode(){
+  if(!map||!gLat)return;
+  const st=STOPS[cDay],ni=fN(st);
+  if(zoomMode===0){
+    // 最大ズーム・現在地中心
+    map.setZoom(19);map.panTo({lat:gLat,lng:gLng});
+  } else if(zoomMode===1){
+    // 3ストップ先まで収まるようfitBounds
+    const bounds=new google.maps.LatLngBounds();
+    bounds.extend({lat:gLat,lng:gLng});
+    for(let i=ni.i;i<=Math.min(ni.i+3,st.length-1);i++)bounds.extend({lat:st[i].lat,lng:st[i].lng});
+    map.fitBounds(bounds,{top:60,bottom:120,left:40,right:40});
+  } else {
+    // 全体ルート
+    const bounds=new google.maps.LatLngBounds();
+    bounds.extend({lat:gLat,lng:gLng});
+    st.forEach(s=>bounds.extend({lat:s.lat,lng:s.lng}));
+    map.fitBounds(bounds,{top:60,bottom:120,left:40,right:40});
+  }
+}
+
+// === AUDIO ===
+const aC=new(window.AudioContext||window.webkitAudioContext)();
+document.addEventListener('touchstart',()=>{if(aC.state!=='running')aC.resume();},{passive:true});
+function tn(f,d,t,dl){if(iM)return;const o=aC.createOscillator(),g=aC.createGain();o.type=t||'sine';o.frequency.value=f;g.gain.setValueAtTime(0.8,aC.currentTime+dl);g.gain.exponentialRampToValueAtTime(0.001,aC.currentTime+dl+d);o.connect(g);g.connect(aC.destination);o.start(aC.currentTime+dl);o.stop(aC.currentTime+dl+d);}
+function sGps(){if(appBgm)appBgm.volume=0.15;aC.resume();setTimeout(()=>{tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.12,'sine',.2);tn(1047,.12,'sine',.3);tn(784,.08,'sine',.42);tn(1047,.35,'sine',.5);setTimeout(()=>{if(appBgm)appBgm.volume=0.25;},1500);},150);}
+function sNext(){tn(523,.1,'sine',0);tn(784,.1,'sine',.1);tn(1047,.1,'sine',.2);tn(1319,.25,'sine',.3);} // ストップ切替チャイム
+function sAhd(){tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.15,'sine',.2);}
+function sBhd(){tn(400,.15,'square',0);tn(350,.15,'square',.12);tn(300,.2,'square',.24);}
+function sOnt(){tn(700,.12,'sine',0);tn(700,.12,'sine',.15);}
+function sGoal(){tn(523,.15,'sine',0);tn(659,.15,'sine',.12);tn(784,.15,'sine',.24);tn(1047,.3,'sine',.36);tn(784,.1,'sine',.56);tn(1047,.4,'sine',.66);}
+function lBGM(e){const f=e.target.files[0];if(!f)return;if(bgm)bgm.pause();bgm=new Audio(URL.createObjectURL(f));bgm.volume=0.5;bgm.play();document.getElementById('bi').textContent='🎵 '+f.name;document.getElementById('bi').style.display='block';}
+const _spkQ=[];let _spkBusy=false;
+// ずんだもん音声マッピング
+const _zundaMap={
+  'ほぼ予定通りなのだ。':'on_time',
+  'まもなくオービスなのだ！速度注意なのだ！':'orbis_300m',
+  '速度注意なのだ！':'orbis_speed',
+  '15ポイント達成なのだ！完走条件クリアなのだ！おめでとうなのだ！':'pt_15',
+  'この先、白バイ注意区間です。':'shirobai_area',
+  'この先、取り締まり注意区間です。':'police_area',
+  'GPS情報を取得したのだ。':'gps_ok',
+};
+function _findZunda(t){
+  if(_zundaMap[t])return 'voice/'+_zundaMap[t]+'.wav';
+  if(t.match(/この先1キロ.*オービス/))return 'voice/orbis_1km.wav';
+  if(t.match(/白バイ注意/))return 'voice/shirobai_area.wav';
+  if(t.match(/取り締まり注意/))return 'voice/police_area.wav';
+  if(t.match(/制限速度(\d+)/)){var m=t.match(/制限速度(\d+)/);var f='voice/limit_'+m[1]+'.wav';return f;}
+  if(t.match(/予定より.*早い/)){var m2=t.match(/(\d+)分早い/);if(m2){var n=parseInt(m2[1]);if(n<=5)return 'voice/ahead_5.wav';if(n<=10)return 'voice/ahead_10.wav';if(n<=20)return 'voice/ahead_20.wav';return 'voice/ahead_30.wav';}}
+  if(t.match(/予定より.*遅れ/)){var m3=t.match(/(\d+)分遅れ/);if(m3){var n2=parseInt(m3[1]);if(n2<=5)return 'voice/behind_5.wav';if(n2<=10)return 'voice/behind_10.wav';if(n2<=20)return 'voice/behind_20.wav';if(n2<=30)return 'voice/behind_30.wav';return 'voice/behind_60.wav';}}
+  if(t.match(/約\d+メートル先/)){var m5=t.match(/(\d+)メートル/);if(m5){var dm=parseInt(m5[1]);
+    if(dm>=1&&dm<=999)return 'voice/dist_'+dm+'m.wav';}}
+  if(t.match(/約[\d.]+キロ先/)){var m4=t.match(/([\d.]+)キロ/);if(m4){var dk=Math.round(parseFloat(m4[1])*10);
+    if(dk>=10&&dk<=6999)return 'voice/dist_'+dk+'t.wav';}}
+  if(t.match(/雨の予報/))return 'voice/rain_ahead.wav';
+  if(t.match(/SSTR.*選択/))return 'voice/sstr_selected.wav';
+  if(t.match(/ツーリングプランを選ぶ/))return 'voice/splash_welcome.wav';
+  if(t.match(/ライダー名を入力/))return 'voice/enter_name.wav';
+  if(t.match(/位置情報を登録/))return 'voice/register_location.wav';
+  if(t.match(/GPS情報を取得するのだ/))return 'voice/gps_getting.wav';
+  if(t.match(/GPS情報を取得したのだ/))return 'voice/gps_ok.wav';
+  if(t.match(/まもなくゴール/))return 'voice/goal_near.wav';
+  if(t.match(/そろそろ給油/))return 'voice/fuel_50.wav';
+  if(t.match(/給油を考える/))return 'voice/fuel_100.wav';
+  if(t.match(/2時間走ってる/))return 'voice/rest_2h.wav';
+  if(t.match(/チェックインも忘れず/))return 'voice/checkin.wav';
+  if(t.match(/まもなく.*なのだ/))return 'voice/approaching.wav';
+  return null;
+}
+var _zundaMouthInterval=null;
+function _spkRestore(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;if(bgm)bgm.volume=0.5;}
+function _zundaShow(text){
+  var o=document.getElementById('zundaOverlay');
+  var b=document.getElementById('zundaBubble');
+  if(o){o.classList.add('show');if(b)b.textContent=text||'';}
+  // 口パクアニメーション開始
+  _zundaMouthStart();
+}
+function _zundaHide(){
+  var o=document.getElementById('zundaOverlay');
+  if(o)o.classList.remove('show');
+  _zundaMouthStop();
+}
+function _zundaMouthStart(){
+  _zundaMouthStop();
+  var open=document.getElementById('zundaMouthOpen');
+  var close=document.getElementById('zundaMouthClose');
+  if(!open||!close)return;
+  var isOpen=false;
+  _zundaMouthInterval=setInterval(function(){
+    isOpen=!isOpen;
+    open.style.opacity=isOpen?'1':'0';
+    close.style.opacity=isOpen?'0':'1';
+  },150);
+}
+function _zundaMouthStop(){
+  if(_zundaMouthInterval){clearInterval(_zundaMouthInterval);_zundaMouthInterval=null;}
+  var open=document.getElementById('zundaMouthOpen');
+  var close=document.getElementById('zundaMouthClose');
+  if(open)open.style.opacity='0';
+  if(close)close.style.opacity='1';
+}
+function _spkNext(){
+  if(_spkQ.length===0){_spkBusy=false;_spkRestore();_zundaMouthStop();setTimeout(_zundaHide,1500);return;}
+  _spkBusy=true;var t=_spkQ.shift();
+  // ずんだもん音声ファイルがあれば再生
+  var zf=_findZunda(t);
+  if(zf){
+    _zundaShow(t);
+    var a=new Audio(new URL(zf,window.location.href).href);
+    a.volume=0.9;a.playbackRate=_voiceSpeed;a.onended=function(){_zundaMouthStop();setTimeout(function(){_zundaHide();_spkNext();},1500);};a.onerror=function(){_spkFallback(t);};a.play().catch(function(){_spkFallback(t);});
+    return;
+  }
+  _spkFallback(t);
+}
+function _spkFallback(t){
+  var _tts=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.TextToSpeech;
+  if(_tts){_tts.speak({text:t,lang:'ja-JP',rate:1.3}).then(_spkNext).catch(_spkNext);}
+  else if('speechSynthesis'in window){var u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';u.rate=1.3;u.onend=_spkNext;u.onerror=_spkNext;speechSynthesis.speak(u);}
+  else{_spkNext();}
+}
+function spk(t,force){if(!force&&iM)return;if(!_spkBusy){if(appBgm&&!_bgmFading)appBgm.volume=0.1;if(bgm&&!bgm.paused)bgm.volume=0.1;}_spkQ.push(t);if(!_spkBusy)_spkNext();}
+// Optimized: only search ±3 stops from last known position (100km/h × 5s = 140m max)
+function fN(stops){
+  if(!gLat)return{i:0,d:0};
+  const idx=Math.max(0,lastNI===- 1?0:lastNI);
+  const d=dK(gLat,gLng,stops[idx].lat,stops[idx].lng);
+  return{i:idx,d};
+}
+function ann(stops,ni,df){
+  // 表示と同じロジック: 近くにいる(1km未満)ならそのストップ、遠いなら次のストップが現在ターゲット
+  const tI=ni.i;
+  const s=stops[tI];
+  const rally=isRallyDay();
+  if(s.name.includes('GOAL')&&ni.d<2){sGoal();if(bgm)bgm.volume=0.8;}
+  else if(!rally)sOnt();
+  else if(Math.abs(df)<=5)sOnt();else if(df<0)sAhd();else sBhd();
+  let m='';
+  if(rally){
+    if(Math.abs(df)<=5)m='ほぼ予定通りなのだ。';
+    else if(df<0)m='予定より'+Math.abs(df)+'分早いのだ。';
+    else{m='予定より'+df+'分遅れているのだ。';if(df>=10&&df<30)m+='ペースを上げるのだ！';if(df>=30)m+='巻いていくのだ！';}
+  }
+  // スケジュール情報を先に読む、距離は2秒後にroadDistを使って読む
+  setTimeout(()=>spk(m),1000);
+  if(tI<stops.length){
+    setTimeout(()=>{
+      const nd=roadDist!==null?roadDist:dK(gLat,gLng,s.lat,s.lng);
+      const nm=s.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim();
+      if(nd<1){var m=Math.round(nd*1000/100)*100;spk('次の目的地は約'+m+'メートル先なのだ。');}
+      else{spk('次の目的地は約'+nd.toFixed(1)+'キロ先なのだ。');}
+    },3500);
+  }
+}
+let appBgm=null,_bgmFading=false;
+const _bgmList=['maou_bgm_neorock83.mp3','maou_bgm_cyber38.mp3','maou_bgm_8bit26.mp3','maou_bgm_neorock01.mp3','maou_bgm_neorock73.mp3','maou_bgm_neorock81.mp3','maou_bgm_neorock82.mp3'];
+var _lastBgmIdx=parseInt(localStorage.getItem('_lastBgmIdx')||'-1');
+var _bgmIdx=_lastBgmIdx;while(_bgmIdx===_lastBgmIdx){_bgmIdx=Math.floor(Math.random()*_bgmList.length);}
+localStorage.setItem('_lastBgmIdx',_bgmIdx);
+function bgmNext(){_bgmIdx=(_bgmIdx+1)%_bgmList.length;_bgmPlay();spk('次の曲なのだ',true);}
+function bgmPrev(){_bgmIdx=(_bgmIdx-1+_bgmList.length)%_bgmList.length;_bgmPlay();spk('前の曲なのだ',true);}
+function _bgmPlay(){
+  if(appBgm){appBgm.pause();appBgm=null;}
+  appBgm=new Audio(new URL(_bgmList[_bgmIdx],window.location.href).href);
+  appBgm.loop=true;appBgm.volume=0.25;appBgm.play().catch(function(){});
+}
+function playAppBgm(){
+  if(appBgm)return;
+  var pick=_bgmList[_bgmIdx];
+  appBgm=new Audio(new URL(pick,window.location.href).href);
+  appBgm.loop=true;
+  appBgm.volume=0.25;
+  appBgm.play().catch(()=>{});
+}
+function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
+
+// === 交通情報 ===
+const NAS_API='https://as5304t-c025.tail5d5c21.ts.net';
+const OWM_KEY='58130931e870f8c89a6eb88eaa5b525c';
+let _rainLayer=null,_rainOn=false;
+let _trafficReports=[];
+let _trafficMarkers=[];
+let _weatherData=[];
+let _weatherMarkers=[];
+let _lastRainNotify=0;
+let _rainEffect=null;
+function fetchWeather(){
+  fetch(NAS_API+'/api/weather',{signal:AbortSignal.timeout(5000)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      _weatherData=d.points||[];
+      try{localStorage.setItem('_weatherCache',JSON.stringify(_weatherData));}catch(e){}
+      showWeatherOnMap();
+      // 雨通知（1時間クールダウン）
+      var now=Date.now();
+      if(now-_lastRainNotify<3600000)return;
+      var rainPts=_weatherData.filter(function(p){return p.is_rain;});
+      if(rainPts.length>0&&gLat){
+        var nearest=rainPts.reduce(function(a,b){return dK(gLat,gLng,a.lat,a.lng)<dK(gLat,gLng,b.lat,b.lng)?a:b;});
+        var dist=dK(gLat,gLng,nearest.lat,nearest.lng);
+        if(dist<100){
+          spk(nearest.name+'付近で'+nearest.description+'の予報なのだ。',true);
+          _lastRainNotify=now;
+        }
+      }
+      // 現在地が雨なら雨エフェクト
+      updateRainEffect();
+    })
+    .catch(function(){try{var c=localStorage.getItem('_weatherCache');if(c){_weatherData=JSON.parse(c);showWeatherOnMap();}}catch(e){}});
+}
+function updateRainEffect(){
+  var isRaining=false;
+  if(gLat&&_weatherData.length>0){
+    var nearest=_weatherData.reduce(function(a,b){return dK(gLat,gLng,a.lat,a.lng)<dK(gLat,gLng,b.lat,b.lng)?a:b;});
+    if(dK(gLat,gLng,nearest.lat,nearest.lng)<30&&nearest.is_rain)isRaining=true;
+  }
+  if(isRaining&&!_rainEffect){
+    _rainEffect=document.createElement('div');
+    _rainEffect.id='rainFx';
+    _rainEffect.style.cssText='position:fixed;inset:0;z-index:9997;pointer-events:none;overflow:hidden;';
+    var drops='';
+    for(var i=0;i<60;i++){
+      var x=Math.random()*100;
+      var d=0.5+Math.random()*1.5;
+      var dl=Math.random()*2;
+      var o=0.3+Math.random()*0.4;
+      drops+='<div style="position:absolute;left:'+x+'%;top:-10%;width:1px;height:15px;background:rgba(150,200,255,'+o+');animation:rainDrop '+d+'s linear '+dl+'s infinite;"></div>';
+    }
+    _rainEffect.innerHTML=drops+'<style>@keyframes rainDrop{0%{transform:translateY(0);}100%{transform:translateY(110vh);}}</style>';
+    document.body.appendChild(_rainEffect);
+  } else if(!isRaining&&_rainEffect){
+    _rainEffect.remove();
+    _rainEffect=null;
+  }
+}
+function showWeatherOnMap(){
+  _weatherMarkers.forEach(function(m){m.setMap(null);});_weatherMarkers=[];
+  if(!map||!_rainOn)return;
+  _weatherData.forEach(function(w){
+    if(!w.is_rain&&!w.is_snow)return;
+    var icon=w.is_snow?'❄️':'🌧';
+    var mk=new google.maps.Marker({position:{lat:w.lat,lng:w.lng},map:map,
+      label:{text:icon,fontSize:'24px'},
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}});
+    mk.addListener('click',function(){
+      new google.maps.InfoWindow({content:'<b>'+w.name+'</b><br>'+w.description+'<br>'+w.temp+'°C 風'+w.wind_speed+'m/s<br>雨量:'+w.rain_1h+'mm/h'}).open(map,mk);
+    });
+    _weatherMarkers.push(mk);
+  });
+}
+// 5分ごとに天気取得
+setInterval(fetchWeather,300000);
+const _trafficIcons={accident:'🚨',closure:'⛔',police:'👮',construction:'🚧',other:'⚠️'};
+const _trafficLabels={accident:'事故',closure:'通行止め',police:'取り締まり',construction:'工事',other:'その他'};
+function fetchTraffic(){
+  fetch(NAS_API+'/api/traffic',{signal:AbortSignal.timeout(5000)})
+    .then(r=>r.json())
+    .then(d=>{const prev=_trafficReports.length;_trafficReports=d;showTrafficOnMap();if(gLat&&d.length>prev){const newest=d[d.length-1];const dist=dK(gLat,gLng,newest.lat,newest.lng);if(dist<30)spk('この先、'+(_trafficLabels[newest.type]||'')+'の情報があるのだ。'+(newest.memo||''),true);}})
+    .catch(()=>{});
+}
+function showTrafficOnMap(){
+  _trafficMarkers.forEach(m=>m.setMap(null));_trafficMarkers=[];
+  if(!map)return;
+  _trafficReports.forEach(r=>{
+    const icon=_trafficIcons[r.type]||'⚠️';
+    const mk=new google.maps.Marker({position:{lat:r.lat,lng:r.lng},map:map,
+      label:{text:icon,fontSize:'20px'},
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0}});
+    mk.addListener('click',()=>{
+      new google.maps.InfoWindow({content:`<b>${_trafficLabels[r.type]||r.type}</b><br>${r.memo||''}<br><small>${new Date(r.ts*1000).toLocaleTimeString('ja-JP')}</small>`}).open(map,mk);
+    });
+    _trafficMarkers.push(mk);
+  });
+}
+function submitReport(type){
+  if(!gLat){alert('GPS未取得');return;}
+  const memo=prompt(_trafficLabels[type]+' メモ（任意）：')||'';
+  fetch(NAS_API+'/api/report',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({lat:gLat,lng:gLng,type,memo}),signal:AbortSignal.timeout(5000)})
+    .then(r=>r.json())
+    .then(()=>{spk(_trafficLabels[type]+'情報を共有しました',true);fetchTraffic();})
+    .catch(()=>alert('共有に失敗しました'));
+}
+// 5分ごとに交通情報を取得
+setInterval(fetchTraffic,300000);
+
+// === バイクエンジン始動音 ===
+var _engineSnd=new Audio(new URL('engine.mp3',window.location.href).href);_engineSnd.preload='auto';
+function playEngineSound(){_engineSnd.currentTime=0;_engineSnd.volume=1.0;_engineSnd.play().catch(function(){});}
+
+// === 初回GPS取得（名前確定後）===
+function _firstTimeGps(){
+  // GPS取得中の表示をスプラッシュに追加
+  var gpsBox=document.createElement('div');
+  gpsBox.id='gpsStatusBox';
+  gpsBox.style.cssText='text-align:center;margin-top:16px;';
+  var _dotCount=0;
+  var _dotInterval=setInterval(function(){_dotCount=(_dotCount+1)%3;var dots='.'.repeat(_dotCount+1);gpsBox.querySelector('.gpsDots').textContent='GPS情報取得中'+dots;},600);
+  gpsBox.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px;"><div style="width:40px;height:40px;border:3px solid rgba(0,212,255,0.3);border-top:3px solid #00d4ff;border-radius:50%;animation:spin 1s linear infinite;"></div><div class="gpsDots" style="font-size:20px;font-weight:700;color:#00d4ff;">GPS情報取得中.</div></div><style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>';
+  var cards=document.querySelector('#riderNameBox');
+  if(cards&&cards.parentElement)cards.parentElement.insertBefore(gpsBox,cards.nextSibling);
+
+  spk('GPS情報を取得するのだ！',true);
+  if(!navigator.geolocation){gpsBox.remove();_showCards();return;}
+  navigator.geolocation.getCurrentPosition(function(p){
+    gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
+    if(p.coords.heading!==null&&!isNaN(p.coords.heading)&&p.coords.speed>1)gHeading=p.coords.heading;
+    clearInterval(_dotInterval);
+    // WAV生成完了を待ってから再生+カード表示
+    var _waitWav=setInterval(function(){
+      fetch(NAS_API+'/api/voice/plan_'+encodeURIComponent(_myName),{signal:AbortSignal.timeout(3000)})
+        .then(function(r){
+          if(r.ok){
+            clearInterval(_waitWav);
+            gpsBox.remove();
+            if(appBgm)appBgm.volume=0.1;
+            _zundaShow(_myName+'さん、ツーリングプランを選択してほしいのだ！');
+            var pa=new Audio(NAS_API+'/api/voice/plan_'+encodeURIComponent(_myName));
+            pa.volume=0.9;pa.playbackRate=_voiceSpeed;
+            pa.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;setTimeout(_zundaHide,1500);};
+            pa.play().catch(function(){});
+            _planAnnounced=true;
+            _showCards();
+          }
+        }).catch(function(){});// まだ生成中、リトライ
+    },1500);
+    // 30秒で諦めてフォールバック
+    setTimeout(function(){clearInterval(_waitWav);gpsBox.remove();_showCards();},30000);
+  },function(){
+    clearInterval(_dotInterval);
+    gpsBox.remove();_showCards();
+  },{enableHighAccuracy:true,timeout:15000});
+}
+
+// === NAS音声生成 ===
+function _genWelcomeVoice(name){
+  var hdr={'Content-Type':'application/json; charset=utf-8'};
+  // プラン選択用WAV → 完了後におかえり用WAV
+  fetch(NAS_API+'/api/voice/generate',{method:'POST',headers:hdr,
+    body:JSON.stringify({text:name+'さん、ツーリングプランを選択してほしいのだ！',key:'plan_'+name}),
+    signal:AbortSignal.timeout(30000)})
+  .then(function(){
+    return fetch(NAS_API+'/api/voice/generate',{method:'POST',headers:hdr,
+      body:JSON.stringify({text:name+'さん、おかえりなのだ！',key:'welcome_'+name}),
+      signal:AbortSignal.timeout(30000)});
+  }).catch(function(){});
+}
+
+// === 位置共有 ===
+var _myName=localStorage.getItem('_riderName')||'';
+var _riderMarkers={};
+function sendMyLocation(){
+  if(!gLat||!_myName)return;
+  fetch(NAS_API+'/api/location',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:_myName,lat:gLat,lng:gLng,speed:gSpeed,heading:gHeading||0}),
+    signal:AbortSignal.timeout(5000)}).catch(function(){});
+}
+function fetchRiderLocations(){
+  if(!_myName)return;
+  fetch(NAS_API+'/api/locations',{signal:AbortSignal.timeout(5000)})
+    .then(function(r){return r.json();})
+    .then(function(locs){
+      if(!map)return;
+      // 自分以外のライダーを表示
+      var seen={};
+      locs.forEach(function(l){
+        if(l.name===_myName)return;
+        seen[l.name]=true;
+        if(!_riderMarkers[l.name]){
+          _riderMarkers[l.name]=new google.maps.Marker({map:map,zIndex:90,
+            icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
+              fillColor:'#ff9100',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,rotation:l.heading||0},
+            title:l.name});
+        }
+        _riderMarkers[l.name].setPosition({lat:l.lat,lng:l.lng});
+        if(l.heading)_riderMarkers[l.name].setIcon({path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
+          fillColor:'#ff9100',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,rotation:l.heading});
+      });
+      // 消えたライダーのマーカー削除
+      Object.keys(_riderMarkers).forEach(function(n){
+        if(!seen[n]){_riderMarkers[n].setMap(null);delete _riderMarkers[n];}
+      });
+    }).catch(function(){});
+}
+// 10秒ごとに送信＆取得
+setInterval(function(){sendMyLocation();fetchRiderLocations();},10000);
+
+// === 設定パネル ===
+function _showSettings(){
+  var ex=document.getElementById('settingsPanel');
+  if(ex){ex.remove();return;}
+  var p=document.createElement('div');p.id='settingsPanel';
+  p.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10001;background:#111118;border:2px solid var(--ac);border-radius:16px;padding:24px;min-width:300px;';
+  p.innerHTML=`
+    <div style="font-size:18px;font-weight:900;color:var(--ac);margin-bottom:16px;">⚙ 設定</div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--txt);margin-bottom:4px;">ライダー名</div>
+      <input id="settingsName" type="text" value="${_myName||''}" style="background:rgba(255,255,255,0.1);border:1px solid var(--org);border-radius:8px;padding:10px;color:#fff;font-size:16px;font-family:inherit;width:100%;box-sizing:border-box;outline:none;">
+    </div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:12px;color:var(--txt);margin-bottom:4px;">音声速度</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="_setSpeed(1.0)" style="flex:1;padding:8px;border:1px solid var(--bdr);border-radius:8px;background:none;color:var(--txt);cursor:pointer;">遅い</button>
+        <button onclick="_setSpeed(1.2)" style="flex:1;padding:8px;border:1px solid var(--ac);border-radius:8px;background:none;color:var(--ac);cursor:pointer;">普通</button>
+        <button onclick="_setSpeed(1.4)" style="flex:1;padding:8px;border:1px solid var(--bdr);border-radius:8px;background:none;color:var(--txt);cursor:pointer;">速い</button>
+      </div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;color:var(--txt);margin-bottom:4px;">BGM音量</div>
+      <input type="range" min="0" max="50" value="${Math.round((appBgm?appBgm.volume:0.25)*100)}" oninput="if(appBgm)appBgm.volume=this.value/100;" style="width:100%;">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="var n=document.getElementById('settingsName').value.trim();if(n){_myName=n;localStorage.setItem('_riderName',n);_genWelcomeVoice(n);}document.getElementById('settingsPanel').remove();rnd();" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:10px;color:#000;font-size:14px;font-weight:800;cursor:pointer;">保存</button>
+      <button onclick="document.getElementById('settingsPanel').remove();" style="flex:1;background:none;border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--txt);font-size:14px;cursor:pointer;">閉じる</button>
+    </div>
+  `;
+  document.body.appendChild(p);
+}
+var _voiceSpeed=parseFloat(localStorage.getItem('_voiceSpeed')||'1.2');
+function _setSpeed(s){_voiceSpeed=s;localStorage.setItem('_voiceSpeed',s);}
+
+// 音声認識は無効（インカム使用のため）
+
+// === 距離案内（定期・接近・10kmごと）===
+var _lastDistAnnounce=0;// 前回の定期案内時刻
+var _lastDistKm=999;// 前回の10km刻み通過距離
+var _announced2km=false;// 2km接近案内済みフラグ
+function checkDistAnnounce(){
+  if(!gLat||iM||lastNI<0)return;
+  var st=STOPS[cDay];
+  var idx=Math.max(0,lastNI);
+  if(idx>=st.length)return;
+  var d=roadDist!==null?roadDist:dK(gLat,gLng,st[idx].lat,st[idx].lng);
+  var now=Date.now();
+
+  // 1. 30分ごとの定期案内
+  if(now-_lastDistAnnounce>=1800000&&_lastDistAnnounce>0){
+    _lastDistAnnounce=now;
+    if(d<1){var m=Math.round(d*1000/100)*100;spk('次の目的地は約'+m+'メートル先なのだ。');}
+    else{spk('次の目的地は約'+d.toFixed(1)+'キロ先なのだ。');}
+    return;
+  }
+  if(_lastDistAnnounce===0)_lastDistAnnounce=now;
+
+  // 2. 10kmごとの案内（50km以上の場合のみ）
+  if(d>=10){
+    var km10=Math.floor(d/10)*10;
+    if(km10<_lastDistKm&&_lastDistKm-km10>=10){
+      _lastDistKm=km10;
+      spk('次の目的地は約'+d.toFixed(1)+'キロ先なのだ。');
+      return;
+    }
+  }
+  if(d<_lastDistKm)_lastDistKm=Math.ceil(d/10)*10;
+
+  // 3. 2km接近案内
+  if(d<2&&d>=0.5&&!_announced2km){
+    _announced2km=true;
+    var nm=st[idx].name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim();
+    spk('まもなく'+nm+'なのだ。',true);
+    // チェックイン忘れ防止（復興ポイント・指定道の駅）
+    if(st[idx].type==='noto'||st[idx].type==='michi')spk('公式アプリでチェックインも忘れずになのだ！',true);
+    return;
+  }
+  if(d>=3)_announced2km=false;// リセット
+}
+
+// 雨雲レーダー
+function toggleRain(){
+  if(!map)return;
+  _rainOn=!_rainOn;
+  if(_rainOn){
+    _rainLayer=new google.maps.ImageMapType({
+      getTileUrl:function(coord,zoom){
+        return 'https://tile.openweathermap.org/map/clouds_new/'+zoom+'/'+coord.x+'/'+coord.y+'.png?appid='+OWM_KEY;
+      },
+      tileSize:new google.maps.Size(256,256),
+      opacity:0.6,
+      name:'Rain'
+    });
+    map.overlayMapTypes.insertAt(0,_rainLayer);
+  } else {
+    if(map.overlayMapTypes.getLength()>0){
+      for(var i=map.overlayMapTypes.getLength()-1;i>=0;i--){
+        if(map.overlayMapTypes.getAt(i)&&map.overlayMapTypes.getAt(i).name==='Rain'){
+          map.overlayMapTypes.removeAt(i);
+        }
+      }
+    }
+    _rainLayer=null;
+  }
+  showWeatherOnMap();
+  rnd();
+}
+
+// オービス・取締ポイント
+const ORBIS=[
+  // === 高速道路 ===
+  // 関越道 下り（Day1）
+  {lat:36.1449,lng:139.2230,name:'関越道 花園IC-寄居PA間',type:'固定',limit:100},
+  {lat:36.4033,lng:139.0241,name:'関越道 前橋IC-駒寄PA間',type:'半固定',limit:100},
+  // 上信越道
+  {lat:36.2415,lng:138.9450,name:'上信越道 甘楽PA付近',type:'固定',limit:100},
+  {lat:36.2406,lng:138.8822,name:'上信越道 富岡トンネル出口',type:'半固定',limit:100},
+  {lat:36.3548,lng:138.3749,name:'上信越道 東部湯の丸IC-小諸IC間',type:'固定',limit:80},
+  // 北陸道
+  {lat:37.2485,lng:138.3580,name:'北陸道 柿崎IC-大潟SIC間',type:'固定',limit:100},
+  {lat:36.9410,lng:137.5036,name:'北陸道 滑川IC付近',type:'固定',limit:100},
+  {lat:36.6439,lng:136.8545,name:'北陸道 金沢東IC付近',type:'固定',limit:100},
+  // 中央道 上り（Day2）
+  {lat:35.6285,lng:139.0463,name:'中央道 談合坂付近',type:'固定',limit:100},
+  {lat:35.6374,lng:138.5377,name:'中央道 双葉JCT付近',type:'固定',limit:80},
+  // 首都高
+  {lat:35.6812,lng:139.6981,name:'首都高4号 代々木付近',type:'固定',limit:60},
+  // === 一般道 取り締まり多発地点 ===
+  // 環八通り（Day1 有明→練馬IC）
+  {lat:35.7233,lng:139.6175,name:'環八 井草3丁目付近',type:'ネズミ捕り多発',limit:50},
+  {lat:35.7440,lng:139.6130,name:'環八 春日町付近',type:'ネズミ捕り多発',limit:50},
+  // 目白通り（練馬IC方面）
+  {lat:35.7520,lng:139.6200,name:'目白通り 谷原付近',type:'ネズミ捕り多発',limit:50},
+  // 国道8号（富山〜氷見方面）
+  {lat:36.7500,lng:137.0700,name:'R8 射水市付近',type:'取り締まり注意',limit:60},
+  // 能登半島（国道160/249）
+  {lat:36.8700,lng:136.9900,name:'R160 氷見市街',type:'取り締まり注意',limit:40},
+  {lat:37.0500,lng:136.9600,name:'R249 七尾市街',type:'取り締まり注意',limit:40},
+  {lat:36.8900,lng:136.7700,name:'R249 千里浜付近',type:'取り締まり注意',limit:50},
+  // 金沢市内
+  {lat:36.5700,lng:136.6500,name:'金沢市内 R157',type:'取り締まり注意',limit:50},
+  // Day2 一般道
+  {lat:36.3400,lng:137.9100,name:'安曇野 R147',type:'取り締まり注意',limit:50},
+  // === 白バイ多発ポイント ===
+  // 関越道（練馬〜藤岡）
+  {lat:35.8100,lng:139.5200,name:'関越道 三芳PA付近',type:'白バイ多発',limit:100},
+  {lat:35.9700,lng:139.3100,name:'関越道 高坂SA付近',type:'白バイ多発',limit:100},
+  {lat:36.0600,lng:139.2800,name:'関越道 嵐山小川IC付近',type:'白バイ多発',limit:100},
+  // 上信越道
+  {lat:36.3200,lng:138.6500,name:'上信越道 佐久IC付近',type:'白バイ多発',limit:100},
+  // 北陸道
+  {lat:37.0700,lng:138.2500,name:'北陸道 上越IC付近',type:'白バイ多発',limit:100},
+  {lat:36.8200,lng:137.4000,name:'北陸道 魚津IC付近',type:'白バイ多発',limit:100},
+  // 中央道（Day2）
+  {lat:35.7200,lng:139.1500,name:'中央道 相模湖IC付近',type:'白バイ多発',limit:100},
+  {lat:35.6600,lng:138.8300,name:'中央道 大月IC付近',type:'白バイ多発',limit:80},
+  {lat:35.9400,lng:138.1800,name:'中央道 諏訪IC付近',type:'白バイ多発',limit:80},
+];
+let _orbisState={};// {index: 'none'|'far'|'near'|'passed'}
+function checkOrbis(){
+  if(!gLat)return;
+  for(let i=0;i<ORBIS.length;i++){
+    const o=ORBIS[i];
+    const d=dK(gLat,gLng,o.lat,o.lng);
+    const st=_orbisState[i]||'none';
+    var isFixed=o.type==='固定'||o.type==='半固定';
+    if(isFixed&&d<1&&d>=0.3&&st==='none'){
+      // オービス: 1km手前 第1警告
+      _orbisState[i]='far';
+      aC.resume();tn(900,.15,'square',0);tn(900,.15,'square',.18);tn(900,.15,'square',.36);
+      spk('この先1キロ、'+o.type+'オービスなのだ。制限速度'+o.limit+'キロなのだ。',true);
+      _showOrbisBanner(o);
+      _orbisFlash(false);
+    } else if(isFixed&&d<0.3&&(st==='far'||st==='near')){
+      // オービス: 300m手前 繰り返し警告
+      _orbisState[i]='near';
+      _orbisRepeatAlert(o,5);
+    } else if(!isFixed&&d<0.5&&st==='none'){
+      // 取り締まり/白バイ: 500m手前 警告
+      _orbisState[i]='near';
+      aC.resume();tn(900,.12,'square',0);tn(900,.12,'square',.15);tn(900,.12,'square',.3);
+      var msg=o.type==='白バイ多発'?'この先、白バイ注意区間です。制限速度'+o.limit+'キロ。':'この先、取り締まり注意区間です。制限速度'+o.limit+'キロ。';
+      spk(msg,true);
+      if(o.type==='白バイ多発'){
+        spk(msg,true);
+        // 赤枠8秒間点滅+バナー8秒表示
+        var frame=_ensureOrbisFrame();
+        var flashOn=false;
+        var fi=setInterval(function(){flashOn=!flashOn;frame.style.borderColor=flashOn?'#ff4444':'transparent';},400);
+        setTimeout(function(){clearInterval(fi);frame.style.borderColor='transparent';},8000);
+        var bn2=document.createElement('div');
+        bn2.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#cc0000,#ff2222);border-bottom:3px solid #ff4444;padding:14px;text-align:center;font-size:16px;font-weight:900;color:#fff;';
+        bn2.textContent='⚠️ '+o.name+' ('+o.type+' '+o.limit+'km/h)';
+        document.body.appendChild(bn2);
+        setTimeout(function(){bn2.style.opacity='0';bn2.style.transition='opacity 0.5s';setTimeout(function(){bn2.remove();},500);},8000);
+      } else {
+        _showOrbisBanner(o);
+        _orbisFlash(false);
+      }
+    } else if(d>3&&(st==='near'||st==='far')){
+      _orbisState[i]='none';
+    }
+  }
+}
+function _ensureOrbisFrame(){
+  var f=document.getElementById('orbisFrame');
+  if(!f){f=document.createElement('div');f.id='orbisFrame';f.style.cssText='position:fixed;inset:0;z-index:9998;pointer-events:none;border:6px solid transparent;';document.body.appendChild(f);}
+  return f;
+}
+function _orbisFlash(urgent){
+  var f=_ensureOrbisFrame();
+  f.style.borderColor='#ff4444';
+  setTimeout(function(){f.style.borderColor='transparent';},urgent?200:400);
+}
+var _orbisInterval=null,_orbisFlashInterval=null;
+function _orbisRepeatAlert(o,times){
+  if(_orbisInterval)clearInterval(_orbisInterval);
+  if(_orbisFlashInterval)clearInterval(_orbisFlashInterval);
+  // TTS: 3回フル + 5回短縮
+  spk('まもなくオービスなのだ！速度注意なのだ！',true);
+  spk('まもなくオービスなのだ！速度注意なのだ！',true);
+  spk('まもなくオービスなのだ！速度注意なのだ！',true);
+  spk('速度注意！',true);
+  spk('速度注意！',true);
+  spk('速度注意！',true);
+  spk('速度注意！',true);
+  spk('速度注意！',true);
+  // 上部バナー（15秒表示）
+  var bn=document.createElement('div');
+  bn.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#cc0000,#ff2222);border-bottom:3px solid #ff4444;padding:14px;text-align:center;font-size:16px;font-weight:900;color:#fff;';
+  bn.textContent='⚠️ '+o.name+' ('+o.type+' '+o.limit+'km/h)';
+  document.body.appendChild(bn);
+  setTimeout(function(){bn.style.opacity='0';bn.style.transition='opacity 0.5s';setTimeout(function(){bn.remove();},500);},15000);
+  // 外枠を点滅（0.4秒間隔、15秒間）
+  var frame=_ensureOrbisFrame();
+  var flashOn=false;
+  _orbisFlashInterval=setInterval(function(){
+    flashOn=!flashOn;
+    frame.style.borderColor=flashOn?'#ff4444':'transparent';
+  },400);
+  // 警告音を小さめに鳴らす（1秒間隔、15秒間）
+  var beepCount=0;
+  _orbisInterval=setInterval(function(){
+    beepCount++;
+    if(beepCount>15){clearInterval(_orbisInterval);_orbisInterval=null;return;}
+    aC.resume();
+    tn(1200,.04,'square',0);tn(1200,.04,'square',.1);tn(1200,.04,'square',.2);
+  },1000);
+  // 15秒後に全停止
+  setTimeout(function(){
+    if(_orbisInterval){clearInterval(_orbisInterval);_orbisInterval=null;}
+    if(_orbisFlashInterval){clearInterval(_orbisFlashInterval);_orbisFlashInterval=null;}
+    frame.style.borderColor='transparent';
+  },15000);
+}
+function _showOrbisBanner(o){
+  var frame=_ensureOrbisFrame();
+  _orbisFlash(false);
+  var bn=document.createElement('div');
+  bn.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#cc0000,#ff2222);border-bottom:3px solid #ff4444;padding:14px;text-align:center;font-size:16px;font-weight:900;color:#fff;';
+  bn.textContent='⚠️ '+o.name+' ('+o.type+' '+o.limit+'km/h)';
+  document.body.appendChild(bn);
+  setTimeout(function(){bn.style.opacity='0';bn.style.transition='opacity 0.5s';setTimeout(function(){bn.remove();},500);},5000);
+}
+
+let _emergGoal=null;
+function emergGoal(){
+  var oLat=gLat||STOPS.day1[0].lat,oLng=gLng||STOPS.day1[0].lng;
+  var goalLat=36.8926,goalLng=136.7658;
+  var ds=new google.maps.DirectionsService();
+  _apiDir++;_apiSave();
+  ds.route({origin:{lat:oLat,lng:oLng},destination:{lat:goalLat,lng:goalLng},
+    travelMode:google.maps.TravelMode.DRIVING,avoidFerries:true,avoidTolls:false},
+    function(result,status){
+      if(status==='OK'){
+        // 地図にルート描画＋ズーム
+        if(map){
+          // 既存ルートをクリア
+          mPolylines.forEach(function(p){p.setMap(null);});mPolylines=[];
+          mStops.forEach(function(m){m.setMap(null);});mStops=[];
+          // ゴールまでのルート線（赤）
+          var path=result.routes[0].overview_path;
+          var pl=new google.maps.Polyline({path:path,map:map,strokeColor:'#ff4444',strokeWeight:6,strokeOpacity:0.9});
+          mPolylines.push(pl);
+          // ゴールマーカー
+          var gm=new google.maps.Marker({position:{lat:goalLat,lng:goalLng},map:map,
+            icon:{path:google.maps.SymbolPath.CIRCLE,scale:12,fillColor:'#ff4444',fillOpacity:1,strokeColor:'#fff',strokeWeight:3},title:'千里浜GOAL'});
+          mStops.push(gm);
+          // ルート全体が見えるようにズーム
+          var bounds=new google.maps.LatLngBounds();
+          bounds.extend({lat:oLat,lng:oLng});
+          bounds.extend({lat:goalLat,lng:goalLng});
+          map.fitBounds(bounds,{top:80,bottom:40,left:40,right:40});
+          // 地図タブに切り替え
+          vM='map';
+        }
+        var leg=result.routes[0].legs[0];
+        var km=(leg.distance.value/1000).toFixed(1);
+        var durMin=Math.round(leg.duration.value/60);
+        var durH=Math.floor(durMin/60),durM=durMin%60;
+        var now=new Date();var nwMin=now.getHours()*60+now.getMinutes();
+        var sunset=19*60;var remMin=Math.max(0,sunset-nwMin);
+        var remH=Math.floor(remMin/60),remM=remMin%60;
+        var ratio=durMin>0?remMin/durMin:99;
+        var col=ratio>1.2?'#00e676':ratio>=1.0?'#ffd740':'#ff4444';
+        var statusTxt=ratio>1.2?'余裕あり':ratio>=1.0?'ギリギリ':'間に合わない！';
+        // ずんだもん音声（状態別）
+        var goalVoice=ratio>1.2?'voice/goal_余裕.wav':ratio>=1.0?'voice/goal_ギリギリ.wav':'voice/goal_間に合わない.wav';
+        var ga=new Audio(new URL(goalVoice,window.location.href).href);
+        ga.volume=0.9;ga.play().catch(function(){});
+        // 地図タブに切り替え
+        vM='map';rnd();
+        // ポップアップ表示
+        var p=document.createElement('div');
+        p.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#111118;border:2px solid '+col+';border-radius:16px;padding:20px;min-width:280px;text-align:center;';
+        p.innerHTML='<div style="font-size:18px;font-weight:900;color:'+col+';margin-bottom:12px;">🚨 千里浜GOALまで</div>'
+          +'<div style="font-family:Outfit;font-size:36px;font-weight:900;color:var(--ac);">'+km+'km</div>'
+          +'<div style="font-family:Outfit;font-size:28px;font-weight:900;color:var(--ac);margin-top:4px;">約'+durH+'時間'+durM.toString().padStart(2,'0')+'分</div>'
+          +'<div style="font-size:14px;color:var(--txt);margin-top:8px;">19:00まで残り '+remH+'時間'+remM.toString().padStart(2,'0')+'分</div>'
+          +'<div style="font-size:20px;font-weight:900;color:'+col+';margin-top:8px;">'+statusTxt+'</div>'
+          +'<a href="https://www.google.com/maps/dir/?api=1&destination=36.8926,136.7658&travelmode=driving" style="display:inline-block;margin-top:12px;color:var(--ac);font-size:14px;">📍 Google Mapsナビ起動</a>'
+          +'<div style="margin-top:12px;"><button onclick="this.parentElement.parentElement.remove();" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--txt);padding:6px 20px;font-size:14px;cursor:pointer;">閉じる</button></div>';
+        document.body.appendChild(p);
+      } else {alert('ルート取得失敗: '+status);}
+    });
+}
+let watchId=null;
+let lastNI=-1;
+let lastUpdate=0;
+let pendingPos=null;
+let gHeading=null;
+let hMode=true;
+let roadDist=null,lastRoadDistCI=-1;
+
+function fetchRoadDist(lat,lng,stop){
+  try{
+    const ds=new google.maps.DirectionsService();
+    _apiDir++;_apiSave();ds.route({origin:{lat,lng},destination:{lat:stop.lat,lng:stop.lng},
+      travelMode:google.maps.TravelMode.DRIVING,avoidFerries:true,avoidHighways:false,avoidTolls:!!stop.noHwy},
+      (result,status)=>{
+        if(status==='OK'){
+          roadDist=result.routes[0].legs.reduce((s,l)=>s+l.distance.value,0)/1000;
+        }
+      });
+  }catch(e){}
+}
+
+// Fast: just move the marker without rebuilding everything
+function moveMarker(lat,lng){
+  if(mMe){
+    mMe.setPosition({lat,lng});
+    if(gHeading!==null){
+      mMe.setIcon({path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
+        fillColor:'#00d4ff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,
+        rotation:gHeading});
+    }
+  }
+  if(map&&zoomMode===0)map.panTo({lat,lng});
+}
+
+function onGpsUpdate(p,announce_it){
+  gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
+  // Store heading (null when stationary)
+  if(p.coords.heading!==null && !isNaN(p.coords.heading) && p.coords.speed>1){
+    gHeading=p.coords.heading;
+  }
+  // Always move marker immediately (fast)
+  moveMarker(gLat,gLng);
+  checkOrbis();
+  checkDistAnnounce();
+  checkFuel();
+  checkRest();
+  // Throttle everything else to 5 seconds
+  const now=Date.now();
+  if(!announce_it && now-lastUpdate<5000){pendingPos=p;return;}
+  lastUpdate=now;pendingPos=null;
+  gSt='📍 追尾中 ('+gLat.toFixed(4)+', '+gLng.toFixed(4)+')'+(gHeading!==null?' 🧭'+Math.round(gHeading)+'°':'');
+  const st=STOPS[cDay],ni=fN(st);
+  // 500m以内に入ったら次のストップへ自動進行
+  if(ni.d<0.5 && ni.i<st.length-1 && lastNI!==ni.i+1){
+    // 高速道路に入ったらBGMフェードアウト
+    if(appBgm&&st[ni.i+1]&&st[ni.i+1].name.match(/練馬IC|金沢西IC/)){
+      _bgmFading=true;var _bv=appBgm.volume;var _bf=setInterval(function(){_bv=Math.max(0,_bv-0.005);if(appBgm)appBgm.volume=_bv;if(_bv<=0){stopAppBgm();_bgmFading=false;clearInterval(_bf);}},200);
+    }
+    // 15pt達成チェック（進行前後でポイント比較）
+    const prevPt=st.slice(0,ni.i+1).reduce((s,x)=>s+x.pt,0);
+    const newPt=st.slice(0,ni.i+2).reduce((s,x)=>s+x.pt,0);
+    if(cDay==='day1'&&prevPt<15&&newPt>=15){
+      if(appBgm)appBgm.volume=0.05;if(bgm)bgm.volume=0.1;
+      const ff=new Audio(new URL('sentou-syouri-remix.mp3',window.location.href).href);
+      ff.volume=0.8;ff.play().catch(()=>sGoal());
+      ff.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;if(bgm)bgm.volume=0.5;};
+      spk('15ポイント達成なのだ！完走条件クリアなのだ！おめでとうなのだ！',true);
+      const bn=document.createElement('div');
+      bn.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#003320,#005530);border-bottom:3px solid var(--grn);padding:16px;text-align:center;font-size:20px;font-weight:900;color:#00e676;animation:fadeIn 0.3s;';
+      bn.textContent='🎉 15pt達成！完走条件クリア！ 🎉';
+      document.body.appendChild(bn);
+      setTimeout(()=>{bn.style.opacity='0';bn.style.transition='opacity 0.5s';setTimeout(()=>bn.remove(),500);},3000);
+    }
+    lastNI=ni.i+1;
+    sNext();
+    const nw=new Date(),nm=nw.getHours()*60+nw.getMinutes();
+    ann(st,{i:lastNI,d:ni.d},nm-pT(st[lastNI].time));
+    updateMap(gLat,gLng,st,lastNI);
+    rnd();
+    return;
+  }
+  if(announce_it || lastNI===-1){
+    lastNI=ni.i;
+    updateMap(gLat,gLng,st,ni.i);
+    // 中間画面のTTS終了を待ってから画面遷移（最低5秒表示）
+    var _mc2=setInterval(function(){
+      var mid0=document.getElementById('midScreen');
+      var age=mid0?(Date.now()-(mid0._created||0)):99999;
+      if(age>=5000&&!_spkBusy&&_spkQ.length===0){
+        clearInterval(_mc2);
+        // 中間画面を消す
+        var mid=document.getElementById('midScreen');
+        if(mid)mid.remove();
+        vM='list';
+        stopAppBgm();
+        _zundaHide();
+        rnd();
+        // リストタブ表示後にチャイム+距離案内
+        setTimeout(function(){
+          sGps();
+          var nw2=new Date(),nm2=nw2.getHours()*60+nw2.getMinutes();
+          ann(st,ni,nm2-pT(st[ni.i].time));
+        },500);
+      }
+    },500);
+    // 15秒フォールバック
+    setTimeout(function(){clearInterval(_mc2);var mid=document.getElementById('midScreen');if(mid){mid.remove();vM='list';stopAppBgm();rnd();}},15000);
+  } else {
+    rnd();
+  }
+}
+// Process any pending position every 5s
+setInterval(()=>{if(pendingPos){onGpsUpdate(pendingPos,false);pendingPos=null;}},5000);
+
+// === 給油リマインダー ===
+var _lastFuelDist=0;// 前回給油からの走行距離
+var _lastFuelLat=null,_lastFuelLng=null;
+var _fuelRange=340;// 航続距離km
+var _fuelWarned100=false,_fuelWarned50=false;
+function checkFuel(){
+  if(!gLat||lastNI<0)return;
+  var st=STOPS[cDay];
+  // 給油ストップ到着でリセット
+  if(st[lastNI]&&st[lastNI].type==='gs'&&_lastFuelLat){
+    _lastFuelDist=0;_lastFuelLat=gLat;_lastFuelLng=gLng;
+    _fuelWarned100=false;_fuelWarned50=false;return;
+  }
+  // 走行距離を加算
+  if(_lastFuelLat){
+    _lastFuelDist+=dK(_lastFuelLat,_lastFuelLng,gLat,gLng);
+  }
+  _lastFuelLat=gLat;_lastFuelLng=gLng;
+  var remain=_fuelRange-_lastFuelDist;
+  if(remain<=50&&!_fuelWarned50){_fuelWarned50=true;spk('そろそろ給油なのだ！残り約'+Math.round(remain)+'キロなのだ！',true);}
+  else if(remain<=100&&!_fuelWarned100){_fuelWarned100=true;spk('給油を考えるのだ。残り約'+Math.round(remain)+'キロなのだ。',true);}
+}
+
+// === 休憩リマインダー ===
+var _restDriveMs=0;// 走行累計ミリ秒
+var _restLastCheck=0;
+var _restWarned=false;
+function checkRest(){
+  if(!gLat||lastNI<0)return;
+  var now=Date.now();
+  var st=STOPS[cDay];
+  // ストップ到着でリセット
+  if(st[lastNI]){
+    var d=dK(gLat,gLng,st[lastNI].lat,st[lastNI].lng);
+    if(d<0.5){_restDriveMs=0;_restLastCheck=now;_restWarned=false;return;}
+  }
+  // 速度が10km/h以上なら走行中とみなして加算
+  if(_restLastCheck>0&&gSpeed>2.8){// 2.8m/s≒10km/h
+    _restDriveMs+=now-_restLastCheck;
+  }
+  _restLastCheck=now;
+  if(_restDriveMs>=7200000&&!_restWarned){// 2時間=7200000ms
+    _restWarned=true;
+    if(!iM)spk('2時間走ってるのだ、休憩するのだ！',true);
+  }
+}
+
+// Wake Lock（スリープ防止）
+let _wakeLock=null;
+async function _requestWakeLock(){
+  try{if('wakeLock'in navigator){_wakeLock=await navigator.wakeLock.request('screen');_wakeLock.addEventListener('release',()=>{_wakeLock=null;});}}catch(e){}
+}
+async function _releaseWakeLock(){try{if(_wakeLock){await _wakeLock.release();_wakeLock=null;}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&watchId)_requestWakeLock();});
+
+function loc(cb){
+  aC.resume();
+  if(!navigator.geolocation){gSt='❌ GPS非対応';rnd();return;}
+  gSt='📡 取得中...';rnd();
+  // First: get immediate position with announcement
+  navigator.geolocation.getCurrentPosition(p=>{
+    if(cb)cb();
+    onGpsUpdate(p,true);
+  },e=>{
+    const msgs={1:'❌ 位置情報を許可してください',2:'❌ 位置取得できません',3:'❌ タイムアウト'};
+    gSt=msgs[e.code]||'❌ '+e.message;
+    rnd();
+  },{enableHighAccuracy:true,timeout:15000});
+  // Then: start continuous watch (silent updates)
+  if(watchId)navigator.geolocation.clearWatch(watchId);
+  _requestWakeLock();
+  watchId=navigator.geolocation.watchPosition(p=>{
+    onGpsUpdate(p,false);
+  },()=>{},{enableHighAccuracy:true,maximumAge:3000,timeout:10000});
+}
+
+function stopWatch(){
+  if(watchId){navigator.geolocation.clearWatch(watchId);watchId=null;}
+  gSt='⏹ 追尾停止';rnd();
+}
+
+// Test: jump to a stop location for PC testing
+let testIdx=0;
+
+
+function testJump(){
+  const st=STOPS[cDay];
+  testIdx=(testIdx+1)%st.length;
+  gLat=st[testIdx].lat+(Math.random()-0.5)*0.01;
+  gLng=st[testIdx].lng+(Math.random()-0.5)*0.01;
+  gSt='🧪 テスト: '+st[testIdx].name;
+  rnd();sGps();
+  const ni=fN(st),nw=new Date(),nm=nw.getHours()*60+nw.getMinutes();
+  ann(st,ni,nm-pT(st[ni.i].time));
+  if(vM==='map')updateMap(gLat,gLng,st,ni.i);
+}
+
+// === RENDER (split: hdr-area, top, btm) ===
+function rnd(){
+  const st=STOPS[cDay],nw=new Date();
+  const nH=nw.getHours().toString().padStart(2,'0'),nM=nw.getMinutes().toString().padStart(2,'0');
+  const nwM=nw.getHours()*60+nw.getMinutes();
+  const ni=fN(st),nI=gLat?ni.i:0,nD=gLat?ni.d:0;
+  const pl=pT(st[nI].time),df=gLat&&isRallyDay()?(nwM-pl):0;
+  const rally=isRallyDay();
+  let dc=!rally?'ot':Math.abs(df)<=5?'ot':df<0?'ah':'bh';
+  let dt=!rally?'':Math.abs(df)<=5?'±0':((df>0?'+':'-')+fD(df));
+  if(!gLat){dc='ot';dt='--';}
+  let cI=gLat?nI:0;
+  const cS=st[cI],cD=gLat?dK(gLat,gLng,cS.lat,cS.lng):0;
+  if(gLat&&cI!==lastRoadDistCI){lastRoadDistCI=cI;roadDist=null;fetchRoadDist(gLat,gLng,cS);}
+  const dispDist=roadDist!==null?roadDist:cD;
+  const cP=pT(cS.time),eta=gLat&&rally?cP+df:cP;
+  const eH=Math.floor(((eta%1440)+1440)%1440/60).toString().padStart(2,'0'),eM=(((eta%1440)+1440)%1440%60).toString().padStart(2,'0');
+  const xI=Math.min(cI+1,st.length-1),xS=st[xI],xD=gLat?dK(gLat,gLng,xS.lat,xS.lng):0;
+  let pPt=0;st.forEach((s,i)=>{if(gLat&&i<nI)pPt+=s.pt;});
+  let tPt=0;st.forEach(s=>tPt+=s.pt);
+  const cDur=cS.dur||0;
+  const depM=eta+cDur;
+  const depH=Math.floor(((depM%1440)+1440)%1440/60).toString().padStart(2,'0'),depMn=(((depM%1440)+1440)%1440%60).toString().padStart(2,'0');
+  const tc={move:'dv',michi:'dm',noto:'dn',goal:'dg',qk:'dq',gs:'ds',other:'do'};
+
+  // Header
+  if(sFl){
+    document.getElementById('hdr-area').innerHTML=`<div class="hdr">
+      <button class="cb" onclick="sFl=false;rnd();" style="border-color:var(--ac);color:var(--ac);padding:6px 16px;font-size:13px;font-weight:800;">← 戻る</button>
+      <div style="font-size:13px;font-weight:700;color:var(--sub)">📋 全リスト</div>
+      <div style="text-align:right"><div class="now">${nH}:${nM}</div></div>
+    </div>`;
+  } else {
+    document.getElementById('hdr-area').innerHTML=`<div class="hdr">
+      <div onclick="goHome()" style="cursor:pointer;display:flex;align-items:center;gap:8px;"><img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:22px;opacity:0.9;" onerror="this.outerHTML='<h1>SSTR</h1>'" ontouchstart="this._lp=setTimeout(()=>{if(_isAdmin){_apiShow=true;setTimeout(()=>{_apiShow=false;},5000);}},800)" ontouchend="clearTimeout(this._lp)" oncontextmenu="event.preventDefault()">${rally&&gLat?'<span class="bdg '+dc+'">'+dt+'</span>':''}</div>
+      <div style="text-align:center;flex:1;padding:0 8px;min-height:70px;display:flex;flex-direction:column;justify-content:center;">
+        ${gLat&&rally?`${(()=>{const schM=pT(cS.time);const diffM=schM-nwM;const absDiff=Math.abs(diffM);const ahead=diffM>=0;const dh=Math.floor(absDiff/60).toString().padStart(2,'0');const dm=(absDiff%60).toString().padStart(2,'0');const now=new Date();const ds=now.getSeconds().toString().padStart(2,'0');const col=ahead?'var(--ac)':'var(--red)';const lbl=ahead?'余裕':'遅れ';const sign=ahead?'+':'-';return `<div style="font-family:'Outfit';font-size:10px;color:${col};letter-spacing:1px;">${lbl}</div><div style="font-family:'Outfit';font-size:45px;font-weight:900;color:${col};line-height:1;letter-spacing:2px;">${sign}${dh}:${dm}:${ds}</div><div style="font-size:9px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()}</div>`;})()}`:(gLat?`${(()=>{
+if(_hdrMode===0){
+  const now=new Date();const goal=new Date(2026,4,23,19,0,0);let remS=Math.floor((goal-now)/1000);const over=remS<0;if(over)remS=Math.abs(remS);const rd=Math.floor(remS/86400),rh=Math.floor((remS%86400)/3600),rm=Math.floor((remS%3600)/60),rs=remS%60;const col=over?'var(--red)':remS<3600?'var(--ylw)':'var(--ac)';const lbl=over?'超過':rd>0?'5/23 19:00まで':'19:00まで';const timeStr=rd>0?rd+'日'+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0'):(over?'-':'')+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0');
+  return '<div style="font-family:Outfit;font-size:10px;color:'+col+';letter-spacing:1px;">'+lbl+'</div><div style="font-family:Outfit;font-size:'+(rd>0?'32':'45')+'px;font-weight:900;color:'+col+';line-height:1;letter-spacing:2px;">'+timeStr+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
+} else if(_hdrMode===1){
+  const distM=Math.round(dispDist*1000);
+  const distStr=distM>=1000?(dispDist.toFixed(1)+'km'):(distM+'m');
+  return '<div style="font-family:Outfit;font-size:10px;color:var(--ac);letter-spacing:1px;">次のスポットまで</div><div style="font-family:Outfit;font-size:45px;font-weight:900;color:var(--ac);line-height:1;letter-spacing:2px;">'+distStr+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
+} else {
+  const now2=new Date();const nwS2=now2.getHours()*3600+now2.getMinutes()*60+now2.getSeconds();const etaS2=eta*60;let rem2=etaS2-nwS2;if(rem2<0)rem2+=86400;const rh2=Math.floor(rem2/3600),rm2=Math.floor((rem2%3600)/60),rs2=rem2%60;
+  return '<div style="font-family:Outfit;font-size:10px;color:var(--ac);letter-spacing:1px;">到着まで</div><div style="font-family:Outfit;font-size:45px;font-weight:900;color:var(--ac);line-height:1;letter-spacing:2px;">'+rh2.toString().padStart(2,'0')+':'+rm2.toString().padStart(2,'0')+':'+rs2.toString().padStart(2,'0')+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
+}
+})()}`:'')}
+      </div>
+      <div style="text-align:right"><div class="now">${nH}:${nM}</div><div class="date">${nw.getMonth()+1}/${nw.getDate()} ${['日','月','火','水','木','金','土'][nw.getDay()]}</div>
+        </div>
+    </div>
+    <div class="vtabs">
+      <div class="vtab ${vM==='list'?'act':''}" onclick="setView('list')">📋 リスト</div>
+      <div class="vtab ${vM==='map'?'act':''}" onclick="setView('map')">🗺️ 地図</div>
+    </div>`;
+  }
+
+  // 全リストモード
+  if(sFl){
+    document.getElementById('top').innerHTML='';
+    document.getElementById('top').style.display='none';
+    document.getElementById('mapWrap').style.display='none';
+    const tc2={move:'dv',michi:'dm',noto:'dn',goal:'dg',qk:'dq',gs:'ds',other:'do'};
+    let fl=`<div style="padding:0 10px 20px;">`;
+    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';fl+=`<div class="fi ${c}"><div class="dot ${tc2[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}<span class="tm">${s.time}</span></div>`;});
+    fl+=`</div>`;
+    document.getElementById('btm').innerHTML=fl;
+    return;
+  }
+
+  // Map mode toggle
+  const mw=document.getElementById('mapWrap');
+  if(vM==='map'){
+    mw.style.display='block';
+    mw.className='full';
+    document.getElementById('top').style.display='none';
+    // Overlay on map
+    let ov=document.getElementById('mapOv');
+    if(!ov){ov=document.createElement('div');ov.id='mapOv';ov.className='map-overlay';mw.style.position='relative';mw.appendChild(ov);}
+    const _bs='background:none;border:1px solid var(--bdr);border-radius:8px;font-size:18px;padding:4px 8px;cursor:pointer;';
+    const _zb=(m,icon)=>`<button onclick="setZoomMode(${m});event.stopPropagation();" style="flex:1;background:${zoomMode===m?'var(--ac)':'none'};border:1px solid ${zoomMode===m?'var(--ac)':'var(--bdr)'};border-radius:8px;color:${zoomMode===m?'#000':'var(--txt)'};padding:6px 4px;font-size:16px;cursor:pointer;">${icon}</button>`;
+    const _db=(day,label)=>`<button onclick="cDay='${day}';lastRouteNI=-1;lastNI=-1;clearMap();if(gLat){var _ni=fN(STOPS.${day});updateMap(gLat,gLng,STOPS.${day},_ni.i);}else{showRouteOnly(STOPS.${day});}rnd();event.stopPropagation();" style="background:${cDay===day?'var(--ac)':'none'};border:1px solid ${cDay===day?'var(--ac)':'var(--bdr)'};border-radius:6px;color:${cDay===day?'#000':'var(--txt)'};padding:4px 8px;font-size:12px;font-weight:700;cursor:pointer;">${label}</button>`;
+    ov.innerHTML=`<div class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px;">${cS.name}</div>
+      <div style="display:flex;gap:4px;">
+        <button onclick="iM=!iM;rnd();event.stopPropagation();" style="${_bs}color:${iM?'var(--txt)':'var(--ac)'};">${iM?'🔇':'🔊'}</button>
+        <button onclick="toggleNight();event.stopPropagation();" style="${_bs}color:${nightMode?'var(--ylw)':'var(--txt)'};">${nightMode?'🌙':'☀️'}</button>
+        ${_db('day1','23')}${_db('day2','24')}
+        ${_zb(0,'🔍')}${_zb(1,'📍')}${_zb(2,'🗺️')}
+        <button onclick="toggleRain();event.stopPropagation();" style="${_bs}background:${_rainOn?'var(--ac)':'none'};border-color:${_rainOn?'var(--ac)':'var(--bdr)'};color:${_rainOn?'#000':'var(--txt)'};">☔</button>
+        ${cDay==='day1'?'<button onclick="emergGoal();event.stopPropagation();" style="'+_bs+'color:var(--red);border-color:var(--red);">🚨</button>':''}
+      </div>`;
+    if(map)google.maps.event.trigger(map,'resize');
+  } else {
+    mw.className='';
+    mw.style.display='none';
+    document.getElementById('top').style.display='block';
+    const ov=document.getElementById('mapOv');if(ov)ov.remove();
+  }
+
+  // Top: current stop panel
+  let t='';
+  if(_myName)t+=`<div style="padding:4px 14px;font-size:12px;color:var(--org);"><span onclick="var n=prompt('ライダー名:',_myName||'');if(n!==null){_myName=n;localStorage.setItem('_riderName',n);rnd();}" style="cursor:pointer;">🏍 ${_myName}</span></div>`;
+  // Current
+  t+=`<div class="pnl pc"><div class="lb">▶ いま向かっている場所</div>
+    <div class="nm">${cS.name}</div>${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
+    ${(()=>{const schM=pT(cS.time);const diff=gLat&&rally?eta-schM:0;const tc=!gLat||!rally?'var(--ac)':diff>0?'var(--red)':diff>=-5?'var(--ylw)':'var(--ac)';return `<div class="sts">
+      <div class="st"><div class="v">${gLat?dispDist.toFixed(1):'--'}</div><div class="l">km</div></div>
+      <div class="st"><div class="v" style="color:${tc}">${gLat?eH+':'+eM:cS.time}</div><div class="l">着${gLat&&rally&&diff>0?'<span style="color:'+tc+'"> +'+diff+'分</span>':''}</div></div>
+    </div>
+    ${cDur?`<div class="sts" style="margin-top:6px;">
+      <div class="st"><div class="v">${cDur}分</div><div class="l">滞在</div></div>
+      <div class="st"><div class="v" style="color:${tc}">${gLat?depH+':'+depMn:'--:--'}</div><div class="l">発</div></div>
+    </div>`:''}`;})()}
+    ${cS.pt?'<div class="pb"><div class="ptb">+'+cS.pt+'pt</div></div>':''}
+  </div>`;
+  document.getElementById('top').innerHTML=t;
+
+  // Bottom: Panel3 (next) + points + controls + list
+  let b='';
+  if(vM==='list'){
+    if(xI!==cI){const xDur=xS.dur||0;b+=`<div class="pnl pn"><div class="ar">›</div><div><div class="lb">その次</div><div class="nm">${xS.name}</div><div class="dt">${xS.time}${gLat?' ・ 約'+xD.toFixed(0)+'km':''}${xDur?' ・ 滞在'+xDur+'分':''}${xS.pt?' ・ +'+xS.pt+'pt':''}</div></div></div>`;}
+    if(cDay==='day1'){const pc=Math.min(100,Math.round(pPt/15*100));b+=`<div class="ptbar"><div><div class="tot">${pPt}</div><div class="lb">獲得pt</div></div><div class="prg"><div class="pf" style="width:${pc}%"></div></div><div style="text-align:right"><div class="tot" style="font-size:16px">${tPt}</div><div class="lb">MAX</div></div></div>`;}
+    b+=`<div class="ctrls">
+      <button class="cb ${iM?'':'act'}" onclick="iM=!iM;rnd();">${iM?'🔇':'🔊'}</button>
+      <label class="cb" style="border-color:var(--pk);color:var(--pk);">🎵 BGM<input type="file" accept="audio/*" onchange="lBGM(event)" style="display:none;"></label>
+      <button class="cb ${sFl?'act':''}" onclick="sFl=!sFl;rnd();">📋 全リスト</button>
+      <button class="cb" onclick="_showSettings();">⚙ 設定</button>
+      ${cDay==='day1'?'<button class="cb" style="border-color:var(--red);color:var(--red);" onclick="emergGoal()">🚨 緊急ゴール</button>':''}
+    </div>`;
+    if(_emergGoal){const g=_emergGoal;b+=`<div class="pnl" style="background:var(--card);border:2px solid ${g.col};padding:14px 16px;">
+      <div style="font-size:14px;font-weight:900;color:${g.col};margin-bottom:8px;">🚨 千里浜GOALまで</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+        <div><div style="font-family:'Outfit';font-size:24px;font-weight:900;color:var(--ac);">${g.km}</div><div style="font-size:12px;color:var(--txt);">km</div></div>
+        <div><div style="font-family:'Outfit';font-size:24px;font-weight:900;color:var(--ac);">${g.durH}:${g.durM.toString().padStart(2,'0')}</div><div style="font-size:12px;color:var(--txt);">所要時間</div></div>
+        <div><div style="font-family:'Outfit';font-size:24px;font-weight:900;color:${g.col};">${g.remH}:${g.remM.toString().padStart(2,'0')}</div><div style="font-size:12px;color:var(--txt);">残り(19時)</div></div>
+      </div>
+      <div style="text-align:center;margin-top:8px;font-size:16px;font-weight:900;color:${g.col};">${g.statusTxt}</div>
+      <div style="text-align:center;margin-top:8px;"><a href="https://www.google.com/maps/dir/?api=1&destination=36.8926,136.7658&travelmode=driving" style="color:var(--ac);font-size:13px;">📍 Google Mapsでナビ開始</a></div>
+      <div style="text-align:center;margin-top:6px;"><button onclick="_emergGoal=null;rnd();" style="background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--txt);padding:4px 12px;font-size:11px;cursor:pointer;">閉じる</button></div>
+    </div>`;}
+    b+=`
+    <div id="bi" style="display:${bgm?'block':'none'};text-align:center;font-size:11px;color:var(--pk);padding:2px;"></div>
+    <div class="dtabs"><div class="dtab ${cDay==='day1'?'act':''}" onclick="cDay='day1';rnd();">Day1 (5/23)</div><div class="dtab ${cDay==='day2'?'act':''}" onclick="cDay='day2';rnd();">Day2 (5/24)</div></div>`;
+    b+=`<div class="fl ${sFl?'show':''}"><div class="fh">📋 全ストップ</div>`;
+    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';b+=`<div class="fi ${c}"><div class="dot ${tc[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}<span class="tm">${s.time}</span></div>`;});
+    b+=`</div>`;
+  } else {
+    // 地図タブ
+  }
+  document.getElementById('btm').innerHTML=b;
+}
+setInterval(rnd,1000);
+// Auto detect Day1 (5/23) or Day2 (5/24)
+(function(){
+  const now=new Date();
+  const m=now.getMonth()+1,d=now.getDate();
+  if(m===5&&d===24)cDay='day2';
+  else cDay='day1'; // Default day1 (including 5/23 and testing)
+})();
+rnd();
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    reg.addEventListener('updatefound',()=>{
+      const nw=reg.installing;
+      nw.addEventListener('statechange',()=>{
+        if(nw.state==='activated'){
+          // 新バージョンが有効化されたら自動リロード
+          window.location.reload();
+        }
+      });
+    });
+  });
+  // 既存のSWが更新を持っている場合
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    window.location.reload();
+  });
+}
+function goHome(){
+  if(watchId){navigator.geolocation.clearWatch(watchId);watchId=null;}
+  _spkQ.length=0;_spkBusy=false;
+  const _tts=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.TextToSpeech;
+  if(_tts)_tts.stop().catch(()=>{});else if('speechSynthesis'in window)speechSynthesis.cancel();
+  if(appBgm){appBgm.pause();appBgm=null;}
+  location.reload();
+}
+function startApp(mode){
+  const sp=document.getElementById('splash');
+  if(!sp)return;
+  if(_apiLocked()){alert('API使用量が上限に達しました。今月は使用できません。');return;}
+  aC.resume();
+  sp.remove();
+  playAppBgm();
+
+  const titles={sstr:'SSTR 2026',nippon1:'にっぽん応援ツーリング 2026 ①',nippon2:'にっぽん応援ツーリング 2026 ②'};
+  const title=titles[mode]||'SSTR 2026';
+
+  // 中間画面
+  const mid=document.createElement('div');
+  mid.style.cssText='position:fixed;inset:0;background:#06060c;z-index:9998;';mid.id='midScreen';mid._created=Date.now();
+  mid.innerHTML=`
+    <div style="position:absolute;inset:0;background-image:url(bg2.jpg);background-size:cover;background-position:center 70%;"></div>
+    <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.2) 100%);"></div>
+    <div style="position:absolute;top:20px;right:20px;z-index:2;font-family:'Outfit';font-size:12px;color:#fff;letter-spacing:1px;text-align:right;">v.260406.7984474</div>
+    <div style="position:absolute;top:40%;left:0;right:0;z-index:1;text-align:center;padding:0 24px;">
+      <div style="margin-bottom:4px;">${mode==='sstr'?'<img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:60px;" onerror="this.outerHTML=\'<span style=font-size:26px;font-weight:900;color:#00d4ff>SSTR 2026</span>\'">':'<img src="greenlabel_logo.png" style="height:80px;" onerror="this.outerHTML=\'<span style=font-size:26px;font-weight:900;color:#00d4ff>'+title+'</span>\'">'}</div>
+      <div style="font-size:13px;color:#ccc;margin-bottom:20px;">が選択されたのだ</div>
+      <div style="display:inline-flex;align-items:center;gap:10px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#00d4ff;animation:pulse 1s infinite;flex-shrink:0;"></div>
+        <div style="font-size:13px;color:#00d4ff;">GPS情報取得までお待ちなのだ</div>
+      </div>
+    </div>
+    <style>@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.2;}}</style>
+  `;
+  document.body.appendChild(mid);
+
+  // BGMはそのまま引き継ぐ（TTS時は自動で音量調整）
+
+  // TTS読み上げ（ミュート状態でも読み上げる）
+  setTimeout(()=>{
+    spk('SSTR2026が選択されたのだ。GPS情報取得までお待ちなのだ。',true);
+  },1500);
+
+  // 15秒後に確実に遷移（TTS終了待ちのフォールバック）
+  setTimeout(()=>{if(mid.parentNode){mid.remove();stopAppBgm();rnd();}},15000);
+
+  if(mode==='nippon1'||mode==='nippon2'){
+    setTimeout(()=>{if(mid.parentNode)mid.remove();
+      document.getElementById('hdr-area').innerHTML=`<div class="hdr"><div><h1>🇯🇵 にっぽん応援ツーリング</h1></div></div>`;
+      document.getElementById('top').innerHTML=`<div style="text-align:center;padding:60px 20px;color:#666680;font-size:14px;">ルートデータ準備中です<br>もうしばらくお待ちください 🙏</div>`;
+    },3000);
+    return;
+  }
+
+  loc();
+}
+// スプラッシュ表示と同時にBGM自動再生（APKはsetMediaPlaybackRequiresUserGesture(false)済み）
+playAppBgm();
+// 2秒後にずんだもんが挨拶（BGM再生中に）
+setTimeout(function(){
+  try{
+    if(appBgm)appBgm.volume=0.1;
+    if(_myName){
+      // 2回目: おかえりWAV → プラン選択WAVの連続再生
+      _zundaShow(_myName+'さん、おかえりなのだ！');
+      var _welcomeWav=new Audio(NAS_API+'/api/voice/welcome_'+encodeURIComponent(_myName));
+      _welcomeWav.volume=0.9;_welcomeWav.playbackRate=_voiceSpeed;
+      _welcomeWav.onended=function(){
+        // おかえり終了→プラン選択WAV
+        _zundaShow(_myName+'さん、ツーリングプランを選択してほしいのだ！');
+        var _planWav=new Audio(NAS_API+'/api/voice/plan_'+encodeURIComponent(_myName));
+        _planWav.volume=0.9;_planWav.playbackRate=_voiceSpeed;
+        _planWav.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;setTimeout(_zundaHide,1500);};
+        _planWav.onerror=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;_zundaHide();};
+        _planWav.play().catch(function(){});
+      };
+      _welcomeWav.onerror=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;_zundaHide();};
+      _welcomeWav.play().catch(function(){_welcomeWav.onerror();});
+    } else {
+      // 初回: 名前入力を促すだけ
+      _zundaShow('ライダー名を入力してほしいのだ！');
+      var za=new Audio(new URL('voice/enter_name.wav',window.location.href).href);
+      za.volume=0.9;
+      za.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;setTimeout(_zundaHide,2000);};
+      za.play().catch(function(){});
+    }
+  }catch(e){}
+},2000);
+// 管理者モード: スプラッシュ初期表示
+if(_isAdmin){const a=document.querySelector('.adm');if(a)a.textContent='🔑 ADMIN';}
+// ライダー名を入力欄に復元
+var _planAnnounced=false;
+var _myNameWasSet=!!_myName;// 起動時に名前があったか
+function _showCards(){
+  var show=_myName&&_myName.length>0;
+  var d=show?'block':'none';
+  var cs=document.getElementById('cardSstr');if(cs)cs.style.display=d;
+  var cn1=document.getElementById('cardNippon1');if(cn1)cn1.style.display=d;
+  var cn2=document.getElementById('cardNippon2');if(cn2)cn2.style.display=d;
+  // 名前をOKボタンで入力した時のみ音声再生（おかえりの時は2秒タイマーが担当）
+  if(show&&!_planAnnounced&&!_myNameWasSet){
+    _planAnnounced=true;
+    if(appBgm)appBgm.volume=0.1;
+    _zundaShow('ツーリングプランを選ぶのだ！');
+    var _pw=new Audio(new URL('voice/splash_welcome.wav',window.location.href).href);
+    _pw.volume=0.9;_pw.playbackRate=_voiceSpeed;
+    _pw.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;setTimeout(_zundaHide,1500);};
+    _pw.play().catch(function(){});
+  }
+}
+var _rni=document.getElementById('riderNameInput');
+if(_rni){
+  if(_myName){_rni.value=_myName;_rni.parentElement.style.display='none';}
+}
+_showCards();
+// スプラッシュのAPIカウンター更新（管理者のみ）
+// 管理者モード: Cloud Functionから実API使用量を取得
+let _cloudStats=null;
+function fetchCloudStats(){
+  if(!_isAdmin)return;
+  fetch('https://as5304t-c025.tail5d5c21.ts.net/api/usage',{signal:AbortSignal.timeout(5000)})
+    .then(r=>r.json())
+    .then(d=>{_cloudStats=d;_apiMaps=d.maps;_apiDir=d.directions;_apiSave();})
+    .catch(()=>{
+      // NAS Funnel失敗時はCloud Functionsにフォールバック
+      fetch('https://asia-northeast1-sstr-492316.cloudfunctions.net/sstr-api/stats')
+        .then(r=>r.json())
+        .then(d=>{_cloudStats=d;_apiMaps=d.maps;_apiDir=d.directions;_apiSave();})
+        .catch(()=>{});
+    });
+}
+if(_isAdmin)fetchCloudStats();
+setInterval(()=>{if(_isAdmin&&document.getElementById('splash'))fetchCloudStats();},10800000);// 3時間ごと
+setInterval(()=>{const el=document.getElementById('apiCntSplash');if(el)el.textContent=_isAdmin?'Maps:'+_apiMaps.toString().padStart(5,'0')+' Dir:'+_apiDir.toString().padStart(5,'0'):'';},1000);
+</script>
+</body>
+</html>

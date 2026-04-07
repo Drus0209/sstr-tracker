@@ -9,10 +9,24 @@
     "android": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor-community/speech-recognition": "^6.0.1",
+    "@capacitor-community/text-to-speech": "^4.1.1",
     "@capacitor/android": "^6.0.0",
-    "@capacitor/core": "^6.0.0"
+    "@capacitor/core": "^6.2.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.0.0"
-  }
+    "@capacitor/cli": "^6.2.1",
+    "sharp": "^0.34.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Drus0209/sstr-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Drus0209/sstr-tracker/issues"
+  },
+  "homepage": "https://github.com/Drus0209/sstr-tracker#readme"
 }

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sunGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffd740"/>
+      <stop offset="100%" stop-color="#ff9100"/>
+    </linearGradient>
+    <linearGradient id="reflGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00d4ff" stop-opacity="0.05"/>
+    </linearGradient>
+    <clipPath id="upperHalf">
+      <rect x="0" y="0" width="512" height="260"/>
+    </clipPath>
+    <clipPath id="lowerHalf">
+      <rect x="0" y="260" width="512" height="252"/>
+    </clipPath>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" fill="#06060c"/>
+  <!-- Sun rays glow -->
+  <circle cx="256" cy="260" r="200" fill="none" stroke="#ff9100" stroke-opacity="0.08" stroke-width="60"/>
+  <circle cx="256" cy="260" r="160" fill="none" stroke="#ffd740" stroke-opacity="0.05" stroke-width="40"/>
+  <!-- Sun (upper half circle) -->
+  <g clip-path="url(#upperHalf)">
+    <circle cx="256" cy="260" r="100" fill="url(#sunGrad)"/>
+  </g>
+  <!-- Horizon line -->
+  <line x1="60" y1="260" x2="452" y2="260" stroke="#ff9100" stroke-width="2" stroke-opacity="0.6"/>
+  <!-- Sea reflection (lower half, mirrored and faded) -->
+  <g clip-path="url(#lowerHalf)">
+    <!-- Main reflection -->
+    <ellipse cx="256" cy="260" rx="90" ry="80" fill="url(#reflGrad)"/>
+    <!-- Ripple lines -->
+    <line x1="180" y1="280" x2="332" y2="280" stroke="#00d4ff" stroke-width="2.5" stroke-opacity="0.5" stroke-linecap="round"/>
+    <line x1="195" y1="300" x2="317" y2="300" stroke="#00d4ff" stroke-width="2" stroke-opacity="0.35" stroke-linecap="round"/>
+    <line x1="210" y1="320" x2="302" y2="320" stroke="#00d4ff" stroke-width="1.5" stroke-opacity="0.25" stroke-linecap="round"/>
+    <line x1="222" y1="340" x2="290" y2="340" stroke="#00d4ff" stroke-width="1.2" stroke-opacity="0.18" stroke-linecap="round"/>
+    <line x1="232" y1="360" x2="280" y2="360" stroke="#00d4ff" stroke-width="1" stroke-opacity="0.12" stroke-linecap="round"/>
+  </g>
+</svg>
