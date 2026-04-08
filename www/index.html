@@ -298,7 +298,7 @@ function _drawRoute(result){
       else if(step.maneuver==='turn-slight-left'||step.maneuver==='fork-left'||step.maneuver==='ramp-left')dir='斜め左';
       else if(step.maneuver==='turn-sharp-right')dir='鋭角右';
       else if(step.maneuver==='turn-sharp-left')dir='鋭角左';
-      else if(step.maneuver==='uturn-right'||step.maneuver==='uturn-left')dir='Uターン';
+      //else if(step.maneuver==='uturn-right'||step.maneuver==='uturn-left')dir='Uターン';
       if(dir){
         _turnPoints.push({lat:step.start_location.lat(),lng:step.start_location.lng(),dir:dir,announced200:false,announced50:false});
       }
@@ -1080,16 +1080,17 @@ const ORBIS=[
 ];
 let _orbisState={};// {index: 'none'|'far'|'near'|'passed'}
 // === ターン案内（200m/50m手前）===
-var _turnAngles={'右':0,'左':180,'斜め右':-45,'斜め左':135,'鋭角右':45,'鋭角左':-135,'Uターン':180};
+var _turnAngles={'右':0,'左':180,'斜め右':-45,'斜め左':225,'鋭角右':45,'鋭角左':135,'Uターン':180};
 function _showTurnArrow(dir,urgent){
   var existing=document.getElementById('turnArrow');if(existing)existing.remove();
   var el=document.createElement('div');el.id='turnArrow';
   var col=urgent?'#ff4444':'#FF9800';
   var angle=_turnAngles[dir]||0;
-  // 流れる方向
-  var flowDir={'右':'120%,0','左':'-120%,0','斜め右':'80%,-80%','斜め左':'-80%,-80%','鋭角右':'80%,80%','鋭角左':'-80%,80%','Uターン':'0,-120%'};
-  var fd=flowDir[dir]||'120%,0';
+  // 流れる方向 (from → to)
+  var _flows={'右':['-120%,0','120%,0'],'左':['120%,0','-120%,0'],'斜め右':['-80%,80%','80%,-80%'],'斜め左':['80%,80%','-80%,-80%'],'鋭角右':['-80%,-80%','80%,80%'],'鋭角左':['80%,-80%','-80%,80%'],'Uターン':['0,120%','0,-120%']};
+  var ff=_flows[dir]||['-120%,0','120%,0'];
   el.style.cssText='position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);z-index:9990;text-align:center;pointer-events:none;';
+  var hdr=document.getElementById('hdr-area');if(hdr)hdr.style.visibility='hidden';
   el.innerHTML='<div style="font-size:'+(urgent?'48px':'40px')+';font-weight:900;color:'+col+';margin-bottom:16px;text-shadow:0 4px 15px rgba(0,0,0,0.9);letter-spacing:6px;filter:drop-shadow(0 0 20px '+col+');">'+(urgent?'まもなく '+dir:'200m先 '+dir)+'</div>'
     +'<div style="position:relative;width:100vw;height:50vh;overflow:hidden;">'
     +'<div class="turnAnim" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">'
@@ -1101,10 +1102,10 @@ function _showTurnArrow(dir,urgent){
     +'</div></div></div>'
     +'<style>'
     +'.turnAnim{animation:turnFlow 0.8s linear infinite;}'
-    +'@keyframes turnFlow{0%{transform:translate(-'+fd+');opacity:0;}15%{opacity:1;}85%{opacity:1;}100%{transform:translate('+fd+');opacity:0;}}'
+    +'@keyframes turnFlow{0%{transform:translate('+ff[0]+');opacity:0;}15%{opacity:1;}85%{opacity:1;}100%{transform:translate('+ff[1]+');opacity:0;}}'
     +'</style>';
   document.body.appendChild(el);
-  setTimeout(function(){if(el.parentNode){el.style.transition='opacity 0.5s';el.style.opacity='0';setTimeout(function(){el.remove();},500);}},urgent?8000:6000);
+  setTimeout(function(){if(el.parentNode){el.style.transition='opacity 0.5s';el.style.opacity='0';setTimeout(function(){el.remove();var h=document.getElementById('hdr-area');if(h)h.style.visibility='visible';},500);}},urgent?8000:6000);
 }
 var _turnVoiceKeys={'右':'right','左':'left','斜め右':'sright','斜め左':'sleft','鋭角右':'right','鋭角左':'left','Uターン':'left'};
 function _playTurnVoice(dir,urgent){
