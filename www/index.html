@@ -40,7 +40,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .pc .mm{font-size:14px;color:var(--org);margin-bottom:12px;}
 .pc .sts{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .pc .st{text-align:center;background:rgba(0,0,0,0.3);border-radius:10px;padding:12px 10px;}
-.pc .st .v{font-family:'Outfit';font-size:42px;font-weight:900;color:var(--ac);}
+.pc .st .v{font-family:'Outfit';font-size:clamp(24px,8vw,42px);font-weight:900;color:var(--ac);white-space:nowrap;}
 .pc .st .l{font-size:14px;color:var(--txt);letter-spacing:1px;margin-top:3px;font-weight:600;}
 .pc .pb{display:flex;justify-content:center;margin-top:10px;}
 .pc .ptb{background:#1a2a1a;border:1px solid var(--grn);color:var(--grn);padding:4px 16px;border-radius:20px;font-weight:800;font-family:'Outfit';font-size:16px;}
@@ -63,13 +63,13 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .fl{margin:0 10px 10px;background:var(--card);border:1px solid var(--bdr);border-radius:14px;max-height:300px;overflow-y:auto;display:none;}
 .fl.show{display:block;}
 .fl .fh{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:2px;padding:10px 12px 6px;position:sticky;top:0;background:var(--card);z-index:1;}
-.fi{display:flex;align-items:center;padding:6px 12px;font-size:12px;border-bottom:1px solid #0e0e18;background:var(--card);border-radius:8px;margin-bottom:4px;}
+.fi{display:flex;align-items:center;padding:6px 12px;font-size:12px;border-bottom:1px solid #0e0e18;background:var(--card);border-radius:8px;margin-bottom:4px;min-height:32px;}
 .fi.pst{color:#2a2a3a;}.fi.pst .nm{color:#2a2a3a;}.fi.pst .tm{color:#1e2a33;}.fi.pst .dot{opacity:0.2;}.fi.pst .pt{color:#1a2a1a;}
 .fi.cur{background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.3);}
 .fi .dot{width:8px;height:8px;border-radius:50%;margin-right:8px;flex-shrink:0;}
 .fi .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .fi .pt{color:var(--grn);font-weight:700;font-size:11px;margin-left:6px;}
-.fi .tm{font-family:'Outfit';font-size:11px;color:var(--ac);margin-left:8px;}
+.fi .tm{font-family:'Outfit';font-size:11px;color:var(--ac);margin-left:8px;line-height:1;flex-shrink:0;}
 .dn{background:var(--noto);}.dm{background:#2196f3;}.dg{background:var(--org);}.dq{background:var(--org);}.ds{background:#e85300;}.dv{background:var(--sub);}.do{background:#9e9e9e;}
 .gps{text-align:center;font-size:11px;color:var(--txt);padding:4px;opacity:0.7;}
 .dtabs{display:flex;gap:6px;margin:8px 10px 0;}
@@ -107,12 +107,12 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
     <div class="adm" style="font-family:'Outfit';font-size:10px;color:var(--ylw);margin-top:4px;"></div>
   </div>
   <div style="position:absolute;top:20px;right:20px;z-index:2;font-family:'Outfit';font-size:12px;color:#fff;letter-spacing:1px;text-align:right;">v.260406.7984474<div id="apiCntSplash" style="font-size:14px;font-weight:700;color:var(--ac);margin-top:4px;"></div></div>
-  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin-top:30px;">
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin-top:-40px;">
     <div style="width:100%;display:flex;flex-direction:column;gap:12px;">
       <div id="riderNameBox" style="background:rgba(20,30,50,0.85);border:2px solid var(--org);border-radius:16px;padding:18px 20px;text-align:center;">
         <div style="font-size:14px;color:var(--txt);font-weight:700;margin-bottom:10px;">ライダー名を入力（ひらがな）</div>
         <input id="riderNameInput" type="text" placeholder="例: てつにん" value="" oncompositionend="this.value=this.value.replace(/[^\u3040-\u309F\u30FC]/g,'');" onblur="this.value=this.value.replace(/[^\u3040-\u309F\u30FC]/g,'');" style="background:rgba(255,255,255,0.15);border:2px solid var(--org);border-radius:12px;padding:14px 20px;color:#fff;font-size:22px;font-weight:700;font-family:inherit;width:100%;max-width:240px;text-align:center;outline:none;box-sizing:border-box;">
-        <button onclick="var v=document.getElementById('riderNameInput').value.trim();if(v){_myName=v;localStorage.setItem('_riderName',v);document.getElementById('riderNameBox').style.display='none';playEngineSound();_genWelcomeVoice(v);_firstTimeGps();}" style="display:block;margin:12px auto 0;background:var(--org);border:none;border-radius:10px;padding:12px 40px;color:#000;font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;">OK</button>
+        <button onclick="_onNameOk()" style="display:block;margin:12px auto 0;background:var(--org);border:none;border-radius:10px;padding:12px 40px;color:#000;font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;">OK</button>
       </div>
       <button onclick="startApp('sstr')" id="cardSstr" style="display:none;background:rgba(6,6,12,0.15);border:2px solid #00d4ff;border-radius:16px;padding:20px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;width:100%;backdrop-filter:blur(2px);">
         <div style="font-size:10px;color:#00d4ff;letter-spacing:3px;font-weight:700;margin-bottom:4px;">MAY 23–24</div>
@@ -150,8 +150,8 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 <div id="btm"></div>
 <script>
 const STOPS={day1:[
-{time:"04:20",name:"🌉 東京ゲートブリッジ",lat:35.6122,lng:139.8289,pt:0,type:"move",memo:"",noHwy:true,dur:2},
-{time:"04:31",name:"☀️ 暁ふ頭公園 START",lat:35.6082,lng:139.7914,pt:0,type:"goal",memo:"海バック写真→スタート登録",noHwy:true,dur:15},
+{time:"04:05",name:"🌉 東京ゲートブリッジ",lat:35.6122,lng:139.8289,pt:0,type:"move",memo:"",noHwy:true,dur:2},
+{time:"04:16",name:"☀️ 暁ふ頭公園 START",lat:35.6082,lng:139.7914,pt:0,type:"goal",memo:"海バック写真→スタート登録 日の出4:31発",noHwy:true,dur:15},
 {time:"05:06",name:"⛽ apollostation環八谷原",lat:35.7483,lng:139.6178,pt:0,type:"gs",memo:"満タン🔶 24h営業",noHwy:true,dur:10},
 {time:"05:21",name:"🚀 練馬IC",lat:35.7546,lng:139.6073,pt:0,type:"move",memo:"関越道へ",dur:0},
 {time:"05:41",name:"🍑 おしり休息タイム 上里SA",lat:36.2542,lng:139.1192,pt:1,type:"qk",memo:"おしり休息タイム＋1pt",dur:5},
@@ -202,7 +202,7 @@ function fD(m){const a=Math.abs(m),h=Math.floor(a/60),n=a%60;return h>0?h+'h'+n.
 function dK(a,b,c,d){const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,z=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return R*2*Math.atan2(Math.sqrt(z),Math.sqrt(1-z));}
 
 let cDay='day1',gLat=null,gLng=null,gSpeed=0,gSt='',sFl=false,iM=false,bgm=null,vM='list',mapZoom='nav',showMapMenu=false;
-let _hdrMode=0;// 0=SSTR終了まで 1=次スポット距離 2=次スポット残り時間
+let _hdrMode=0;// 0=SSTR終了まで 1=次スポット距離 2=次スポット到着予定時刻
 setInterval(function(){_hdrMode=(_hdrMode+1)%3;},5000);
 let _apiMaps=parseInt(localStorage.getItem('_apiMaps')||'0');
 let _apiDir=parseInt(localStorage.getItem('_apiDir')||'0');
@@ -279,12 +279,30 @@ function clearMap(){
   mStops.forEach(m=>m.setMap(null));mStops=[];
   mPolylines.forEach(p=>p.setMap(null));mPolylines=[];
 }
+var _turnPoints=[];// {lat,lng,dir:'右'|'左'|'斜め右'|'斜め左'|'Uターン',announced200:false,announced50:false}
 function _drawRoute(result){
   const path=result.routes[0].overview_path;
   const pl=new google.maps.Polyline({
     path,map,strokeColor:'#00d4ff',strokeWeight:5,strokeOpacity:0.8
   });
   mPolylines.push(pl);
+  // ステップからターン情報を抽出
+  result.routes[0].legs.forEach(leg=>{
+    leg.steps.forEach(step=>{
+      if(!step.maneuver)return;
+      var dir=null;
+      if(step.maneuver==='turn-right')dir='右';
+      else if(step.maneuver==='turn-left')dir='左';
+      else if(step.maneuver==='turn-slight-right'||step.maneuver==='fork-right'||step.maneuver==='ramp-right')dir='斜め右';
+      else if(step.maneuver==='turn-slight-left'||step.maneuver==='fork-left'||step.maneuver==='ramp-left')dir='斜め左';
+      else if(step.maneuver==='turn-sharp-right')dir='鋭角右';
+      else if(step.maneuver==='turn-sharp-left')dir='鋭角左';
+      else if(step.maneuver==='uturn-right'||step.maneuver==='uturn-left')dir='Uターン';
+      if(dir){
+        _turnPoints.push({lat:step.start_location.lat(),lng:step.start_location.lng(),dir:dir,announced200:false,announced50:false});
+      }
+    });
+  });
 }
 function _routeReq(origin,dest,waypoints,noHwy){
   return{origin,destination:dest,waypoints:waypoints||[],
@@ -467,7 +485,7 @@ function applyZoomMode(){
 const aC=new(window.AudioContext||window.webkitAudioContext)();
 document.addEventListener('touchstart',()=>{if(aC.state!=='running')aC.resume();},{passive:true});
 function tn(f,d,t,dl){if(iM)return;const o=aC.createOscillator(),g=aC.createGain();o.type=t||'sine';o.frequency.value=f;g.gain.setValueAtTime(0.8,aC.currentTime+dl);g.gain.exponentialRampToValueAtTime(0.001,aC.currentTime+dl+d);o.connect(g);g.connect(aC.destination);o.start(aC.currentTime+dl);o.stop(aC.currentTime+dl+d);}
-function sGps(){if(appBgm)appBgm.volume=0.15;aC.resume();setTimeout(()=>{tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.12,'sine',.2);tn(1047,.12,'sine',.3);tn(784,.08,'sine',.42);tn(1047,.35,'sine',.5);setTimeout(()=>{if(appBgm)appBgm.volume=0.25;},1500);},150);}
+function sGps(){if(appBgm)appBgm.volume=0.15;aC.resume();setTimeout(()=>{tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.12,'sine',.2);tn(1047,.25,'sine',.3);setTimeout(()=>{if(appBgm)appBgm.volume=0.15;},1000);},150);}
 function sNext(){tn(523,.1,'sine',0);tn(784,.1,'sine',.1);tn(1047,.1,'sine',.2);tn(1319,.25,'sine',.3);} // ストップ切替チャイム
 function sAhd(){tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.15,'sine',.2);}
 function sBhd(){tn(400,.15,'square',0);tn(350,.15,'square',.12);tn(300,.2,'square',.24);}
@@ -513,7 +531,7 @@ function _findZunda(t){
   return null;
 }
 var _zundaMouthInterval=null;
-function _spkRestore(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;if(bgm)bgm.volume=0.5;}
+function _spkRestore(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;if(bgm)bgm.volume=0.5;}
 function _zundaShow(text){
   var o=document.getElementById('zundaOverlay');
   var b=document.getElementById('zundaBubble');
@@ -564,7 +582,8 @@ function _spkFallback(t){
   else if('speechSynthesis'in window){var u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';u.rate=1.3;u.onend=_spkNext;u.onerror=_spkNext;speechSynthesis.speak(u);}
   else{_spkNext();}
 }
-function spk(t,force){if(!force&&iM)return;if(!_spkBusy){if(appBgm&&!_bgmFading)appBgm.volume=0.1;if(bgm&&!bgm.paused)bgm.volume=0.1;}_spkQ.push(t);if(!_spkBusy)_spkNext();}
+var _appReady=false;// リスト/地図タブが表示されたらtrue
+function spk(t,force){if(!force&&iM)return;if(!force&&!_appReady)return;if(!_spkBusy){if(appBgm&&!_bgmFading)appBgm.volume=0.05;if(bgm&&!bgm.paused)bgm.volume=0.1;}_spkQ.push(t);if(!_spkBusy)_spkNext();}
 // Optimized: only search ±3 stops from last known position (100km/h × 5s = 140m max)
 function fN(stops){
   if(!gLat)return{i:0,d:0};
@@ -607,14 +626,14 @@ function bgmPrev(){_bgmIdx=(_bgmIdx-1+_bgmList.length)%_bgmList.length;_bgmPlay(
 function _bgmPlay(){
   if(appBgm){appBgm.pause();appBgm=null;}
   appBgm=new Audio(new URL(_bgmList[_bgmIdx],window.location.href).href);
-  appBgm.loop=true;appBgm.volume=0.25;appBgm.play().catch(function(){});
+  appBgm.loop=true;appBgm.volume=0.15;appBgm.play().catch(function(){});
 }
 function playAppBgm(){
   if(appBgm)return;
   var pick=_bgmList[_bgmIdx];
   appBgm=new Audio(new URL(pick,window.location.href).href);
   appBgm.loop=true;
-  appBgm.volume=0.25;
+  appBgm.volume=0.15;
   appBgm.play().catch(()=>{});
 }
 function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
@@ -730,39 +749,83 @@ function submitReport(type){
 setInterval(fetchTraffic,300000);
 
 // === バイクエンジン始動音 ===
-var _engineSnd=new Audio(new URL('engine.mp3',window.location.href).href);_engineSnd.preload='auto';
-function playEngineSound(){_engineSnd.currentTime=0;_engineSnd.volume=1.0;_engineSnd.play().catch(function(){});}
+function playEngineSound(){
+  var snd=new Audio('engine.mp3');
+  snd.volume=1.0;
+  snd.play().then(function(){}).catch(function(e){console.log('ENGINE ERR:',e);});
+}
+function _onNameOk(){
+  var v=document.getElementById('riderNameInput').value.trim();
+  if(!v)return;
+  if(aC)aC.resume();
+  // 再生中の音声を全停止
+  _spkQ.length=0;_spkBusy=false;
+  if(window._splashAudio){window._splashAudio.pause();window._splashAudio=null;}
+  _zundaHide();
+  // BGM音量を復帰（スプラッシュ音声で0.1に下がっている場合）
+  if(appBgm&&!_bgmFading)appBgm.volume=0.15;
+  // 名前保存・UI非表示
+  _myName=v;localStorage.setItem('_riderName',v);
+  document.getElementById('riderNameBox').style.display='none';
+  // NAS WAV生成開始（バックグラウンド）
+  _genWelcomeVoice(v);
+  // エンジン音再生（BGMを少し残す）
+  if(appBgm)appBgm.volume=0.03;
+  playEngineSound();
+  // エンジン音(約2秒) + 一呼吸(1秒) → GPSフロー
+  setTimeout(function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_firstTimeGps();},3000);
+}
 
 // === 初回GPS取得（名前確定後）===
 function _firstTimeGps(){
-  // GPS取得中の表示をスプラッシュに追加
+  // ずんだもん音声再生 → 完了後にダイアログ
+  spk('GPS情報を取得するのだ！',true);
+  // 音声完了を待ってからダイアログ表示
+  var _gpsDotsShown=false;
+  var _waitVoice=setInterval(function(){
+    if(!_spkBusy&&_spkQ.length===0){
+      clearInterval(_waitVoice);
+      if(!_gpsDotsShown){_gpsDotsShown=true;_showGpsDots();}
+    }
+  },300);
+  setTimeout(function(){clearInterval(_waitVoice);if(!_gpsDotsShown){_gpsDotsShown=true;_showGpsDots();}},5000);
+}
+function _showGpsDots(){
   var gpsBox=document.createElement('div');
   gpsBox.id='gpsStatusBox';
-  gpsBox.style.cssText='text-align:center;margin-top:16px;';
+  gpsBox.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;text-align:center;';
+  gpsBox.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:30px 40px;background:rgba(6,6,12,0.9);border:2px solid #00d4ff;border-radius:20px;"><div style="width:40px;height:40px;border:3px solid rgba(0,212,255,0.3);border-top:3px solid #00d4ff;border-radius:50%;animation:spin 1s linear infinite;"></div><div class="gpsDots" style="font-size:18px;font-weight:700;color:#00d4ff;white-space:nowrap;">GPS情報取得中.</div></div><style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>';
+  document.body.appendChild(gpsBox);
   var _dotCount=0;
-  var _dotInterval=setInterval(function(){_dotCount=(_dotCount+1)%3;var dots='.'.repeat(_dotCount+1);gpsBox.querySelector('.gpsDots').textContent='GPS情報取得中'+dots;},600);
-  gpsBox.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px;"><div style="width:40px;height:40px;border:3px solid rgba(0,212,255,0.3);border-top:3px solid #00d4ff;border-radius:50%;animation:spin 1s linear infinite;"></div><div class="gpsDots" style="font-size:20px;font-weight:700;color:#00d4ff;">GPS情報取得中.</div></div><style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>';
-  var cards=document.querySelector('#riderNameBox');
-  if(cards&&cards.parentElement)cards.parentElement.insertBefore(gpsBox,cards.nextSibling);
-
-  spk('GPS情報を取得するのだ！',true);
+  var _dotInterval=setInterval(function(){_dotCount=(_dotCount+1)%3;var dots='.'.repeat(_dotCount+1);var el=gpsBox.querySelector('.gpsDots');if(el)el.textContent='GPS情報取得中'+dots;},600);
+  _startGps(gpsBox,_dotInterval);
+}
+function _startGps(gpsBox,_dotInterval){
   if(!navigator.geolocation){gpsBox.remove();_showCards();return;}
-  navigator.geolocation.getCurrentPosition(function(p){
-    gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
-    if(p.coords.heading!==null&&!isNaN(p.coords.heading)&&p.coords.speed>1)gHeading=p.coords.heading;
+  var _gpsReady=false,_minWait=false;
+  var _gpsStart=Date.now();
+  // 最低3秒はドットアニメを表示
+  setTimeout(function(){_minWait=true;if(_gpsReady)_afterGps();},3000);
+  function _afterGps(){
     clearInterval(_dotInterval);
+    _proceedToCards();
+  }
+  function _proceedToCards(){
     // WAV生成完了を待ってから再生+カード表示
+    var _wavDone=false;
     var _waitWav=setInterval(function(){
+      if(_wavDone)return;
       fetch(NAS_API+'/api/voice/plan_'+encodeURIComponent(_myName),{signal:AbortSignal.timeout(3000)})
         .then(function(r){
-          if(r.ok){
+          if(r.ok&&!_wavDone){
+            _wavDone=true;
             clearInterval(_waitWav);
             gpsBox.remove();
             if(appBgm)appBgm.volume=0.1;
             _zundaShow(_myName+'さん、ツーリングプランを選択してほしいのだ！');
             var pa=new Audio(NAS_API+'/api/voice/plan_'+encodeURIComponent(_myName));
             pa.volume=0.9;pa.playbackRate=_voiceSpeed;
-            pa.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;setTimeout(_zundaHide,1500);};
+            pa.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);};
             pa.play().catch(function(){});
             _planAnnounced=true;
             _showCards();
@@ -771,6 +834,12 @@ function _firstTimeGps(){
     },1500);
     // 30秒で諦めてフォールバック
     setTimeout(function(){clearInterval(_waitWav);gpsBox.remove();_showCards();},30000);
+  }
+  navigator.geolocation.getCurrentPosition(function(p){
+    gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
+    if(p.coords.heading!==null&&!isNaN(p.coords.heading)&&p.coords.speed>1)gHeading=p.coords.heading;
+    _gpsReady=true;
+    if(_minWait)_afterGps();
   },function(){
     clearInterval(_dotInterval);
     gpsBox.remove();_showCards();
@@ -917,7 +986,7 @@ function toggleRain(){
   if(_rainOn){
     _rainLayer=new google.maps.ImageMapType({
       getTileUrl:function(coord,zoom){
-        return 'https://tile.openweathermap.org/map/clouds_new/'+zoom+'/'+coord.x+'/'+coord.y+'.png?appid='+OWM_KEY;
+        return 'https://tile.openweathermap.org/map/precipitation_new/'+zoom+'/'+coord.x+'/'+coord.y+'.png?appid='+OWM_KEY;
       },
       tileSize:new google.maps.Size(256,256),
       opacity:0.6,
@@ -987,15 +1056,95 @@ const ORBIS=[
   {lat:35.7200,lng:139.1500,name:'中央道 相模湖IC付近',type:'白バイ多発',limit:100},
   {lat:35.6600,lng:138.8300,name:'中央道 大月IC付近',type:'白バイ多発',limit:80},
   {lat:35.9400,lng:138.1800,name:'中央道 諏訪IC付近',type:'白バイ多発',limit:80},
+  // === OSM速度カメラ（ルート沿い追加分） ===
+  // 一般道（東京）
+  {lat:35.7840,lng:139.3143,name:'R16 八王子方面',type:'固定(OSM)',limit:50},
+  {lat:35.7497,lng:139.3943,name:'青梅街道付近',type:'固定(OSM)',limit:50},
+  {lat:35.7784,lng:139.7575,name:'環七通り付近',type:'固定(OSM)',limit:50},
+  {lat:35.7652,lng:139.7193,name:'目白通り付近',type:'固定(OSM)',limit:50},
+  {lat:35.7038,lng:139.6548,name:'環八 杉並付近',type:'固定(OSM)',limit:50},
+  {lat:35.7493,lng:139.6800,name:'練馬区内',type:'固定(OSM)',limit:50},
+  {lat:35.5834,lng:139.6813,name:'R246 世田谷付近',type:'固定(OSM)',limit:60},
+  {lat:35.6170,lng:139.6359,name:'甲州街道付近',type:'固定(OSM)',limit:60},
+  {lat:35.5067,lng:139.4732,name:'R16 横浜方面',type:'固定(OSM)',limit:60},
+  // 埼玉
+  {lat:35.9516,lng:139.9739,name:'春日部 LHシステム',type:'固定(OSM)',limit:60},
+  {lat:35.8492,lng:139.7941,name:'川口付近',type:'固定(OSM)',limit:60},
+  // 関越道（追加分）
+  {lat:36.0257,lng:139.6725,name:'関越道 圏央道合流付近',type:'固定(OSM)',limit:120},
+  {lat:36.3421,lng:139.2269,name:'関越道 渋川付近 オーバーヘッド',type:'固定(OSM)',limit:100},
+  {lat:36.2694,lng:139.2889,name:'関越道 本庄児玉付近 オーバーヘッド',type:'固定(OSM)',limit:100},
+  {lat:36.3478,lng:139.0501,name:'関越道 前橋付近(OSM)',type:'固定(OSM)',limit:100},
+  // 上信越道（追加分）
+  {lat:36.2400,lng:138.9380,name:'上信越道 甘楽付近(OSM)',type:'固定(OSM)',limit:100},
+  // 北方面
+  {lat:36.9499,lng:140.0523,name:'R4 北栃木付近',type:'固定(OSM)',limit:60},
+  {lat:36.5176,lng:139.9186,name:'栃木方面',type:'固定(OSM)',limit:60},
 ];
 let _orbisState={};// {index: 'none'|'far'|'near'|'passed'}
+// === ターン案内（200m/50m手前）===
+var _turnEmoji={'右':'→','左':'←','斜め右':'↗','斜め左':'↖','鋭角右':'↘','鋭角左':'↙','Uターン':'↩'};
+function _showTurnArrow(dir,urgent){
+  var existing=document.getElementById('turnArrow');if(existing)existing.remove();
+  var arrow=_turnEmoji[dir]||'→';
+  var el=document.createElement('div');el.id='turnArrow';
+  var col=urgent?'#ff4444':'#00e676';
+  var sz=urgent?'80vw':'65vw';
+  // 流れる方向のtranslate
+  var flowDir={'右':'100%,0','左':'-100%,0','斜め右':'70%,-70%','斜め左':'-70%,-70%','鋭角右':'70%,70%','鋭角左':'-70%,70%','Uターン':'0,-100%'};
+  var fd=flowDir[dir]||'100%,0';
+  el.style.cssText='position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);z-index:9990;text-align:center;pointer-events:none;overflow:visible;';
+  el.innerHTML='<div style="position:relative;width:'+sz+';height:'+sz+';margin:0 auto;overflow:hidden;">'
+    +'<div class="turnAnim" style="font-size:'+sz+';line-height:1;color:'+col+';filter:drop-shadow(0 0 40px '+col+') drop-shadow(0 0 80px '+col+');position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">'+arrow+'</div>'
+    +'</div>'
+    +'<div style="font-size:'+(urgent?'28px':'22px')+';font-weight:900;color:'+col+';margin-top:12px;text-shadow:0 4px 15px rgba(0,0,0,0.9);letter-spacing:4px;">'+(urgent?'まもなく '+dir:'200m先 '+dir)+'</div>'
+    +'<style>'
+    +'.turnAnim{animation:turnFlow 1s linear infinite;}'
+    +'@keyframes turnFlow{0%{transform:translate(-'+fd+');opacity:0;}20%{opacity:1;}80%{opacity:1;}100%{transform:translate('+fd+');opacity:0;}}'
+    +'</style>';
+  document.body.appendChild(el);
+  setTimeout(function(){if(el.parentNode){el.style.transition='opacity 0.5s';el.style.opacity='0';setTimeout(function(){el.remove();},500);}},urgent?8000:6000);
+}
+var _turnVoiceKeys={'右':'right','左':'left','斜め右':'sright','斜め左':'sleft','鋭角右':'right','鋭角左':'left','Uターン':'left'};
+function _playTurnVoice(dir,urgent){
+  var key=_turnVoiceKeys[dir]||'right';
+  var wavKey=urgent?'turn_50_'+key:'turn_200_'+key;
+  var a=new Audio(NAS_API+'/api/voice/'+wavKey);
+  a.volume=0.9;a.playbackRate=_voiceSpeed;
+  if(appBgm&&!_bgmFading)appBgm.volume=0.05;
+  _zundaShow(urgent?'まもなく'+dir+'なのだ！':'200メートル先、'+dir+'なのだ。');
+  _zundaMouthStart();
+  a.onended=function(){_zundaMouthStop();if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);};
+  a.onerror=function(){_zundaMouthStop();_zundaHide();spk(urgent?'まもなく'+dir+'なのだ。':'200メートル先、'+dir+'なのだ。');};
+  a.play().catch(function(){a.onerror();});
+}
+function checkTurns(){
+  if(!gLat||_turnPoints.length===0)return;
+  for(var i=0;i<_turnPoints.length;i++){
+    var tp=_turnPoints[i];
+    var d=dK(gLat,gLng,tp.lat,tp.lng)*1000;// メートル
+    if(d<=200&&d>50&&!tp.announced200){
+      tp.announced200=true;
+      _showTurnArrow(tp.dir,false);
+      _playTurnVoice(tp.dir,false);
+    } else if(d<=50&&!tp.announced50){
+      tp.announced50=true;
+      _showTurnArrow(tp.dir,true);
+      _playTurnVoice(tp.dir,true);
+    }
+    // 通過後リセット（500m以上離れたら再利用可能に）
+    if(d>500&&(tp.announced200||tp.announced50)){
+      tp.announced200=false;tp.announced50=false;
+    }
+  }
+}
 function checkOrbis(){
   if(!gLat)return;
   for(let i=0;i<ORBIS.length;i++){
     const o=ORBIS[i];
     const d=dK(gLat,gLng,o.lat,o.lng);
     const st=_orbisState[i]||'none';
-    var isFixed=o.type==='固定'||o.type==='半固定';
+    var isFixed=o.type==='固定'||o.type==='半固定'||o.type==='固定(OSM)';
     if(isFixed&&d<1&&d>=0.3&&st==='none'){
       // オービス: 1km手前 第1警告
       _orbisState[i]='far';
@@ -1011,7 +1160,7 @@ function checkOrbis(){
       // 取り締まり/白バイ: 500m手前 警告
       _orbisState[i]='near';
       aC.resume();tn(900,.12,'square',0);tn(900,.12,'square',.15);tn(900,.12,'square',.3);
-      var msg=o.type==='白バイ多発'?'この先、白バイ注意区間です。制限速度'+o.limit+'キロ。':'この先、取り締まり注意区間です。制限速度'+o.limit+'キロ。';
+      var msg=o.type==='白バイ多発'?'この先、白バイ注意区間なのだ。制限速度'+o.limit+'キロなのだ。':o.type==='ネズミ捕り多発'?'この先、ネズミ捕り多発地点なのだ。制限速度'+o.limit+'キロなのだ。':'この先、取り締まり注意区間なのだ。制限速度'+o.limit+'キロなのだ。';
       spk(msg,true);
       if(o.type==='白バイ多発'){
         spk(msg,true);
@@ -1164,6 +1313,7 @@ let gHeading=null;
 let hMode=true;
 let roadDist=null,lastRoadDistCI=-1;
 
+var roadDur=null;// 所要時間（秒）
 function fetchRoadDist(lat,lng,stop){
   try{
     const ds=new google.maps.DirectionsService();
@@ -1172,6 +1322,7 @@ function fetchRoadDist(lat,lng,stop){
       (result,status)=>{
         if(status==='OK'){
           roadDist=result.routes[0].legs.reduce((s,l)=>s+l.distance.value,0)/1000;
+          roadDur=result.routes[0].legs.reduce((s,l)=>s+l.duration.value,0);
         }
       });
   }catch(e){}
@@ -1199,6 +1350,7 @@ function onGpsUpdate(p,announce_it){
   // Always move marker immediately (fast)
   moveMarker(gLat,gLng);
   checkOrbis();
+  checkTurns();
   checkDistAnnounce();
   checkFuel();
   checkRest();
@@ -1214,18 +1366,22 @@ function onGpsUpdate(p,announce_it){
     if(appBgm&&st[ni.i+1]&&st[ni.i+1].name.match(/練馬IC|金沢西IC/)){
       _bgmFading=true;var _bv=appBgm.volume;var _bf=setInterval(function(){_bv=Math.max(0,_bv-0.005);if(appBgm)appBgm.volume=_bv;if(_bv<=0){stopAppBgm();_bgmFading=false;clearInterval(_bf);}},200);
     }
-    // 15pt達成チェック（進行前後でポイント比較）
+    // ポイント達成チェック（進行前後でポイント比較）
     const prevPt=st.slice(0,ni.i+1).reduce((s,x)=>s+x.pt,0);
     const newPt=st.slice(0,ni.i+2).reduce((s,x)=>s+x.pt,0);
-    if(cDay==='day1'&&prevPt<15&&newPt>=15){
+    const _milestones=[15,20,25,30,34];
+    const _hit=_milestones.find(m=>prevPt<m&&newPt>=m);
+    if(cDay==='day1'&&_hit){
       if(appBgm)appBgm.volume=0.05;if(bgm)bgm.volume=0.1;
       const ff=new Audio(new URL('sentou-syouri-remix.mp3',window.location.href).href);
       ff.volume=0.8;ff.play().catch(()=>sGoal());
-      ff.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;if(bgm)bgm.volume=0.5;};
-      spk('15ポイント達成なのだ！完走条件クリアなのだ！おめでとうなのだ！',true);
+      ff.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;if(bgm)bgm.volume=0.5;};
+      const _msgs={15:'15ポイント達成なのだ！完走条件クリアなのだ！おめでとうなのだ！',20:'20ポイント達成なのだ！すごいのだ！',25:'25ポイント達成なのだ！絶好調なのだ！',30:'30ポイント達成なのだ！あと少しなのだ！',34:'34ポイント！全ポイント制覇なのだ！おめでとうなのだ！'};
+      spk(_msgs[_hit],true);
+      const _bnMsgs={15:'🎉 15pt達成！完走条件クリア！ 🎉',20:'🎉 20pt達成！ 🎉',25:'🎉 25pt達成！ 🎉',30:'🎉 30pt達成！ 🎉',34:'🎉 34pt！全制覇！ 🎉'};
       const bn=document.createElement('div');
       bn.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#003320,#005530);border-bottom:3px solid var(--grn);padding:16px;text-align:center;font-size:20px;font-weight:900;color:#00e676;animation:fadeIn 0.3s;';
-      bn.textContent='🎉 15pt達成！完走条件クリア！ 🎉';
+      bn.textContent=_bnMsgs[_hit];
       document.body.appendChild(bn);
       setTimeout(()=>{bn.style.opacity='0';bn.style.transition='opacity 0.5s';setTimeout(()=>bn.remove(),500);},3000);
     }
@@ -1253,12 +1409,15 @@ function onGpsUpdate(p,announce_it){
         stopAppBgm();
         _zundaHide();
         rnd();
-        // リストタブ表示後にチャイム+距離案内
-        setTimeout(function(){
-          sGps();
-          var nw2=new Date(),nm2=nw2.getHours()*60+nw2.getMinutes();
-          ann(st,ni,nm2-pT(st[ni.i].time));
-        },500);
+        // リストタブ表示後にチャイム+距離案内（初回GPS済みならスキップ）
+        if(!window._skipFirstChime){
+          setTimeout(function(){
+            sGps();
+            var nw2=new Date(),nm2=nw2.getHours()*60+nw2.getMinutes();
+            ann(st,ni,nm2-pT(st[ni.i].time));
+          },500);
+        }
+        window._skipFirstChime=false;
       }
     },500);
     // 15秒フォールバック
@@ -1326,6 +1485,7 @@ async function _releaseWakeLock(){try{if(_wakeLock){await _wakeLock.release();_w
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&watchId)_requestWakeLock();});
 
 function loc(cb){
+  setTimeout(function(){_appReady=true;},5000);
   aC.resume();
   if(!navigator.geolocation){gSt='❌ GPS非対応';rnd();return;}
   gSt='📡 取得中...';rnd();
@@ -1380,16 +1540,24 @@ function rnd(){
   if(!gLat){dc='ot';dt='--';}
   let cI=gLat?nI:0;
   const cS=st[cI],cD=gLat?dK(gLat,gLng,cS.lat,cS.lng):0;
-  if(gLat&&cI!==lastRoadDistCI){lastRoadDistCI=cI;roadDist=null;fetchRoadDist(gLat,gLng,cS);}
+  if(gLat&&cI!==lastRoadDistCI){lastRoadDistCI=cI;roadDist=null;roadDur=null;fetchRoadDist(gLat,gLng,cS);}
   const dispDist=roadDist!==null?roadDist:cD;
-  const cP=pT(cS.time),eta=gLat&&rally?cP+df:cP;
-  const eH=Math.floor(((eta%1440)+1440)%1440/60).toString().padStart(2,'0'),eM=(((eta%1440)+1440)%1440%60).toString().padStart(2,'0');
+  const cP=pT(cS.time);
+  // 到着予定 = 現在時刻 + 実所要時間（Directions API）
+  var eta;
+  if(gLat&&roadDur!==null){
+    var nowMin=nw.getHours()*60+nw.getMinutes()+nw.getSeconds()/60;
+    eta=nowMin+roadDur/60;
+  } else {
+    eta=gLat&&rally?cP+df:cP;
+  }
+  const _etaSec=Math.floor(eta*60);const _etaMod=((_etaSec%(1440*60))+(1440*60))%(1440*60);const eH=Math.floor(_etaMod/3600).toString().padStart(2,'0'),eM=Math.floor((_etaMod%3600)/60).toString().padStart(2,'0'),eS=(_etaMod%60).toString().padStart(2,'0');
   const xI=Math.min(cI+1,st.length-1),xS=st[xI],xD=gLat?dK(gLat,gLng,xS.lat,xS.lng):0;
   let pPt=0;st.forEach((s,i)=>{if(gLat&&i<nI)pPt+=s.pt;});
   let tPt=0;st.forEach(s=>tPt+=s.pt);
   const cDur=cS.dur||0;
-  const depM=eta+cDur;
-  const depH=Math.floor(((depM%1440)+1440)%1440/60).toString().padStart(2,'0'),depMn=(((depM%1440)+1440)%1440%60).toString().padStart(2,'0');
+  const depM=Math.floor(eta)+cDur;
+  const _depSec=Math.floor(depM*60);const _depMod=((_depSec%(1440*60))+(1440*60))%(1440*60);const depH=Math.floor(_depMod/3600).toString().padStart(2,'0'),depMn=Math.floor((_depMod%3600)/60).toString().padStart(2,'0'),depS=(_depMod%60).toString().padStart(2,'0');
   const tc={move:'dv',michi:'dm',noto:'dn',goal:'dg',qk:'dq',gs:'ds',other:'do'};
 
   // Header
@@ -1402,8 +1570,8 @@ function rnd(){
   } else {
     document.getElementById('hdr-area').innerHTML=`<div class="hdr">
       <div onclick="goHome()" style="cursor:pointer;display:flex;align-items:center;gap:8px;"><img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:22px;opacity:0.9;" onerror="this.outerHTML='<h1>SSTR</h1>'" ontouchstart="this._lp=setTimeout(()=>{if(_isAdmin){_apiShow=true;setTimeout(()=>{_apiShow=false;},5000);}},800)" ontouchend="clearTimeout(this._lp)" oncontextmenu="event.preventDefault()">${rally&&gLat?'<span class="bdg '+dc+'">'+dt+'</span>':''}</div>
-      <div style="text-align:center;flex:1;padding:0 8px;min-height:70px;display:flex;flex-direction:column;justify-content:center;">
-        ${gLat&&rally?`${(()=>{const schM=pT(cS.time);const diffM=schM-nwM;const absDiff=Math.abs(diffM);const ahead=diffM>=0;const dh=Math.floor(absDiff/60).toString().padStart(2,'0');const dm=(absDiff%60).toString().padStart(2,'0');const now=new Date();const ds=now.getSeconds().toString().padStart(2,'0');const col=ahead?'var(--ac)':'var(--red)';const lbl=ahead?'余裕':'遅れ';const sign=ahead?'+':'-';return `<div style="font-family:'Outfit';font-size:10px;color:${col};letter-spacing:1px;">${lbl}</div><div style="font-family:'Outfit';font-size:45px;font-weight:900;color:${col};line-height:1;letter-spacing:2px;">${sign}${dh}:${dm}:${ds}</div><div style="font-size:9px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()}</div>`;})()}`:(gLat?`${(()=>{
+      <div style="text-align:center;flex:1;padding:0 8px;height:70px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;">
+        ${gLat&&rally?`${(()=>{const schM=pT(cS.time);const diffM=schM-nwM;const absDiff=Math.abs(diffM);const ahead=diffM>=0;const dh=Math.floor(absDiff/60).toString().padStart(2,'0');const dm=Math.floor(absDiff%60).toString().padStart(2,'0');const now=new Date();const ds=now.getSeconds().toString().padStart(2,'0');const col=ahead?'var(--ac)':'var(--red)';const lbl=ahead?'余裕':'遅れ';const sign=ahead?'+':'-';return `<div style="font-family:'Outfit';font-size:10px;color:${col};letter-spacing:1px;">${lbl}</div><div style="font-family:'Outfit';font-size:45px;font-weight:900;color:${col};line-height:1;letter-spacing:2px;">${sign}${dh}:${dm}:${ds}</div><div style="font-size:9px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()}</div>`;})()}`:(gLat?`${(()=>{
 if(_hdrMode===0){
   const now=new Date();const goal=new Date(2026,4,23,19,0,0);let remS=Math.floor((goal-now)/1000);const over=remS<0;if(over)remS=Math.abs(remS);const rd=Math.floor(remS/86400),rh=Math.floor((remS%86400)/3600),rm=Math.floor((remS%3600)/60),rs=remS%60;const col=over?'var(--red)':remS<3600?'var(--ylw)':'var(--ac)';const lbl=over?'超過':rd>0?'5/23 19:00まで':'19:00まで';const timeStr=rd>0?rd+'日'+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0'):(over?'-':'')+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0');
   return '<div style="font-family:Outfit;font-size:10px;color:'+col+';letter-spacing:1px;">'+lbl+'</div><div style="font-family:Outfit;font-size:'+(rd>0?'32':'45')+'px;font-weight:900;color:'+col+';line-height:1;letter-spacing:2px;">'+timeStr+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
@@ -1412,8 +1580,11 @@ if(_hdrMode===0){
   const distStr=distM>=1000?(dispDist.toFixed(1)+'km'):(distM+'m');
   return '<div style="font-family:Outfit;font-size:10px;color:var(--ac);letter-spacing:1px;">次のスポットまで</div><div style="font-family:Outfit;font-size:45px;font-weight:900;color:var(--ac);line-height:1;letter-spacing:2px;">'+distStr+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
 } else {
-  const now2=new Date();const nwS2=now2.getHours()*3600+now2.getMinutes()*60+now2.getSeconds();const etaS2=eta*60;let rem2=etaS2-nwS2;if(rem2<0)rem2+=86400;const rh2=Math.floor(rem2/3600),rm2=Math.floor((rem2%3600)/60),rs2=rem2%60;
-  return '<div style="font-family:Outfit;font-size:10px;color:var(--ac);letter-spacing:1px;">到着まで</div><div style="font-family:Outfit;font-size:45px;font-weight:900;color:var(--ac);line-height:1;letter-spacing:2px;">'+rh2.toString().padStart(2,'0')+':'+rm2.toString().padStart(2,'0')+':'+rs2.toString().padStart(2,'0')+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
+  const _etaFS=Math.floor(eta*60);const _etaFMod=((_etaFS%(1440*60))+(1440*60))%(1440*60);const etaH=Math.floor(_etaFMod/3600),etaM2=Math.floor((_etaFMod%3600)/60),etaS2=(_etaFMod%60);
+  const schM=pT(cS.time);const diffM=eta-schM;
+  const etaCol=diffM>0?'var(--red)':diffM>=-5?'var(--ylw)':'var(--ac)';
+  const etaLbl=diffM>0?'到着予定（遅れ）':diffM>=-5?'到着予定（ギリギリ）':'到着予定';
+  return '<div style="font-family:Outfit;font-size:10px;color:'+etaCol+';letter-spacing:1px;">'+etaLbl+'</div><div style="font-family:Outfit;font-size:45px;font-weight:900;color:'+etaCol+';line-height:1;letter-spacing:2px;">'+etaH.toString().padStart(2,'0')+':'+etaM2.toString().padStart(2,'0')+':'+etaS2.toString().padStart(2,'0')+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
 }
 })()}`:'')}
       </div>
@@ -1470,17 +1641,17 @@ if(_hdrMode===0){
 
   // Top: current stop panel
   let t='';
-  if(_myName)t+=`<div style="padding:4px 14px;font-size:12px;color:var(--org);"><span onclick="var n=prompt('ライダー名:',_myName||'');if(n!==null){_myName=n;localStorage.setItem('_riderName',n);rnd();}" style="cursor:pointer;">🏍 ${_myName}</span></div>`;
+  if(_myName)t+=`<div style="padding:6px 14px;font-size:15px;font-weight:700;color:var(--org);"><span onclick="var n=prompt('ライダー名:',_myName||'');if(n!==null){_myName=n;localStorage.setItem('_riderName',n);rnd();}" style="cursor:pointer;">${_myName}さん</span></div>`;
   // Current
   t+=`<div class="pnl pc"><div class="lb">▶ いま向かっている場所</div>
     <div class="nm">${cS.name}</div>${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
-    ${(()=>{const schM=pT(cS.time);const diff=gLat&&rally?eta-schM:0;const tc=!gLat||!rally?'var(--ac)':diff>0?'var(--red)':diff>=-5?'var(--ylw)':'var(--ac)';return `<div class="sts">
-      <div class="st"><div class="v">${gLat?dispDist.toFixed(1):'--'}</div><div class="l">km</div></div>
-      <div class="st"><div class="v" style="color:${tc}">${gLat?eH+':'+eM:cS.time}</div><div class="l">着${gLat&&rally&&diff>0?'<span style="color:'+tc+'"> +'+diff+'分</span>':''}</div></div>
+    ${(()=>{const schM=pT(cS.time);const diff=gLat?eta-schM:0;const tc=!gLat?'var(--ac)':diff>0?'var(--red)':diff>=-5?'var(--ylw)':'var(--ac)';return `<div class="sts">
+      <div class="st"><div class="v" style="color:${!gLat?'var(--ac)':dispDist>=100?'var(--red)':dispDist>=50?'var(--ylw)':'var(--ac)'}">${gLat?dispDist.toFixed(1):'--'}</div><div class="l">km</div></div>
+      <div class="st"><div class="v" style="color:${tc}">${gLat?eH+':'+eM+':'+eS:cS.time}</div><div class="l">着${gLat&&Math.floor(diff)>0?'<span style="color:'+tc+'"> +'+Math.floor(diff)+'分</span>':''}</div></div>
     </div>
     ${cDur?`<div class="sts" style="margin-top:6px;">
       <div class="st"><div class="v">${cDur}分</div><div class="l">滞在</div></div>
-      <div class="st"><div class="v" style="color:${tc}">${gLat?depH+':'+depMn:'--:--'}</div><div class="l">発</div></div>
+      <div class="st"><div class="v" style="color:${tc}">${gLat?depH+':'+depMn+':'+depS:'--:--:--'}</div><div class="l">発</div></div>
     </div>`:''}`;})()}
     ${cS.pt?'<div class="pb"><div class="ptb">+'+cS.pt+'pt</div></div>':''}
   </div>`;
@@ -1494,8 +1665,8 @@ if(_hdrMode===0){
     b+=`<div class="ctrls">
       <button class="cb ${iM?'':'act'}" onclick="iM=!iM;rnd();">${iM?'🔇':'🔊'}</button>
       <label class="cb" style="border-color:var(--pk);color:var(--pk);">🎵 BGM<input type="file" accept="audio/*" onchange="lBGM(event)" style="display:none;"></label>
-      <button class="cb ${sFl?'act':''}" onclick="sFl=!sFl;rnd();">📋 全リスト</button>
-      <button class="cb" onclick="_showSettings();">⚙ 設定</button>
+      <button class="cb ${sFl?'act':''}" onclick="sFl=!sFl;rnd();" style="border-color:var(--grn);color:var(--grn);">📋 全リスト</button>
+      <button class="cb" onclick="_showSettings();" style="border-color:var(--ylw);color:var(--ylw);">⚙ 設定</button>
       ${cDay==='day1'?'<button class="cb" style="border-color:var(--red);color:var(--red);" onclick="emergGoal()">🚨 緊急ゴール</button>':''}
     </div>`;
     if(_emergGoal){const g=_emergGoal;b+=`<div class="pnl" style="background:var(--card);border:2px solid ${g.col};padding:14px 16px;">
@@ -1530,21 +1701,20 @@ setInterval(rnd,1000);
 })();
 rnd();
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').then(reg=>{
-    reg.addEventListener('updatefound',()=>{
-      const nw=reg.installing;
-      nw.addEventListener('statechange',()=>{
-        if(nw.state==='activated'){
-          // 新バージョンが有効化されたら自動リロード
-          window.location.reload();
-        }
+  if(window.Capacitor){
+    // APK: SWを解除（リロードループ防止）
+    navigator.serviceWorker.getRegistrations().then(regs=>{regs.forEach(r=>r.unregister());});
+  } else {
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.addEventListener('updatefound',()=>{
+        const nw=reg.installing;
+        nw.addEventListener('statechange',()=>{
+          if(nw.state==='activated'){window.location.reload();}
+        });
       });
     });
-  });
-  // 既存のSWが更新を持っている場合
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{
-    window.location.reload();
-  });
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{window.location.reload();});
+  }
 }
 function goHome(){
   if(watchId){navigator.geolocation.clearWatch(watchId);watchId=null;}
@@ -1558,6 +1728,9 @@ function startApp(mode){
   const sp=document.getElementById('splash');
   if(!sp)return;
   if(_apiLocked()){alert('API使用量が上限に達しました。今月は使用できません。');return;}
+  // 前フローの音声・UIを全停止
+  _spkQ.length=0;_spkBusy=false;_zundaHide();
+  var _oldGps=document.getElementById('gpsStatusBox');if(_oldGps)_oldGps.remove();
   aC.resume();
   sp.remove();
   playAppBgm();
@@ -1572,27 +1745,15 @@ function startApp(mode){
     <div style="position:absolute;inset:0;background-image:url(bg2.jpg);background-size:cover;background-position:center 70%;"></div>
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.2) 100%);"></div>
     <div style="position:absolute;top:20px;right:20px;z-index:2;font-family:'Outfit';font-size:12px;color:#fff;letter-spacing:1px;text-align:right;">v.260406.7984474</div>
-    <div style="position:absolute;top:40%;left:0;right:0;z-index:1;text-align:center;padding:0 24px;">
+    <div class="mid-content" style="position:absolute;top:40%;left:0;right:0;z-index:1;text-align:center;padding:0 24px;">
       <div style="margin-bottom:4px;">${mode==='sstr'?'<img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:60px;" onerror="this.outerHTML=\'<span style=font-size:26px;font-weight:900;color:#00d4ff>SSTR 2026</span>\'">':'<img src="greenlabel_logo.png" style="height:80px;" onerror="this.outerHTML=\'<span style=font-size:26px;font-weight:900;color:#00d4ff>'+title+'</span>\'">'}</div>
       <div style="font-size:13px;color:#ccc;margin-bottom:20px;">が選択されたのだ</div>
-      <div style="display:inline-flex;align-items:center;gap:10px;">
-        <div style="width:8px;height:8px;border-radius:50%;background:#00d4ff;animation:pulse 1s infinite;flex-shrink:0;"></div>
-        <div style="font-size:13px;color:#00d4ff;">GPS情報取得までお待ちなのだ</div>
-      </div>
     </div>
     <style>@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.2;}}</style>
   `;
   document.body.appendChild(mid);
 
   // BGMはそのまま引き継ぐ（TTS時は自動で音量調整）
-
-  // TTS読み上げ（ミュート状態でも読み上げる）
-  setTimeout(()=>{
-    spk('SSTR2026が選択されたのだ。GPS情報取得までお待ちなのだ。',true);
-  },1500);
-
-  // 15秒後に確実に遷移（TTS終了待ちのフォールバック）
-  setTimeout(()=>{if(mid.parentNode){mid.remove();stopAppBgm();rnd();}},15000);
 
   if(mode==='nippon1'||mode==='nippon2'){
     setTimeout(()=>{if(mid.parentNode)mid.remove();
@@ -1602,40 +1763,111 @@ function startApp(mode){
     return;
   }
 
-  loc();
+  // 「選択されたのだ」音声 → GPS取得画面（ドットアニメ）→ リストタブ
+  function _goMain(){
+    _spkQ.length=0;_spkBusy=false;_zundaHide();
+    sGps();
+    window._skipFirstChime=true;
+    // メロディ後に画面切り替え
+    setTimeout(function(){
+      if(mid.parentNode){mid.remove();}
+      // BGMフェードアウト（2秒かけて）
+      if(appBgm){_bgmFading=true;var _bv=appBgm.volume;var _bf=setInterval(function(){_bv=Math.max(0,_bv-0.02);if(appBgm)appBgm.volume=_bv;if(_bv<=0){stopAppBgm();_bgmFading=false;clearInterval(_bf);}},100);}
+      loc();
+    },800);
+  }
+  // 「選択されたのだ」音声再生
+  setTimeout(()=>{
+    spk('SSTR2026が選択されたのだ。',true);
+  },500);
+
+  if(gLat){
+    // 初回フロー: GPS既に取得済み → 音声完了待ち → メロディ → リストタブ
+    // 音声は500ms後に開始するので、1秒後からチェック開始
+    setTimeout(function(){
+      var _transWait=setInterval(function(){
+        if(!_spkBusy&&_spkQ.length===0){
+          clearInterval(_transWait);
+          setTimeout(_goMain,500);
+        }
+      },300);
+      setTimeout(function(){clearInterval(_transWait);_goMain();},10000);
+    },1000);
+  } else {
+    // 2回目フロー: GPS未取得 → 3秒後にGPS取得画面を表示
+    setTimeout(function(){
+      var gpsArea=mid.querySelector('.mid-content');
+      if(gpsArea){
+        gpsArea.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:12px;"><div style="width:40px;height:40px;border:3px solid rgba(0,212,255,0.3);border-top:3px solid #00d4ff;border-radius:50%;animation:spin 1s linear infinite;"></div><div class="gpsDots" style="font-size:20px;font-weight:700;color:#00d4ff;">GPS情報取得中.</div></div>';
+        var _dotCount=0;
+        var _dotInterval=setInterval(function(){_dotCount=(_dotCount+1)%3;var dots='.'.repeat(_dotCount+1);var el=mid.querySelector('.gpsDots');if(el)el.textContent='GPS情報取得中'+dots;},600);
+        spk('GPS情報を取得するのだ！',true);
+        var _gpsOk=false,_minOk=false;
+        setTimeout(function(){_minOk=true;if(_gpsOk){clearInterval(_dotInterval);_goMain();}},3000);
+        navigator.geolocation.getCurrentPosition(function(p){
+          gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
+          if(p.coords.heading!==null&&!isNaN(p.coords.heading)&&p.coords.speed>1)gHeading=p.coords.heading;
+          _gpsOk=true;
+          if(_minOk){clearInterval(_dotInterval);_goMain();}
+        },function(){clearInterval(_dotInterval);_goMain();},{enableHighAccuracy:true,timeout:15000});
+      } else {
+        _goMain();
+      }
+    },3000);
+  }
+
+  // 20秒後に確実に遷移（フォールバック）
+  setTimeout(()=>{if(mid.parentNode){_goMain();}},20000);
 }
 // スプラッシュ表示と同時にBGM自動再生（APKはsetMediaPlaybackRequiresUserGesture(false)済み）
 playAppBgm();
-// 2秒後にずんだもんが挨拶（BGM再生中に）
+// 1秒後にずんだもんが挨拶（BGM再生中に）
 setTimeout(function(){
   try{
     if(appBgm)appBgm.volume=0.1;
     if(_myName){
-      // 2回目: おかえりWAV → プラン選択WAVの連続再生
+      // 2回目: おかえり → プラン選択
       _zundaShow(_myName+'さん、おかえりなのだ！');
       var _welcomeWav=new Audio(NAS_API+'/api/voice/welcome_'+encodeURIComponent(_myName));
       _welcomeWav.volume=0.9;_welcomeWav.playbackRate=_voiceSpeed;
       _welcomeWav.onended=function(){
-        // おかえり終了→プラン選択WAV
-        _zundaShow(_myName+'さん、ツーリングプランを選択してほしいのだ！');
+        _zundaShow(_myName+'さん、ツーリングプランを選ぶのだ！');
         var _planWav=new Audio(NAS_API+'/api/voice/plan_'+encodeURIComponent(_myName));
         _planWav.volume=0.9;_planWav.playbackRate=_voiceSpeed;
-        _planWav.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;setTimeout(_zundaHide,1500);};
-        _planWav.onerror=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;_zundaHide();};
-        _planWav.play().catch(function(){});
+        _planWav.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);};
+        _planWav.onerror=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();};
+        _planWav.play().catch(function(){_planWav.onerror();});
       };
-      _welcomeWav.onerror=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;_zundaHide();};
+      _welcomeWav.onerror=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();};
       _welcomeWav.play().catch(function(){_welcomeWav.onerror();});
     } else {
-      // 初回: 名前入力を促すだけ
-      _zundaShow('ライダー名を入力してほしいのだ！');
-      var za=new Audio(new URL('voice/enter_name.wav',window.location.href).href);
-      za.volume=0.9;
-      za.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;setTimeout(_zundaHide,2000);};
-      za.play().catch(function(){});
+      // 初回: 初めまして → 名前入力を促す
+      _zundaShow('初めましてなのだ！');
+      var _hajimeAudio=new Audio(NAS_API+'/api/voice/hajimemashite');
+      _hajimeAudio.volume=0.9;_hajimeAudio.playbackRate=_voiceSpeed;
+      _zundaMouthStart();
+      _hajimeAudio.onended=function(){
+        _zundaMouthStop();
+        setTimeout(function(){
+          _zundaShow('ライダー名を入力してほしいのだ！');
+          window._splashAudio=new Audio(new URL('voice/enter_name.wav',window.location.href).href);
+          window._splashAudio.volume=0.9;
+          window._splashAudio.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,2000);};
+          window._splashAudio.play().catch(function(){});
+        },500);
+      };
+      _hajimeAudio.onerror=function(){
+        _zundaMouthStop();
+        _zundaShow('ライダー名を入力してほしいのだ！');
+        window._splashAudio=new Audio(new URL('voice/enter_name.wav',window.location.href).href);
+        window._splashAudio.volume=0.9;
+        window._splashAudio.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,2000);};
+        window._splashAudio.play().catch(function(){});
+      };
+      _hajimeAudio.play().catch(function(){_hajimeAudio.onerror();});
     }
   }catch(e){}
-},2000);
+},1000);
 // 管理者モード: スプラッシュ初期表示
 if(_isAdmin){const a=document.querySelector('.adm');if(a)a.textContent='🔑 ADMIN';}
 // ライダー名を入力欄に復元
@@ -1654,7 +1886,7 @@ function _showCards(){
     _zundaShow('ツーリングプランを選ぶのだ！');
     var _pw=new Audio(new URL('voice/splash_welcome.wav',window.location.href).href);
     _pw.volume=0.9;_pw.playbackRate=_voiceSpeed;
-    _pw.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.25;setTimeout(_zundaHide,1500);};
+    _pw.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);};
     _pw.play().catch(function(){});
   }
 }
