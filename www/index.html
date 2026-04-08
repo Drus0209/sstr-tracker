@@ -90,6 +90,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 @keyframes sparkle{0%,100%{left:-100%;}50%{left:150%;}}
 @keyframes orbisFlash{0%,100%{border-color:transparent;}50%{border-color:#ff4444;}}
 @keyframes zundaBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
 #riderNameInput::placeholder{color:rgba(255,255,255,0.5);}
 #zundaOverlay{position:fixed;bottom:0;right:10px;z-index:10000;display:none;flex-direction:column;align-items:center;pointer-events:none;}
 #zundaOverlay.show{display:flex;}
@@ -485,7 +486,7 @@ function applyZoomMode(){
 const aC=new(window.AudioContext||window.webkitAudioContext)();
 document.addEventListener('touchstart',()=>{if(aC.state!=='running')aC.resume();},{passive:true});
 function tn(f,d,t,dl){if(iM)return;const o=aC.createOscillator(),g=aC.createGain();o.type=t||'sine';o.frequency.value=f;g.gain.setValueAtTime(0.8,aC.currentTime+dl);g.gain.exponentialRampToValueAtTime(0.001,aC.currentTime+dl+d);o.connect(g);g.connect(aC.destination);o.start(aC.currentTime+dl);o.stop(aC.currentTime+dl+d);}
-function sGps(){if(appBgm)appBgm.volume=0.15;aC.resume();setTimeout(()=>{tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.12,'sine',.2);tn(1047,.25,'sine',.3);setTimeout(()=>{if(appBgm)appBgm.volume=0.15;},1000);},150);}
+function sGps(onDone){if(appBgm)appBgm.volume=0.15;aC.resume();tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.12,'sine',.2);tn(1047,.25,'sine',.3);var _dur=550;if(onDone){var _t=aC.currentTime;var _chk=setInterval(function(){if(aC.currentTime>=_t+_dur/1000+0.1){clearInterval(_chk);if(appBgm)appBgm.volume=0.15;onDone();}},50);}else{setTimeout(()=>{if(appBgm)appBgm.volume=0.15;},700);}}
 function sNext(){tn(523,.1,'sine',0);tn(784,.1,'sine',.1);tn(1047,.1,'sine',.2);tn(1319,.25,'sine',.3);} // ストップ切替チャイム
 function sAhd(){tn(523,.12,'sine',0);tn(659,.12,'sine',.1);tn(784,.15,'sine',.2);}
 function sBhd(){tn(400,.15,'square',0);tn(350,.15,'square',.12);tn(300,.2,'square',.24);}
@@ -563,15 +564,18 @@ function _zundaMouthStop(){
   if(open)open.style.opacity='0';
   if(close)close.style.opacity='1';
 }
+var _spkCallback=null;// spk完了コールバック
 function _spkNext(){
-  if(_spkQ.length===0){_spkBusy=false;_spkRestore();_zundaMouthStop();setTimeout(_zundaHide,1500);return;}
+  if(_spkQ.length===0){_spkBusy=false;_spkRestore();_zundaMouthStop();_zundaHide();if(_spkCallback){var cb=_spkCallback;_spkCallback=null;cb();}return;}
   _spkBusy=true;var t=_spkQ.shift();
-  // ずんだもん音声ファイルがあれば再生
   var zf=_findZunda(t);
   if(zf){
     _zundaShow(t);
     var a=new Audio(new URL(zf,window.location.href).href);
-    a.volume=0.9;a.playbackRate=_voiceSpeed;a.onended=function(){_zundaMouthStop();setTimeout(function(){_zundaHide();_spkNext();},1500);};a.onerror=function(){_spkFallback(t);};a.play().catch(function(){_spkFallback(t);});
+    a.volume=0.9;a.playbackRate=_voiceSpeed;
+    a.onended=function(){_zundaMouthStop();_zundaHide();_spkNext();};
+    a.onerror=function(){_spkFallback(t);};
+    a.play().catch(function(){_spkFallback(t);});
     return;
   }
   _spkFallback(t);
@@ -582,8 +586,9 @@ function _spkFallback(t){
   else if('speechSynthesis'in window){var u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';u.rate=1.3;u.onend=_spkNext;u.onerror=_spkNext;speechSynthesis.speak(u);}
   else{_spkNext();}
 }
-var _appReady=false;// リスト/地図タブが表示されたらtrue
-function spk(t,force){if(!force&&iM)return;if(!force&&!_appReady)return;if(!_spkBusy){if(appBgm&&!_bgmFading)appBgm.volume=0.05;if(bgm&&!bgm.paused)bgm.volume=0.1;}_spkQ.push(t);if(!_spkBusy)_spkNext();}
+var _appReady=false;
+// spk(text, force, onDone) — onDone: キュー完了時コールバック
+function spk(t,force,onDone){if(!force&&iM)return;if(!force&&!_appReady)return;if(!_spkBusy){if(appBgm&&!_bgmFading)appBgm.volume=0.05;if(bgm&&!bgm.paused)bgm.volume=0.1;}if(onDone)_spkCallback=onDone;_spkQ.push(t);if(!_spkBusy)_spkNext();}
 // Optimized: only search ±3 stops from last known position (100km/h × 5s = 140m max)
 function fN(stops){
   if(!gLat)return{i:0,d:0};
@@ -749,46 +754,38 @@ function submitReport(type){
 setInterval(fetchTraffic,300000);
 
 // === バイクエンジン始動音 ===
-function playEngineSound(){
+function playEngineSound(onDone){
   var snd=new Audio('engine.mp3');
   snd.volume=1.0;
-  snd.play().then(function(){}).catch(function(e){console.log('ENGINE ERR:',e);});
+  snd.onended=function(){if(onDone)onDone();};
+  snd.onerror=function(){if(onDone)onDone();};
+  snd.play().catch(function(){if(onDone)onDone();});
 }
 function _onNameOk(){
   var v=document.getElementById('riderNameInput').value.trim();
   if(!v)return;
   if(aC)aC.resume();
-  // 再生中の音声を全停止
   _spkQ.length=0;_spkBusy=false;
   if(window._splashAudio){window._splashAudio.pause();window._splashAudio=null;}
   _zundaHide();
-  // BGM音量を復帰（スプラッシュ音声で0.1に下がっている場合）
   if(appBgm&&!_bgmFading)appBgm.volume=0.15;
-  // 名前保存・UI非表示
   _myName=v;localStorage.setItem('_riderName',v);
   document.getElementById('riderNameBox').style.display='none';
-  // NAS WAV生成開始（バックグラウンド）
   _genWelcomeVoice(v);
-  // エンジン音再生（BGMを少し残す）
+  // エンジン音再生 → 終了後にGPSフロー
   if(appBgm)appBgm.volume=0.03;
-  playEngineSound();
-  // エンジン音(約2秒) + 一呼吸(1秒) → GPSフロー
-  setTimeout(function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_firstTimeGps();},3000);
+  playEngineSound(function(){
+    if(appBgm&&!_bgmFading)appBgm.volume=0.15;
+    _firstTimeGps();
+  });
 }
 
 // === 初回GPS取得（名前確定後）===
 function _firstTimeGps(){
   // ずんだもん音声再生 → 完了後にダイアログ
-  spk('GPS情報を取得するのだ！',true);
-  // 音声完了を待ってからダイアログ表示
-  var _gpsDotsShown=false;
-  var _waitVoice=setInterval(function(){
-    if(!_spkBusy&&_spkQ.length===0){
-      clearInterval(_waitVoice);
-      if(!_gpsDotsShown){_gpsDotsShown=true;_showGpsDots();}
-    }
-  },300);
-  setTimeout(function(){clearInterval(_waitVoice);if(!_gpsDotsShown){_gpsDotsShown=true;_showGpsDots();}},5000);
+  spk('GPS情報を取得するのだ！',true,function(){
+    _showGpsDots();
+  });
 }
 function _showGpsDots(){
   var gpsBox=document.createElement('div');
@@ -805,7 +802,7 @@ function _startGps(gpsBox,_dotInterval){
   var _gpsReady=false,_minWait=false;
   var _gpsStart=Date.now();
   // 最低3秒はドットアニメを表示
-  setTimeout(function(){_minWait=true;if(_gpsReady)_afterGps();},3000);
+  setTimeout(function(){_minWait=true;if(_gpsReady){clearInterval(_dotInterval);_proceedToCards();}},3000);
   function _afterGps(){
     clearInterval(_dotInterval);
     _proceedToCards();
@@ -1083,24 +1080,28 @@ const ORBIS=[
 ];
 let _orbisState={};// {index: 'none'|'far'|'near'|'passed'}
 // === ターン案内（200m/50m手前）===
-var _turnEmoji={'右':'→','左':'←','斜め右':'↗','斜め左':'↖','鋭角右':'↘','鋭角左':'↙','Uターン':'↩'};
+var _turnAngles={'右':0,'左':180,'斜め右':-45,'斜め左':135,'鋭角右':45,'鋭角左':-135,'Uターン':180};
 function _showTurnArrow(dir,urgent){
   var existing=document.getElementById('turnArrow');if(existing)existing.remove();
-  var arrow=_turnEmoji[dir]||'→';
   var el=document.createElement('div');el.id='turnArrow';
-  var col=urgent?'#ff4444':'#00e676';
-  var sz=urgent?'80vw':'65vw';
-  // 流れる方向のtranslate
-  var flowDir={'右':'100%,0','左':'-100%,0','斜め右':'70%,-70%','斜め左':'-70%,-70%','鋭角右':'70%,70%','鋭角左':'-70%,70%','Uターン':'0,-100%'};
-  var fd=flowDir[dir]||'100%,0';
-  el.style.cssText='position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);z-index:9990;text-align:center;pointer-events:none;overflow:visible;';
-  el.innerHTML='<div style="position:relative;width:'+sz+';height:'+sz+';margin:0 auto;overflow:hidden;">'
-    +'<div class="turnAnim" style="font-size:'+sz+';line-height:1;color:'+col+';filter:drop-shadow(0 0 40px '+col+') drop-shadow(0 0 80px '+col+');position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">'+arrow+'</div>'
-    +'</div>'
-    +'<div style="font-size:'+(urgent?'28px':'22px')+';font-weight:900;color:'+col+';margin-top:12px;text-shadow:0 4px 15px rgba(0,0,0,0.9);letter-spacing:4px;">'+(urgent?'まもなく '+dir:'200m先 '+dir)+'</div>'
+  var col=urgent?'#ff4444':'#FF9800';
+  var angle=_turnAngles[dir]||0;
+  // 流れる方向
+  var flowDir={'右':'120%,0','左':'-120%,0','斜め右':'80%,-80%','斜め左':'-80%,-80%','鋭角右':'80%,80%','鋭角左':'-80%,80%','Uターン':'0,-120%'};
+  var fd=flowDir[dir]||'120%,0';
+  el.style.cssText='position:fixed;top:35%;left:50%;transform:translate(-50%,-50%);z-index:9990;text-align:center;pointer-events:none;';
+  el.innerHTML='<div style="font-size:'+(urgent?'48px':'40px')+';font-weight:900;color:'+col+';margin-bottom:16px;text-shadow:0 4px 15px rgba(0,0,0,0.9);letter-spacing:6px;filter:drop-shadow(0 0 20px '+col+');">'+(urgent?'まもなく '+dir:'200m先 '+dir)+'</div>'
+    +'<div style="position:relative;width:100vw;height:50vh;overflow:hidden;">'
+    +'<div class="turnAnim" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">'
+    +'<div style="width:90vw;height:35vh;position:relative;transform:rotate('+angle+'deg);">'
+    // 矢印の軸（太い棒）
+    +'<div style="position:absolute;top:50%;left:0;right:25%;height:16vh;transform:translateY(-50%);background:linear-gradient(to right,transparent,'+col+');border-radius:6px;"></div>'
+    // 矢印の先端（三角）
+    +'<div style="position:absolute;top:50%;right:0;width:0;height:0;transform:translateY(-50%);border-top:18vh solid transparent;border-bottom:18vh solid transparent;border-left:25vw solid '+col+';"></div>'
+    +'</div></div></div>'
     +'<style>'
-    +'.turnAnim{animation:turnFlow 1s linear infinite;}'
-    +'@keyframes turnFlow{0%{transform:translate(-'+fd+');opacity:0;}20%{opacity:1;}80%{opacity:1;}100%{transform:translate('+fd+');opacity:0;}}'
+    +'.turnAnim{animation:turnFlow 0.8s linear infinite;}'
+    +'@keyframes turnFlow{0%{transform:translate(-'+fd+');opacity:0;}15%{opacity:1;}85%{opacity:1;}100%{transform:translate('+fd+');opacity:0;}}'
     +'</style>';
   document.body.appendChild(el);
   setTimeout(function(){if(el.parentNode){el.style.transition='opacity 0.5s';el.style.opacity='0';setTimeout(function(){el.remove();},500);}},urgent?8000:6000);
@@ -1409,15 +1410,6 @@ function onGpsUpdate(p,announce_it){
         stopAppBgm();
         _zundaHide();
         rnd();
-        // リストタブ表示後にチャイム+距離案内（初回GPS済みならスキップ）
-        if(!window._skipFirstChime){
-          setTimeout(function(){
-            sGps();
-            var nw2=new Date(),nm2=nw2.getHours()*60+nw2.getMinutes();
-            ann(st,ni,nm2-pT(st[ni.i].time));
-          },500);
-        }
-        window._skipFirstChime=false;
       }
     },500);
     // 15秒フォールバック
@@ -1521,7 +1513,7 @@ function testJump(){
   gLat=st[testIdx].lat+(Math.random()-0.5)*0.01;
   gLng=st[testIdx].lng+(Math.random()-0.5)*0.01;
   gSt='🧪 テスト: '+st[testIdx].name;
-  rnd();sGps();
+  rnd();
   const ni=fN(st),nw=new Date(),nm=nw.getHours()*60+nw.getMinutes();
   ann(st,ni,nm-pT(st[ni.i].time));
   if(vM==='map')updateMap(gLat,gLng,st,ni.i);
@@ -1763,61 +1755,39 @@ function startApp(mode){
     return;
   }
 
-  // 「選択されたのだ」音声 → GPS取得画面（ドットアニメ）→ リストタブ
+  // 「選択されたのだ」音声 → リストタブへ遷移
   function _goMain(){
-    _spkQ.length=0;_spkBusy=false;_zundaHide();
-    sGps();
-    window._skipFirstChime=true;
-    // メロディ後に画面切り替え
-    setTimeout(function(){
+    _zundaHide();
+    // メロディ → 完了後に画面切替
+    sGps(function(){
       if(mid.parentNode){mid.remove();}
-      // BGMフェードアウト（2秒かけて）
       if(appBgm){_bgmFading=true;var _bv=appBgm.volume;var _bf=setInterval(function(){_bv=Math.max(0,_bv-0.02);if(appBgm)appBgm.volume=_bv;if(_bv<=0){stopAppBgm();_bgmFading=false;clearInterval(_bf);}},100);}
       loc();
-    },800);
+    });
   }
-  // 「選択されたのだ」音声再生
-  setTimeout(()=>{
-    spk('SSTR2026が選択されたのだ。',true);
-  },500);
 
   if(gLat){
-    // 初回フロー: GPS既に取得済み → 音声完了待ち → メロディ → リストタブ
-    // 音声は500ms後に開始するので、1秒後からチェック開始
-    setTimeout(function(){
-      var _transWait=setInterval(function(){
-        if(!_spkBusy&&_spkQ.length===0){
-          clearInterval(_transWait);
-          setTimeout(_goMain,500);
-        }
-      },300);
-      setTimeout(function(){clearInterval(_transWait);_goMain();},10000);
-    },1000);
+    // 初回フロー: GPS既に取得済み → 音声完了 → リストタブ
+    spk('SSTR2026が選択されたのだ。',true,_goMain);
   } else {
-    // 2回目フロー: GPS未取得 → 3秒後にGPS取得画面を表示
-    setTimeout(function(){
+    // 2回目フロー: 音声完了 → GPS取得画面
+    spk('SSTR2026が選択されたのだ。',true,function(){
       var gpsArea=mid.querySelector('.mid-content');
-      if(gpsArea){
-        gpsArea.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:12px;"><div style="width:40px;height:40px;border:3px solid rgba(0,212,255,0.3);border-top:3px solid #00d4ff;border-radius:50%;animation:spin 1s linear infinite;"></div><div class="gpsDots" style="font-size:20px;font-weight:700;color:#00d4ff;">GPS情報取得中.</div></div>';
-        var _dotCount=0;
-        var _dotInterval=setInterval(function(){_dotCount=(_dotCount+1)%3;var dots='.'.repeat(_dotCount+1);var el=mid.querySelector('.gpsDots');if(el)el.textContent='GPS情報取得中'+dots;},600);
-        spk('GPS情報を取得するのだ！',true);
-        var _gpsOk=false,_minOk=false;
-        setTimeout(function(){_minOk=true;if(_gpsOk){clearInterval(_dotInterval);_goMain();}},3000);
-        navigator.geolocation.getCurrentPosition(function(p){
-          gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
-          if(p.coords.heading!==null&&!isNaN(p.coords.heading)&&p.coords.speed>1)gHeading=p.coords.heading;
-          _gpsOk=true;
-          if(_minOk){clearInterval(_dotInterval);_goMain();}
-        },function(){clearInterval(_dotInterval);_goMain();},{enableHighAccuracy:true,timeout:15000});
-      } else {
-        _goMain();
-      }
-    },3000);
+      if(!gpsArea){_goMain();return;}
+      gpsArea.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:12px;"><div style="width:40px;height:40px;border:3px solid rgba(0,212,255,0.3);border-top:3px solid #00d4ff;border-radius:50%;animation:spin 1s linear infinite;"></div><div class="gpsDots" style="font-size:20px;font-weight:700;color:#00d4ff;">GPS情報取得中.</div></div>';
+      var _dotCount=0;
+      var _dotInterval=setInterval(function(){_dotCount=(_dotCount+1)%3;var dots='.'.repeat(_dotCount+1);var el=mid.querySelector('.gpsDots');if(el)el.textContent='GPS情報取得中'+dots;},600);
+      spk('GPS情報を取得するのだ！',true);
+      var _gpsOk=false,_minOk=false;
+      var _minTimer=setTimeout(function(){_minOk=true;if(_gpsOk){clearInterval(_dotInterval);_goMain();}},3000);
+      navigator.geolocation.getCurrentPosition(function(p){
+        gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
+        if(p.coords.heading!==null&&!isNaN(p.coords.heading)&&p.coords.speed>1)gHeading=p.coords.heading;
+        _gpsOk=true;
+        if(_minOk){clearInterval(_dotInterval);_goMain();}
+      },function(){clearInterval(_dotInterval);_goMain();},{enableHighAccuracy:true,timeout:15000});
+    });
   }
-
-  // 20秒後に確実に遷移（フォールバック）
-  setTimeout(()=>{if(mid.parentNode){_goMain();}},20000);
 }
 // スプラッシュ表示と同時にBGM自動再生（APKはsetMediaPlaybackRequiresUserGesture(false)済み）
 playAppBgm();
