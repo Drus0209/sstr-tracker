@@ -100,14 +100,22 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 </style>
 </head>
 <body>
+<div id="reqScreen" style="position:fixed;inset:0;background:#06060c;z-index:10001;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;">
+  <div style="width:100%;max-width:340px;">
+    <div style="font-family:'Outfit';font-size:10px;font-weight:700;color:#aaa;letter-spacing:4px;margin-bottom:4px;">TOURING TRACKER</div>
+    <div style="font-size:18px;font-weight:900;color:var(--ac);margin-bottom:20px;">動作要件チェック</div>
+    <div id="reqList" style="font-size:14px;color:var(--txt);"></div>
+    <button id="reqOkBtn" onclick="document.getElementById('reqScreen').remove();" style="display:none;width:100%;margin-top:20px;background:var(--ac);border:none;border-radius:12px;padding:14px;color:#000;font-size:16px;font-weight:800;cursor:pointer;">OK</button>
+  </div>
+</div>
 <div id="splash" style="position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:48% 70%;" ontouchstart="aC&&aC.resume();">
   <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.15) 50%,rgba(6,6,12,0.7) 100%);"></div>
-  <div style="position:absolute;top:20px;left:20px;z-index:2;" onclick="if(!window._atc)window._atc=0;window._atc++;clearTimeout(window._att);window._att=setTimeout(()=>{window._atc=0;},2000);if(window._atc>=5){window._atc=0;_isAdmin=!_isAdmin;localStorage.setItem('_isAdmin',_isAdmin?'1':'0');this.querySelector('.adm').textContent=_isAdmin?'🔑 ADMIN':'';}" >
+  <div style="position:absolute;top:20px;left:20px;z-index:2;" onclick="if(!window._atc)window._atc=0;window._atc++;clearTimeout(window._att);window._att=setTimeout(()=>{window._atc=0;},2000);if(window._atc>=5){window._atc=0;_isAdmin=!_isAdmin;localStorage.setItem('_isAdmin',_isAdmin?'1':'0');this.querySelector('.adm').textContent=_isAdmin?'🔑 ADMIN':'';_showCards();}" >
     <div style="font-family:'Outfit';font-size:10px;font-weight:700;color:#aaa;letter-spacing:4px;text-transform:uppercase;">GPS Tracker</div>
     <div style="font-family:'Outfit';font-size:36px;font-weight:900;color:#00d4ff;letter-spacing:2px;line-height:1;">2026</div>
     <div class="adm" style="font-family:'Outfit';font-size:10px;color:var(--ylw);margin-top:4px;"></div>
   </div>
-  <div style="position:absolute;top:20px;right:20px;z-index:2;font-family:'Outfit';font-size:12px;color:#fff;letter-spacing:1px;text-align:right;">v.260408.93dd60c<div id="apiCntSplash" style="font-size:14px;font-weight:700;color:var(--ac);margin-top:4px;"></div></div>
+  <div style="position:absolute;top:20px;right:20px;z-index:2;text-align:right;"><div id="apiCntSplash"></div><div id="adminExitBtn" style="display:none;"><button onclick="_isAdmin=false;localStorage.setItem('_isAdmin','0');document.querySelector('.adm').textContent='';_showCards();document.getElementById('adminExitBtn').style.display='none';" style="background:rgba(255,68,68,0.15);border:1px solid var(--red);border-radius:8px;padding:6px 12px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;">🔓 管理者解除</button></div></div>
   <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin-top:60px;">
     <div style="width:100%;display:flex;flex-direction:column;gap:12px;">
       <div id="riderNameBox" style="background:rgba(20,30,50,0.85);border:2px solid var(--org);border-radius:16px;padding:18px 20px;text-align:center;">
@@ -158,6 +166,30 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 <div id="mapWrap"><div id="map"></div></div>
 <div id="btm"></div>
 <script>
+// === 動作要件チェック ===
+(function(){
+  var rl=document.getElementById('reqList');if(!rl)return;
+  function _chk(label,ok,detail){
+    rl.innerHTML+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.1);">'+(ok?'🟢':'🔴')+' <div><div style="font-weight:700;">'+label+'</div><div style="font-size:11px;color:'+(ok?'var(--sub)':'var(--red)')+';">'+detail+'</div></div></div>';
+  }
+  _chk('位置情報(GPS)',!!navigator.geolocation,navigator.geolocation?'利用可能':'非対応');
+  _chk('インターネット接続',navigator.onLine,navigator.onLine?'接続中':'オフライン');
+  _chk('音声再生',!!(window.AudioContext||window.webkitAudioContext),'利用可能');
+  _chk('画面解像度',screen.width>=320,screen.width+'x'+screen.height);
+  _chk('実行環境',true,window.Capacitor?'Capacitor APK':'ブラウザ');
+  var nasEl=document.createElement('div');
+  nasEl.innerHTML='⏳ <div style="display:inline-block;"><div style="font-weight:700;">NASサーバー</div><div style="font-size:11px;color:var(--sub);">確認中...</div></div>';
+  nasEl.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.1);';
+  rl.appendChild(nasEl);
+  fetch('https://as5304t-c025.tail5d5c21.ts.net/',{signal:AbortSignal.timeout(5000)}).then(function(r){return r.json();}).then(function(){
+    nasEl.innerHTML='🟢 <div style="display:inline-block;"><div style="font-weight:700;">NASサーバー</div><div style="font-size:11px;color:var(--sub);">接続OK</div></div>';
+    document.getElementById('reqOkBtn').style.display='block';
+  }).catch(function(){
+    nasEl.innerHTML='🔴 <div style="display:inline-block;"><div style="font-weight:700;">NASサーバー</div><div style="font-size:11px;color:var(--red);">接続失敗</div></div>';
+    document.getElementById('reqOkBtn').style.display='block';
+  });
+})();
+
 const STOPS={day1:[
 {time:"04:05",name:"🌉 東京ゲートブリッジ",lat:35.6122,lng:139.8289,pt:0,type:"move",memo:"",noHwy:true,dur:2},
 {time:"04:16",name:"☀️ 暁ふ頭公園 START",lat:35.6082,lng:139.7914,pt:0,type:"goal",memo:"海バック写真→スタート登録 日の出4:31発",noHwy:true,dur:15},
@@ -2204,8 +2236,8 @@ playAppBgm();
 setTimeout(function(){
   try{
     if(appBgm)appBgm.volume=0.1;
-    if(_myName){
-      // 2回目: おかえり → プラン選択
+    if(_myName&&!_isAdmin){
+      // 2回目: おかえり → プラン選択（管理者はスキップ）
       _zundaShow(_myName+'さん、おかえりなのだ！');
       var _welcomeWav=new Audio(NAS_API+'/api/voice/welcome_'+encodeURIComponent(_myName));
       _welcomeWav.volume=0.9;_welcomeWav.playbackRate=_voiceSpeed;
@@ -2254,6 +2286,63 @@ var _planAnnounced=false;
 var _myNameWasSet=!!_myName;// 起動時に名前があったか
 function _showCards(){
   var show=_myName&&_myName.length>0;
+  // 管理者モード: バージョン情報画面
+  var adminPanel=document.getElementById('adminVersionPanel');
+  if(adminPanel)adminPanel.remove();
+  var exitBtn=document.getElementById('adminExitBtn');
+  if(exitBtn)exitBtn.style.display=_isAdmin?'block':'none';
+  if(_isAdmin&&show){
+    var d2='none';
+    var cs2=document.getElementById('cardSstr');if(cs2)cs2.style.display=d2;
+    var cn12=document.getElementById('cardNippon1');if(cn12)cn12.style.display=d2;
+    var cn22=document.getElementById('cardNippon2');if(cn22)cn22.style.display=d2;
+    var cc2=document.getElementById('cardCreate');if(cc2)cc2.style.display=d2;
+    var ap=document.createElement('div');ap.id='adminVersionPanel';
+    ap.style.cssText='width:100%;background:rgba(20,30,50,0.9);border:2px solid var(--ylw);border-radius:16px;padding:18px;margin-top:-20px;';
+    ap.innerHTML='<div style="font-size:16px;font-weight:900;color:var(--ylw);margin-bottom:14px;">🔑 システム情報</div>'
+      +'<div id="adminVersionList" style="font-size:15px;color:var(--txt);"></div>'
+;
+    var cardArea=document.querySelector('#cardCreate');
+    if(cardArea&&cardArea.parentElement)cardArea.parentElement.insertBefore(ap,cardArea);
+    // 各データソースのバージョンを取得
+    var vl=document.getElementById('adminVersionList');
+    function _fmtDate(dateStr){
+      if(!dateStr||dateStr==='-')return '-';
+      try{var d=new Date(dateStr);return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0')+'-'+d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}catch(e){return dateStr;}
+    }
+    function _addRow(label,value,dateStr,maxAgeH){
+      var col='var(--sub)';var indicator='🟢';
+      if(dateStr&&dateStr!=='-'&&maxAgeH){
+        var d=new Date(dateStr);var ageH=(Date.now()-d.getTime())/3600000;
+        if(ageH>maxAgeH*2){col='var(--red)';indicator='🔴';}
+        else if(ageH>maxAgeH){col='var(--ylw)';indicator='🟡';}
+      }
+      vl.innerHTML+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.1);"><span style="font-weight:700;color:var(--txt);">'+indicator+' '+label+'</span><span style="text-align:right;font-size:13px;">'+value+'<br><span style="color:'+col+';font-size:11px;">'+_fmtDate(dateStr)+'</span></span></div>';
+    }
+    _addRow('アプリ','v.260408.93dd60c','2026-04-08',null);
+    _addRow('オービス(組込)',ORBIS.length+'箇所','-',null);
+    _addRow('NAS API','...'+NAS_API.slice(-12),'-',null);
+    _addRow('Maps Key','...'+document.querySelector('script[src*=maps]').src.split('key=')[1].slice(-6),'-',null);
+    _addRow('OWM Key','...'+OWM_KEY.slice(-6),'-',null);
+    // NASデータ非同期取得（maxAgeH: 超えたら黄色、2倍で赤）
+    fetch(NAS_API+'/api/usage',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
+      _addRow('APIカウンター','Maps:'+d.maps+' Dir:'+d.directions,d.timestamp,6);// 6h超で黄色
+    }).catch(()=>{_addRow('APIカウンター','取得失敗','-',null);});
+    fetch(NAS_API+'/api/orbis',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
+      _addRow('オービス(OSM)',d.count+'台',d.updated,48);// 48h超で黄色
+    }).catch(()=>{_addRow('オービス(OSM)','取得失敗','-',null);});
+    fetch(NAS_API+'/api/weather',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
+      var pts=d.points?d.points.length:(d.length||0);
+      _addRow('天気データ',pts+'地点',d.updated||new Date().toISOString(),1);
+    }).catch(()=>{_addRow('天気データ','取得失敗','-',null);});
+    fetch(NAS_API+'/api/locations',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
+      _addRow('ライダー位置',d.length+'人','-',null);
+    }).catch(()=>{});
+    fetch(NAS_API+'/api/voice/hajimemashite',{method:'HEAD',signal:AbortSignal.timeout(5000)}).then(r=>{
+      _addRow('VOICEVOX',r.ok?'稼働中':'停止','-',null);
+    }).catch(()=>{_addRow('VOICEVOX','接続失敗','-',null);});
+    return;
+  }
   var d=show?'block':'none';
   var cs=document.getElementById('cardSstr');if(cs)cs.style.display=d;
   var cn1=document.getElementById('cardNippon1');if(cn1)cn1.style.display=d;
@@ -2279,7 +2368,7 @@ function _showCards(){
           +'</div>';
       });
       var cardArea=document.querySelector('#cardCreate');
-      if(cardArea&&cardArea.parentElement)cardArea.parentElement.insertBefore(cp,cardArea);
+      if(cardArea&&cardArea.parentElement)cardArea.parentElement.insertBefore(cp,cardArea.nextSibling);
     }
   }
   // 名前をOKボタンで入力した時のみ音声再生（おかえりの時は2秒タイマーが担当）
@@ -2316,7 +2405,7 @@ function fetchCloudStats(){
 }
 if(_isAdmin)fetchCloudStats();
 setInterval(()=>{if(_isAdmin&&document.getElementById('splash'))fetchCloudStats();},10800000);// 3時間ごと
-setInterval(()=>{const el=document.getElementById('apiCntSplash');if(el)el.textContent=_isAdmin?'Maps:'+_apiMaps.toString().padStart(5,'0')+' Dir:'+_apiDir.toString().padStart(5,'0'):'';},1000);
+setInterval(()=>{const el=document.getElementById('apiCntSplash');if(el)el.textContent='';},1000);
 </script>
 </body>
 </html>
