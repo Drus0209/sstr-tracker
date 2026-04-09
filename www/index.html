@@ -92,20 +92,40 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 @keyframes zundaBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
 @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
 #riderNameInput::placeholder{color:rgba(255,255,255,0.5);}
-#zundaOverlay{position:fixed;bottom:0;right:10px;z-index:10000;display:none;flex-direction:column;align-items:center;pointer-events:none;}
-#zundaOverlay.show{display:flex;}
-#zundaOverlay .bubble{background:rgba(134,193,102,0.95);color:#000;padding:10px 16px;border-radius:16px 16px 4px 16px;font-size:14px;font-weight:700;max-width:200px;margin-bottom:4px;text-align:center;}
+#zundaOverlay{position:fixed;bottom:0;right:10px;z-index:10000;display:none;pointer-events:none;width:100px;}
+#zundaOverlay.show{display:block;}
+#zundaOverlay .bubble{position:absolute;bottom:105px;right:0;background:rgba(134,193,102,0.95);color:#000;padding:10px 16px;border-radius:16px 16px 4px 16px;font-size:14px;font-weight:700;max-width:200px;text-align:center;white-space:normal;width:max-content;}
 #zundaOverlay .avatar-wrap{position:relative;width:100px;height:100px;animation:zundaBob 1s ease-in-out infinite;}
 #zundaOverlay .avatar-wrap img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;}
 </style>
 </head>
 <body>
-<div id="reqScreen" style="position:fixed;inset:0;background:#06060c;z-index:10001;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;">
-  <div style="width:100%;max-width:340px;">
+<div id="reqScreen" style="position:fixed;inset:0;background:#06060c;z-index:10001;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;background-image:url(icon-512.png);background-size:120%;background-position:center center;background-repeat:no-repeat;">
+  <div style="width:100%;max-width:340px;background:rgba(6,6,12,0.85);border-radius:20px;padding:24px;">
     <div style="font-family:'Outfit';font-size:10px;font-weight:700;color:#aaa;letter-spacing:4px;margin-bottom:4px;">TOURING TRACKER</div>
     <div style="font-size:18px;font-weight:900;color:var(--ac);margin-bottom:20px;">動作要件チェック</div>
     <div id="reqList" style="font-size:14px;color:var(--txt);"></div>
-    <button id="reqOkBtn" onclick="document.getElementById('reqScreen').remove();" style="display:none;width:100%;margin-top:20px;background:var(--ac);border:none;border-radius:12px;padding:14px;color:#000;font-size:16px;font-weight:800;cursor:pointer;">OK</button>
+    <div style="position:fixed;bottom:10px;right:10px;z-index:10002;width:100px;">
+      <div id="reqBubble" style="display:none;position:absolute;bottom:105px;right:0;background:rgba(134,193,102,0.95);color:#000;padding:8px 14px;border-radius:14px 14px 4px 14px;font-size:13px;font-weight:700;max-width:180px;text-align:center;width:max-content;"></div>
+      <img id="reqZunda" src="zundamon_close.png" style="width:100px;height:100px;object-fit:contain;animation:zundaBob 1s ease-in-out infinite;">
+    </div>
+    <button id="reqOkBtn" onclick="localStorage.setItem('_reqChecked','1');if(window._rca){_rca.pause();_rca=null;}if(window._rtap){_rtap.pause();_rtap=null;}var _rzi=document.getElementById('reqZunda');if(_rzi){var _rzm=_rzi._rzm;if(_rzm)clearInterval(_rzm);}document.getElementById('reqScreen').remove();_showConsent();" style="display:none;width:100%;margin-top:20px;background:var(--ac);border:none;border-radius:12px;padding:14px;color:#000;font-size:16px;font-weight:800;cursor:pointer;">OK</button>
+  </div>
+</div>
+<div id="consentScreen" style="position:fixed;inset:0;background:#06060c;z-index:10000;display:none;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;">
+  <div style="width:100%;max-width:360px;background:rgba(20,30,50,0.95);border:2px solid var(--ac);border-radius:20px;padding:24px;">
+    <div style="font-family:'Outfit';font-size:10px;font-weight:700;color:#aaa;letter-spacing:4px;margin-bottom:4px;">TOURING TRACKER</div>
+    <div style="font-size:18px;font-weight:900;color:var(--ac);margin-bottom:16px;">利用規約</div>
+    <div style="font-size:12px;color:var(--txt);line-height:1.8;max-height:50vh;overflow-y:auto;padding-right:8px;">
+      <p style="margin-bottom:10px;"><b style="color:var(--ac);">1. 本アプリについて</b><br>本アプリは個人利用を目的としたバイクツーリング支援ツールです。商用利用を目的としたものではありません。</p>
+      <p style="margin-bottom:10px;"><b style="color:var(--ac);">2. 位置情報の利用</b><br>本アプリはGPSによる位置情報を使用します。位置情報はルート案内・距離計算・ライダー間の位置共有に利用されます。</p>
+      <p style="margin-bottom:10px;"><b style="color:var(--ac);">3. 外部サービスの利用</b><br>Google Maps Platform、OpenStreetMap、OpenWeatherMap等の外部サービスを利用しています。各サービスの利用規約に従います。</p>
+      <p style="margin-bottom:10px;"><b style="color:var(--ac);">4. 音声合成</b><br>VOICEVOX（ずんだもん）を使用した音声ガイドを提供します。音声合成エンジンはVOICEVOXの利用規約に従います。</p>
+      <p style="margin-bottom:10px;"><b style="color:var(--ac);">5. 安全について</b><br>走行中はスマートフォンの操作を行わないでください。音声ガイドを活用し、安全運転を心がけてください。本アプリの使用により生じた事故・損害について、開発者は一切の責任を負いません。</p>
+      <p style="margin-bottom:10px;"><b style="color:var(--ac);">6. データの保存</b><br>ライダー名・プランデータは端末内に保存されます。位置情報はサーバーに送信され、今後の開発・改善に利用する場合があります。個人を特定する情報は収集しません。</p>
+      <p><b style="color:var(--ac);">7. 免責事項</b><br>本アプリは現状有姿で提供されます。ルート案内・到着予定・オービス情報等の正確性は保証しません。</p>
+    </div>
+    <button onclick="localStorage.setItem('_consentAgreed','1');if(window._rca){_rca.pause();}if(window._rtap){_rtap.pause();}document.getElementById('consentScreen').remove();_startSplashAudio();" style="display:block;width:100%;margin-top:16px;background:var(--ac);border:none;border-radius:12px;padding:14px;color:#000;font-size:16px;font-weight:800;cursor:pointer;">同意してはじめる</button>
   </div>
 </div>
 <div id="splash" style="position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:48% 70%;" ontouchstart="aC&&aC.resume();">
@@ -116,7 +136,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
     <div class="adm" style="font-family:'Outfit';font-size:10px;color:var(--ylw);margin-top:4px;"></div>
   </div>
   <div style="position:absolute;top:20px;right:20px;z-index:2;text-align:right;"><div id="apiCntSplash"></div><div id="adminExitBtn" style="display:none;"><button onclick="_isAdmin=false;localStorage.setItem('_isAdmin','0');document.querySelector('.adm').textContent='';_showCards();document.getElementById('adminExitBtn').style.display='none';" style="background:rgba(255,68,68,0.15);border:1px solid var(--red);border-radius:8px;padding:6px 12px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;">🔓 管理者解除</button></div></div>
-  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin-top:60px;">
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin-top:-30px;">
     <div style="width:100%;display:flex;flex-direction:column;gap:12px;">
       <div id="riderNameBox" style="background:rgba(20,30,50,0.85);border:2px solid var(--org);border-radius:16px;padding:18px 20px;text-align:center;">
         <div style="font-size:14px;color:var(--txt);font-weight:700;margin-bottom:10px;">ライダー名を入力（ひらがな）</div>
@@ -166,28 +186,102 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 <div id="mapWrap"><div id="map"></div></div>
 <div id="btm"></div>
 <script>
+// === 同意画面 ===
+function _showConsent(){
+  if(localStorage.getItem('_consentAgreed'))return;
+  var cs=document.getElementById('consentScreen');
+  if(cs)cs.style.display='flex';
+}
+// 要件チェック済み＋同意未了の場合
+if(localStorage.getItem('_reqChecked')&&!localStorage.getItem('_consentAgreed')){_showConsent();}
+
 // === 動作要件チェック ===
 (function(){
+  var rs=document.getElementById('reqScreen');
+  if(localStorage.getItem('_reqChecked')){if(rs)rs.remove();return;}
   var rl=document.getElementById('reqList');if(!rl)return;
   function _chk(label,ok,detail){
     rl.innerHTML+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.1);">'+(ok?'🟢':'🔴')+' <div><div style="font-weight:700;">'+label+'</div><div style="font-size:11px;color:'+(ok?'var(--sub)':'var(--red)')+';">'+detail+'</div></div></div>';
   }
-  _chk('位置情報(GPS)',!!navigator.geolocation,navigator.geolocation?'利用可能':'非対応');
-  _chk('インターネット接続',navigator.onLine,navigator.onLine?'接続中':'オフライン');
-  _chk('音声再生',!!(window.AudioContext||window.webkitAudioContext),'利用可能');
-  _chk('画面解像度',screen.width>=320,screen.width+'x'+screen.height);
+  // OS
+  var ua=navigator.userAgent;
+  var osVer='不明';var osOk=true;
+  var andMatch=ua.match(/Android\s([\d.]+)/);
+  var iosMatch=ua.match(/iPhone OS ([\d_]+)/);
+  if(andMatch){var av=parseFloat(andMatch[1]);osVer='Android '+andMatch[1];osOk=av>=8;}
+  else if(iosMatch){var iv=parseFloat(iosMatch[1].replace(/_/g,'.'));osVer='iOS '+iosMatch[1].replace(/_/g,'.');osOk=iv>=14;}
+  else{osVer=navigator.platform;}
+  _chk('OS',osOk,osVer+(osOk?'':' — バージョンが古い可能性'));
+  // 実行環境
   _chk('実行環境',true,window.Capacitor?'Capacitor APK':'ブラウザ');
-  var nasEl=document.createElement('div');
-  nasEl.innerHTML='⏳ <div style="display:inline-block;"><div style="font-weight:700;">NASサーバー</div><div style="font-size:11px;color:var(--sub);">確認中...</div></div>';
-  nasEl.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.1);';
-  rl.appendChild(nasEl);
-  fetch('https://as5304t-c025.tail5d5c21.ts.net/',{signal:AbortSignal.timeout(5000)}).then(function(r){return r.json();}).then(function(){
-    nasEl.innerHTML='🟢 <div style="display:inline-block;"><div style="font-weight:700;">NASサーバー</div><div style="font-size:11px;color:var(--sub);">接続OK</div></div>';
+  // WebView/ブラウザ
+  var chrMatch=ua.match(/Chrome\/([\d]+)/);
+  var safMatch=ua.match(/Version\/([\d.]+).*Safari/);
+  var bVer=chrMatch?'Chrome '+chrMatch[1]:safMatch?'Safari '+safMatch[1]:'不明';
+  var bOk=chrMatch?parseInt(chrMatch[1])>=80:safMatch?parseFloat(safMatch[1])>=14:true;
+  _chk('ブラウザエンジン',bOk,bVer+(bOk?'':' — 更新してください'));
+  // インターネット
+  _chk('インターネット',navigator.onLine,navigator.onLine?'接続中':'オフライン — 地図が使えません');
+  // WebGL (Google Maps必須)
+  var canvas=document.createElement('canvas');
+  var gl=canvas.getContext('webgl')||canvas.getContext('experimental-webgl');
+  _chk('WebGL (地図描画)',!!gl,gl?'対応':'非対応 — 地図が表示できません');
+  // GPS
+  _chk('位置情報',!!navigator.geolocation,navigator.geolocation?'対応':'非対応 — ナビが使えません');
+  // メモリ
+  var mem=navigator.deviceMemory;
+  _chk('メモリ',!mem||mem>=2,mem?mem+'GB'+(mem<2?' — 動作が不安定になる可能性':''):'取得不可');
+  // CPU
+  var cores=navigator.hardwareConcurrency||0;
+  if(cores){_chk('CPU',cores>=2,cores+'コア'+(cores<2?' — 処理が遅くなる可能性':''));}
+  // ストレージ
+  if(navigator.storage&&navigator.storage.estimate){
+    navigator.storage.estimate().then(function(e){
+      var free=((e.quota-e.usage)/1024/1024/1024).toFixed(1);
+      var ok=parseFloat(free)>0.5;
+      _chk('ストレージ空き',ok,free+'GB'+(ok?'':' — 容量不足'));
+      _reqDone();
+    }).catch(function(){_reqDone();});
+  } else {
+    _reqDone();
+  }
+  var _reqDoneCalled=false;
+  function _reqDone(){
+    if(_reqDoneCalled)return;_reqDoneCalled=true;
+    // 最初の音声＋口パクを停止
+    if(window._rca){window._rca.pause();window._rca=null;}
+    if(window._rzm){clearInterval(window._rzm);window._rzm=null;}
+    var _rzi=document.getElementById('reqZunda');
+    if(_rzi)_rzi.src='zundamon_close.png';
     document.getElementById('reqOkBtn').style.display='block';
-  }).catch(function(){
-    nasEl.innerHTML='🔴 <div style="display:inline-block;"><div style="font-weight:700;">NASサーバー</div><div style="font-size:11px;color:var(--red);">接続失敗</div></div>';
-    document.getElementById('reqOkBtn').style.display='block';
-  });
+    var bb=document.getElementById('reqBubble');
+    if(bb){bb.style.display='block';bb.textContent='問題がなければOKをタップするのだ！';}
+    try{
+      window._rtap=new Audio('https://as5304t-c025.tail5d5c21.ts.net/api/voice/req_ok_tap');
+      var _rtap=window._rtap;
+      _rtap.volume=0.9;
+      var _rzi2=document.getElementById('reqZunda');var _rzm2=null;
+      _rtap.onplay=function(){if(_rzi2)_rzm2=setInterval(function(){_rzi2.src=_rzi2.src.includes('close')?'zundamon_open.png':'zundamon_close.png';},150);};
+      _rtap.onended=function(){if(_rzm2)clearInterval(_rzm2);if(_rzi2)_rzi2.src='zundamon_close.png';};
+      _rtap.play().catch(function(){});
+    }catch(e){}
+  }
+  // 画面サイズ
+  _chk('画面',screen.width>=320&&screen.height>=480,screen.width+'x'+screen.height);
+  // ずんだもん音声＋口パク
+  try{
+    window._rca=new Audio('https://as5304t-c025.tail5d5c21.ts.net/api/voice/req_check');
+    var _rca=window._rca;
+    _rca.volume=0.9;
+    var _rzi=document.getElementById('reqZunda');
+    window._rzm=null;
+    _rca.onplay=function(){
+      if(_rzi)window._rzm=setInterval(function(){_rzi.src=_rzi.src.includes('close')?'zundamon_open.png':'zundamon_close.png';},150);
+    };
+    _rca.onended=function(){if(window._rzm)clearInterval(window._rzm);if(_rzi)_rzi.src='zundamon_close.png';};
+    _rca.onerror=function(){if(window._rzm)clearInterval(window._rzm);};
+    _rca.play().catch(function(){});
+  }catch(e){}
 })();
 
 const STOPS={day1:[
@@ -2230,10 +2324,10 @@ function startApp(mode){
     });
   }
 }
-// スプラッシュ表示と同時にBGM自動再生（APKはsetMediaPlaybackRequiresUserGesture(false)済み）
-playAppBgm();
-// 1秒後にずんだもんが挨拶（BGM再生中に）
-setTimeout(function(){
+// BGM＋ずんだもん挨拶は要件チェック＋同意完了後に開始
+function _startSplashAudio(){
+  playAppBgm();
+  setTimeout(function(){
   try{
     if(appBgm)appBgm.volume=0.1;
     if(_myName&&!_isAdmin){
@@ -2279,6 +2373,9 @@ setTimeout(function(){
     }
   }catch(e){}
 },1000);
+}
+// 要件チェック＋同意が済んでいれば即開始、まだなら待機
+if(localStorage.getItem('_reqChecked')&&localStorage.getItem('_consentAgreed')){_startSplashAudio();}
 // 管理者モード: スプラッシュ初期表示
 if(_isAdmin){const a=document.querySelector('.adm');if(a)a.textContent='🔑 ADMIN';}
 // ライダー名を入力欄に復元
