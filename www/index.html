@@ -2002,7 +2002,9 @@ function _selectPlace(sid,placeId,el){
     }
   });
 }
+var _mapPickerSid=null,_pickedName='',_pickedLat=0,_pickedLng=0;
 function _openMapPicker(sid){
+  _mapPickerSid=sid;
   var overlay=document.createElement('div');overlay.id='mapPicker';
   overlay.style.cssText='position:fixed;inset:0;z-index:10000;background:#000;';
   overlay.innerHTML='<div style="position:absolute;top:0;left:0;right:0;z-index:1;background:rgba(6,6,12,0.9);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">'
@@ -2020,41 +2022,37 @@ function _openMapPicker(sid){
     center:center,zoom:12,mapTypeId:'roadmap'
   });
   var marker=null;
+  _pickedName='';_pickedLat=0;_pickedLng=0;
   pm.addListener('click',function(e){
-    var lat=e.latLng.lat(),lng=e.latLng.lng();
+    _pickedLat=e.latLng.lat();_pickedLng=e.latLng.lng();
     if(marker)marker.setMap(null);
     marker=new google.maps.Marker({position:e.latLng,map:pm});
-    // 逆ジオコーディングで住所取得
-    var gc=new google.maps.Geocoder();
-    gc.geocode({location:e.latLng},function(results,status){
-      var info=document.getElementById('mapPickerInfo');
-      var addr=document.getElementById('mapPickerAddr');
-      info.style.display='block';
-      if(status==='OK'&&results[0]){
-        addr.innerHTML='📍 <b>'+results[0].formatted_address+'</b><br><span style="font-size:11px;color:var(--sub);">'+lat.toFixed(6)+', '+lng.toFixed(6)+'</span>';
-      } else {
-        addr.innerHTML='📍 '+lat.toFixed(6)+', '+lng.toFixed(6);
-      }
-      document.getElementById('mapPickerOk').onclick=function(){
-        document.getElementById(sid+'Lat').value=lat;
-        document.getElementById(sid+'Lng').value=lng;
-        var name=document.getElementById(sid+'Name').value.trim();
-        if(!name&&results&&results[0]){
-          // 名前未入力なら住所の一部を入れる
-          var comps=results[0].address_components;
-          var locality=comps.find(function(c){return c.types.includes('sublocality_level_1')||c.types.includes('locality');});
-          document.getElementById(sid+'Name').value=locality?locality.long_name:results[0].formatted_address.split(' ')[0];
-        }
-        var resultEl=document.getElementById(sid+'Result');
-        if(resultEl){
-          resultEl.style.display='block';
-          resultEl.style.borderColor='var(--grn)';
-          resultEl.innerHTML='<div>📍 <b style="color:var(--grn);">'+(results&&results[0]?results[0].formatted_address:(lat.toFixed(4)+', '+lng.toFixed(4)))+'</b></div>';
-        }
-        overlay.remove();
-      };
+    var info=document.getElementById('mapPickerInfo');
+    var addrEl=document.getElementById('mapPickerAddr');
+    info.style.display='block';
+    addrEl.innerHTML='📍 取得中...';
+    _pickedName='';
+    // NAS経由で場所名取得
+    fetch(NAS_API+'/api/placename?lat='+_pickedLat+'&lng='+_pickedLng,{signal:AbortSignal.timeout(10000)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      _pickedName=(d.name||'').replace(/日本[、,]\s*/g,'').replace(/[A-Z0-9]{2,}\+[A-Z0-9]+\s*/g,'').trim();
+      var dispAddr=(d.address||'').replace(/日本[、,]\s*/g,'').replace(/[A-Z0-9]{2,}\+[A-Z0-9]+\s*/g,'').trim();
+      addrEl.innerHTML='📍 <b style="font-size:16px;">'+_pickedName+'</b><br><span style="font-size:11px;color:var(--sub);">'+(dispAddr||_pickedLat.toFixed(6)+', '+_pickedLng.toFixed(6))+'</span>';
+    }).catch(function(){
+      _pickedName=_pickedLat.toFixed(4)+', '+_pickedLng.toFixed(4);
+      addrEl.innerHTML='📍 '+_pickedName;
     });
   });
+  document.getElementById('mapPickerOk').onclick=function(){
+    var _sid=_mapPickerSid;
+    overlay.remove();
+    var latEl=document.getElementById(_sid+'Lat');if(latEl)latEl.value=_pickedLat;
+    var lngEl=document.getElementById(_sid+'Lng');if(lngEl)lngEl.value=_pickedLng;
+    var nameEl=document.getElementById(_sid+'Name');if(nameEl)nameEl.value=_pickedName;
+    var resultEl=document.getElementById(_sid+'Result');
+    if(resultEl){resultEl.style.display='block';resultEl.style.borderColor='var(--grn)';resultEl.innerHTML='📍 <b style="color:var(--grn);">'+_pickedName+'</b>';}
+  };
 }
 function _selectPlaceDirect(sid,lat,lng,name,addr){
   var suggestEl=document.getElementById(sid+'Suggest');
