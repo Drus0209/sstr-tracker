@@ -443,7 +443,7 @@ function _drawRoute(result){
 function _routeReq(origin,dest,waypoints,noHwy){
   return{origin,destination:dest,waypoints:waypoints||[],
     travelMode:google.maps.TravelMode.DRIVING,
-    avoidFerries:true,avoidHighways:false,avoidTolls:!!noHwy};
+    avoidFerries:true,avoidHighways:!!noHwy,avoidTolls:!!noHwy};
 }
 // Fallback: route each pair 1-to-1
 function _route1to1(ds,chunk,delay){
@@ -461,7 +461,22 @@ function _route1to1(ds,chunk,delay){
 }
 function fetchGoogleRoute(stops){
   if(stops.length<2)return;
-  // Step 1: split at noHwy boundary so highway/local don't mix
+  // カスタムプラン: 区間ごとに個別ルート検索（noHwy確実反映）
+  if(cDay==='custom'){
+    const ds=new google.maps.DirectionsService();
+    for(let k=0;k<stops.length-1;k++){
+      const a=stops[k],b=stops[k+1];
+      setTimeout(()=>{
+        _apiDir++;_apiSave();
+        ds.route(_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],a.noHwy),(r,s)=>{
+          if(s==='OK')_drawRoute(r);
+          else console.warn('[Route:custom] FAILED '+s+': '+a.name+' → '+b.name);
+        });
+      },k*500);
+    }
+    return;
+  }
+  // SSTR: noHwy境界で分割
   const segs=[];let segStart=0;
   for(let i=1;i<stops.length;i++){
     if(!!stops[i].noHwy!==!!stops[segStart].noHwy){
@@ -2032,13 +2047,11 @@ function _openMapPicker(sid){
     info.style.display='block';
     addrEl.innerHTML='📍 取得中...';
     _pickedName='';
-    // NAS経由で場所名取得
     fetch(NAS_API+'/api/placename?lat='+_pickedLat+'&lng='+_pickedLng,{signal:AbortSignal.timeout(10000)})
     .then(function(r){return r.json();})
     .then(function(d){
-      _pickedName=(d.name||'').replace(/日本[、,]\s*/g,'').replace(/[A-Z0-9]{2,}\+[A-Z0-9]+\s*/g,'').trim();
-      var dispAddr=(d.address||'').replace(/日本[、,]\s*/g,'').replace(/[A-Z0-9]{2,}\+[A-Z0-9]+\s*/g,'').trim();
-      addrEl.innerHTML='📍 <b style="font-size:16px;">'+_pickedName+'</b><br><span style="font-size:11px;color:var(--sub);">'+(dispAddr||_pickedLat.toFixed(6)+', '+_pickedLng.toFixed(6))+'</span>';
+      _pickedName=d.name||_pickedLat.toFixed(4)+', '+_pickedLng.toFixed(4);
+      addrEl.innerHTML='📍 <b style="font-size:16px;">'+_pickedName+'</b>';
     }).catch(function(){
       _pickedName=_pickedLat.toFixed(4)+', '+_pickedLng.toFixed(4);
       addrEl.innerHTML='📍 '+_pickedName;
