@@ -1893,6 +1893,7 @@ if('serviceWorker' in navigator){
 function goHome(){
   if(watchId){navigator.geolocation.clearWatch(watchId);watchId=null;}
   _spkQ.length=0;_spkBusy=false;
+  cDay='day1';delete STOPS.custom;_appReady=false;
   const _tts=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.TextToSpeech;
   if(_tts)_tts.stop().catch(()=>{});else if('speechSynthesis'in window)speechSynthesis.cancel();
   if(appBgm){appBgm.pause();appBgm=null;}
@@ -2117,7 +2118,7 @@ function _addPlanStop(){
     +'</div>';
   div.appendChild(s);
 }
-var _tempPlanStops=null,_tempPlanName='',_tempPlanDate='';
+var _tempPlanStops=null,_tempPlanName='',_tempPlanDate='',_tempSegNoHwy=[];
 function _previewPlan(){
   var name=document.getElementById('planName').value.trim();
   var date=document.getElementById('planDate').value;
@@ -2169,6 +2170,9 @@ function _previewPlan(){
     +'<button onclick="_setSegStart(true)" id="seg_startgen" style="background:none;color:var(--txt);border:1px solid var(--bdr);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">🏘 一般道</button>'
     +'</div></div>';
   window._planStartNoHwy=false;
+  _tempSegNoHwy=[];
+  _tempSegNoHwy.push(false);// 現在地→スポット1（デフォルト高速）
+  for(var i=0;i<stops.length-1;i++)_tempSegNoHwy.push(false);// 各区間デフォルト高速
   for(var i=0;i<stops.length;i++){
     var s=stops[i];
     var tc={'other':'var(--sub)','michi':'#2196f3','gs':'#e85300','qk':'var(--org)','goal':'var(--grn)'}[s.type]||'var(--sub)';
@@ -2188,6 +2192,7 @@ function _previewPlan(){
 }
 function _setSegStart(noHwy){
   window._planStartNoHwy=noHwy;
+  _tempSegNoHwy[0]=noHwy;
   var hBtn=document.getElementById('seg_starthwy');
   var gBtn=document.getElementById('seg_startgen');
   if(noHwy){
@@ -2200,7 +2205,7 @@ function _setSegStart(noHwy){
 }
 function _setSeg(i,noHwy){
   if(!_tempPlanStops)return;
-  _tempPlanStops[i].noHwy=noHwy;
+  _tempSegNoHwy[i+1]=noHwy;// i+1: 0は現在地→スポット1
   var hBtn=document.getElementById('seg'+i+'hwy');
   var gBtn=document.getElementById('seg'+i+'gen');
   if(noHwy){
@@ -2250,8 +2255,15 @@ function _confirmSavePlan(){
   if(startTime&&startTime.value&&_tempPlanStops.length>0){
     _tempPlanStops[0].time=startTime.value;
   }
-  if(_tempPlanStops.length>0&&window._planStartNoHwy){
-    _tempPlanStops[0].noHwy=true;
+  // 区間設定をスポットに反映
+  // _tempSegNoHwy[0]=現在地→スポット0, [1]=スポット0→スポット1, ...
+  // スポット[i].noHwy = そのスポットから次への区間設定
+  for(var si=0;si<_tempPlanStops.length;si++){
+    _tempPlanStops[si].noHwy=_tempSegNoHwy[si+1]||false;
+  }
+  // 最初のスポットは現在地からの区間設定
+  if(_tempPlanStops.length>0){
+    _tempPlanStops[0].noHwy=_tempSegNoHwy[0]||false;
   }
   var plans=JSON.parse(localStorage.getItem('_plans_'+_myName)||'[]');
   plans.push({name:name,date:date,stops:_tempPlanStops,logo:_planLogoData||null,owner:_myName,created:Date.now()});
@@ -2366,10 +2378,11 @@ function startApp(mode){
       a.onended=_done;a.onerror=function(){spk(title+'が選択されたのだ。',true,cb);};
       a.play().catch(function(){a.onerror();});
     } else if(mode==='custom'){
-      // カスタム: spkで読み上げ（確実に動作）
-      _zundaMouthStop();_zundaHide();
-      if(appBgm&&!_bgmFading)appBgm.volume=0.15;
-      spk(title+'が選択されたのだ。',true,cb);
+      // カスタム: NAS WAV（保存時に事前生成済み）
+      var a=new Audio(NAS_API+'/api/voice/'+encodeURIComponent('selected_'+title));
+      _currentAudio=a;a.volume=0.9;a.playbackRate=_voiceSpeed;
+      a.onended=_done;a.onerror=function(){_done();spk(title+'が選択されたのだ。',true,cb);};
+      a.play().catch(function(){_done();spk(title+'が選択されたのだ。',true,cb);});
     } else {
       // その他: spkフォールバック
       spk(title+'が選択されたのだ。',true,cb);
