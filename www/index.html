@@ -583,12 +583,13 @@ function updateMap(lat,lng,stops,nI){
     // Current pos → next stop: road-following route
     const ds=new google.maps.DirectionsService();
     const curStop=stops[nI];
+    const _routeNoHwy=nI===0&&curStop.startNoHwy!==undefined?curStop.startNoHwy:curStop.noHwy;
     _apiDir++;_apiSave();ds.route({origin:{lat,lng},destination:{lat:tS.lat,lng:tS.lng},
       travelMode:google.maps.TravelMode.DRIVING,
-      avoidFerries:true,avoidHighways:!!curStop.noHwy,avoidTolls:!!curStop.noHwy
+      avoidFerries:true,avoidHighways:!!_routeNoHwy,avoidTolls:!!_routeNoHwy
     },(result,status)=>{
       if(status==='OK'){
-        _drawRoute(result,curStop.noHwy);
+        _drawRoute(result,_routeNoHwy);
       }
     });
     // Full route: all stops
@@ -1093,7 +1094,7 @@ function _showSettings(){
       <button onclick="document.getElementById('settingsPanel').remove();" style="flex:1;background:none;border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--txt);font-size:14px;cursor:pointer;">閉じる</button>
     </div>
   `;
-  document.body.appendChild(p);
+  document.body.appendChild(p);_navPush('settings',function(){p.remove();});
 }
 var _voiceSpeed=parseFloat(localStorage.getItem('_voiceSpeed')||'1.2');
 function _setSpeed(s){_voiceSpeed=s;localStorage.setItem('_voiceSpeed',s);}
@@ -1486,7 +1487,7 @@ function emergGoal(){
           +'<div style="font-size:20px;font-weight:900;color:'+col+';margin-top:8px;">'+statusTxt+'</div>'
           +'<a href="https://www.google.com/maps/dir/?api=1&destination=36.8926,136.7658&travelmode=driving" style="display:inline-block;margin-top:12px;color:var(--ac);font-size:14px;">📍 Google Mapsナビ起動</a>'
           +'<div style="margin-top:12px;"><button onclick="this.parentElement.parentElement.remove();" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--txt);padding:6px 20px;font-size:14px;cursor:pointer;">閉じる</button></div>';
-        document.body.appendChild(p);
+        document.body.appendChild(p);_navPush('settings',function(){p.remove();});
       } else {alert('ルート取得失敗: '+status);}
     });
 }
@@ -1874,6 +1875,27 @@ if(_hdrMode===0&&cDay!=='custom'){
   document.getElementById('btm').innerHTML=b;
 }
 setInterval(rnd,1000);
+// === 画面履歴スタック + Androidバックボタン ===
+var _navStack=[];
+function _navPush(id,closeFn){_navStack.push({id:id,close:closeFn});}
+function _navPop(){
+  if(_navStack.length>0){
+    var last=_navStack.pop();
+    if(last.close)last.close();
+    return true;
+  }
+  return false;
+}
+function _navRemove(id){_navStack=_navStack.filter(function(n){return n.id!==id;});}
+document.addEventListener('backbutton',function(e){
+  e.preventDefault();
+  if(!_navPop()){
+    // スタックが空 = トップ画面
+    if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App){
+      Capacitor.Plugins.App.minimizeApp();
+    }
+  }
+});
 // Auto detect Day1 (5/23) or Day2 (5/24)
 (function(){
   const now=new Date();
@@ -1946,7 +1968,7 @@ function startPlanCreate(){
     +'<button onclick="_loadPlan('+i+')" style="background:var(--ac);border:none;border-radius:6px;padding:6px 12px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">開始</button>'
     +'<button onclick="_deletePlan('+i+')" style="background:none;border:1px solid var(--red);border-radius:6px;padding:6px 12px;color:var(--red);font-size:12px;cursor:pointer;">削除</button>'
     +'</div></div>';}).join('')+'</div>':'');
-  document.body.appendChild(pc);
+  document.body.appendChild(pc);_navPush('planCreator',function(){pc.remove();location.reload();});
   // ずんだもんVOICEVOX音声
   _planStopCount=0;
   _addPlanStop();// 最初の1つ
@@ -2041,7 +2063,7 @@ function _openMapPicker(sid){
     +'<div id="mapPickerAddr" style="font-size:13px;color:var(--txt);margin-bottom:10px;"></div>'
     +'<button id="mapPickerOk" style="width:100%;background:var(--org);border:none;border-radius:10px;padding:12px;color:#000;font-size:15px;font-weight:800;cursor:pointer;">この場所を選択</button>'
     +'</div>';
-  document.body.appendChild(overlay);
+  document.body.appendChild(overlay);_navPush('mapPicker',function(){overlay.remove();});
   var center=gLat?{lat:gLat,lng:gLng}:{lat:35.68,lng:139.77};
   var pm=new google.maps.Map(document.getElementById('mapPickerMap'),{
     center:center,zoom:12,mapTypeId:'roadmap'
@@ -2171,16 +2193,15 @@ function _previewPlan(){
     +'<input type="time" id="segStartTime" style="background:rgba(255,255,255,0.08);border:1px solid var(--ac);border-radius:8px;padding:6px 8px;color:#fff;font-size:16px;font-weight:700;font-family:inherit;width:90px;">'
     +'<button onclick="var n=new Date();document.getElementById(\'segStartTime\').value=n.getHours().toString().padStart(2,\'0\')+\':\'+n.getMinutes().toString().padStart(2,\'0\');" style="background:none;border:1px solid var(--ac);border-radius:6px;padding:3px 8px;color:var(--ac);font-size:10px;cursor:pointer;">今の時刻</button>'
     +'</div></div>'
-    +'<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:2px 0 2px 20px;" id="seg_start">'
+    +'<div class="segRow" data-seg="start" data-nohwy="false" style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:2px 0 2px 20px;">'
     +'<div style="font-size:12px;color:var(--sub);">↓</div>'
     +'<div style="display:flex;gap:6px;">'
-    +'<button onclick="_setSegStart(false)" id="seg_starthwy" style="background:var(--ac);color:#000;border:1px solid var(--ac);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">🛣 高速</button>'
-    +'<button onclick="_setSegStart(true)" id="seg_startgen" style="background:none;color:var(--txt);border:1px solid var(--bdr);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">🏘 一般道</button>'
+    +'<button onclick="_toggleSeg(this,false)" class="segHwy" style="background:var(--ac);color:#000;border:1px solid var(--ac);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">🛣 高速</button>'
+    +'<button onclick="_toggleSeg(this,true)" class="segGen" style="background:none;color:var(--txt);border:1px solid var(--bdr);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">🏘 一般道</button>'
     +'</div></div>';
-  window._planStartNoHwy=false;
-  _tempSegNoHwy=[];
-  _tempSegNoHwy.push(false);// 現在地→スポット1（デフォルト高速）
-  for(var i=0;i<stops.length-1;i++)_tempSegNoHwy.push(false);// 各区間デフォルト高速
+  _segSettings={};
+  _segSettings['start']=false;
+  for(var si2=0;si2<stops.length-1;si2++)_segSettings[String(si2)]=false;
   for(var i=0;i<stops.length;i++){
     var s=stops[i];
     var tc={'other':'var(--sub)','michi':'#2196f3','gs':'#e85300','qk':'var(--org)','goal':'var(--grn)'}[s.type]||'var(--sub)';
@@ -2189,33 +2210,23 @@ function _previewPlan(){
       +'<div style="flex:1;"><div style="font-weight:700;color:#fff;font-size:14px;">'+s.name+'</div></div>'
       +'</div>';
     if(i<stops.length-1){
-      segs.innerHTML+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:2px 0 2px 20px;" id="seg'+i+'">'
+      segs.innerHTML+='<div class="segRow" data-seg="'+i+'" data-nohwy="false" style="display:flex;align-items:center;gap:8px;padding:8px 12px;margin:2px 0 2px 20px;">'
         +'<div style="font-size:12px;color:var(--sub);">↓</div>'
         +'<div style="display:flex;gap:6px;">'
-        +'<button onclick="_setSeg('+i+',false)" id="seg'+i+'hwy" style="background:var(--ac);color:#000;border:1px solid var(--ac);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">🛣 高速</button>'
-        +'<button onclick="_setSeg('+i+',true)" id="seg'+i+'gen" style="background:none;color:var(--txt);border:1px solid var(--bdr);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">🏘 一般道</button>'
+        +'<button onclick="_toggleSeg(this,false)" class="segHwy" style="background:var(--ac);color:#000;border:1px solid var(--ac);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">🛣 高速</button>'
+        +'<button onclick="_toggleSeg(this,true)" class="segGen" style="background:none;color:var(--txt);border:1px solid var(--bdr);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">🏘 一般道</button>'
         +'</div></div>';
     }
   }
 }
-function _setSegStart(noHwy){
-  window._planStartNoHwy=noHwy;
-  _tempSegNoHwy[0]=noHwy;
-  var hBtn=document.getElementById('seg_starthwy');
-  var gBtn=document.getElementById('seg_startgen');
-  if(noHwy){
-    gBtn.style.background='var(--org)';gBtn.style.color='#000';gBtn.style.borderColor='var(--org)';
-    hBtn.style.background='none';hBtn.style.color='var(--txt)';hBtn.style.borderColor='var(--bdr)';
-  } else {
-    hBtn.style.background='var(--ac)';hBtn.style.color='#000';hBtn.style.borderColor='var(--ac)';
-    gBtn.style.background='none';gBtn.style.color='var(--txt)';gBtn.style.borderColor='var(--bdr)';
-  }
-}
-function _setSeg(i,noHwy){
-  if(!_tempPlanStops)return;
-  _tempSegNoHwy[i+1]=noHwy;// i+1: 0は現在地→スポット1
-  var hBtn=document.getElementById('seg'+i+'hwy');
-  var gBtn=document.getElementById('seg'+i+'gen');
+var _segSettings={};// {'start':false, '0':true, '1':false, ...}
+function _toggleSeg(btn,noHwy){
+  var row=btn.closest('.segRow');
+  if(!row)return;
+  var seg=row.dataset.seg;
+  _segSettings[seg]=noHwy;
+  var hBtn=row.querySelector('.segHwy');
+  var gBtn=row.querySelector('.segGen');
   if(noHwy){
     gBtn.style.background='var(--org)';gBtn.style.color='#000';gBtn.style.borderColor='var(--org)';
     hBtn.style.background='none';hBtn.style.color='var(--txt)';hBtn.style.borderColor='var(--bdr)';
@@ -2263,15 +2274,12 @@ function _confirmSavePlan(){
   if(startTime&&startTime.value&&_tempPlanStops.length>0){
     _tempPlanStops[0].time=startTime.value;
   }
-  // 区間設定をスポットに反映
-  // _tempSegNoHwy[0]=現在地→スポット0, [1]=スポット0→スポット1, ...
-  // スポット[i].noHwy = そのスポットから次への区間設定
-  for(var si=0;si<_tempPlanStops.length;si++){
-    _tempPlanStops[si].noHwy=_tempSegNoHwy[si+1]||false;
-  }
-  // 最初のスポットは現在地からの区間設定
+  // 区間設定を_segSettingsから読み取り
   if(_tempPlanStops.length>0){
-    _tempPlanStops[0].noHwy=_tempSegNoHwy[0]||false;
+    _tempPlanStops[0].startNoHwy=!!_segSettings['start'];
+  }
+  for(var si=0;si<_tempPlanStops.length-1;si++){
+    _tempPlanStops[si].noHwy=!!_segSettings[String(si)];
   }
   var plans=JSON.parse(localStorage.getItem('_plans_'+_myName)||'[]');
   var planData={name:name,date:date,stops:_tempPlanStops,logo:_planLogoData||null,owner:_myName,created:Date.now()};
@@ -2360,6 +2368,24 @@ function _sharePlan(idx){
 // 設定パネルでフレンド読み込み
 setTimeout(function(){if(document.getElementById('friendsList'))_loadFriends();},500);
 
+function _showPlanMenu(idx){
+  var plans=JSON.parse(localStorage.getItem('_plans_'+_myName)||'[]');
+  var p=plans[idx];if(!p)return;
+  var ex=document.getElementById('planMenu');if(ex)ex.remove();
+  var m=document.createElement('div');m.id='planMenu';
+  m.style.cssText='position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;justify-content:center;';
+  m.onclick=function(e){if(e.target===m)m.remove();};
+  m.innerHTML='<div style="width:100%;max-width:360px;background:#1a1a2a;border-radius:20px 20px 0 0;padding:20px;padding-bottom:30px;">'
+    +'<div style="font-size:18px;font-weight:900;color:#fff;margin-bottom:4px;">'+p.name+'</div>'
+    +'<div style="font-size:11px;color:var(--sub);margin-bottom:16px;">'+(p.date||'日付未定')+' ・ '+p.stops.length+'スポット</div>'
+    +'<button onclick="document.getElementById(\'planMenu\').remove();_startCustomPlan('+idx+');" style="display:block;width:100%;background:var(--ac);border:none;border-radius:12px;padding:14px;color:#000;font-size:16px;font-weight:800;cursor:pointer;margin-bottom:8px;">🏍 ツーリング開始</button>'
+    +'<button onclick="document.getElementById(\'planMenu\').remove();_editCustomPlan('+idx+');" style="display:block;width:100%;background:none;border:2px solid var(--ac);border-radius:12px;padding:12px;color:var(--ac);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">✎ 編集</button>'
+    +'<button onclick="document.getElementById(\'planMenu\').remove();_sharePlan('+idx+');" style="display:block;width:100%;background:none;border:2px solid var(--org);border-radius:12px;padding:12px;color:var(--org);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">↗ フレンドに共有</button>'
+    +'<button onclick="document.getElementById(\'planMenu\').remove();_deleteCustomPlan('+idx+');" style="display:block;width:100%;background:none;border:2px solid var(--red);border-radius:12px;padding:12px;color:var(--red);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">✕ 削除</button>'
+    +'<button onclick="document.getElementById(\'planMenu\').remove();" style="display:block;width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:12px;padding:12px;color:var(--txt);font-size:14px;cursor:pointer;">キャンセル</button>'
+    +'</div>';
+  document.body.appendChild(m);_navPush('planMenu',function(){m.remove();});
+}
 var _editingPlanIdx=-1;
 function _editCustomPlan(idx){
   var plans=JSON.parse(localStorage.getItem('_plans_'+_myName)||'[]');
@@ -2429,6 +2455,7 @@ function startApp(mode){
   var _oldGps=document.getElementById('gpsStatusBox');if(_oldGps)_oldGps.remove();
   aC.resume();
   sp.remove();
+  _navPush('mainApp',function(){goHome();});
   playAppBgm();
 
   const titles={sstr:'SSTR 2026',nippon1:'にっぽん応援ツーリング 2026 ①',nippon2:'にっぽん応援ツーリング 2026 ②',custom:_customPlanName||'カスタムプラン'};
@@ -2594,7 +2621,7 @@ function _showCards(){
     var cn22=document.getElementById('cardNippon2');if(cn22)cn22.style.display=d2;
     var cc2=document.getElementById('cardCreate');if(cc2)cc2.style.display=d2;
     var ap=document.createElement('div');ap.id='adminVersionPanel';
-    ap.style.cssText='width:100%;background:rgba(20,30,50,0.9);border:2px solid var(--ylw);border-radius:16px;padding:18px;margin-top:-20px;';
+    ap.style.cssText='width:100%;background:rgba(20,30,50,0.9);border:2px solid var(--ylw);border-radius:16px;padding:18px;margin-top:20px;';
     ap.innerHTML='<div style="font-size:16px;font-weight:900;color:var(--ylw);margin-bottom:14px;">🔑 システム情報</div>'
       +'<div id="adminVersionList" style="font-size:15px;color:var(--txt);"></div>'
 ;
@@ -2654,17 +2681,12 @@ function _showCards(){
       cp.style.cssText='width:100%;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;';
       plans.forEach(function(p,i){
         var logoHtml=p.logo?'<img src="'+p.logo+'" style="height:28px;border-radius:6px;">':'<span style="font-size:18px;font-weight:900;">'+p.name.charAt(0)+'</span>';
-        cp.innerHTML+='<div style="position:relative;width:calc(50% - 4px);">'
-          +'<button onclick="_startCustomPlan('+i+')" style="background:rgba(6,6,12,0.15);border:2px solid var(--org);border-radius:12px;padding:12px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;width:100%;box-sizing:border-box;backdrop-filter:blur(2px);">'
+        cp.innerHTML+='<div style="width:calc(50% - 4px);">'
+          +'<button onclick="_showPlanMenu('+i+')" style="background:rgba(6,6,12,0.15);border:2px solid var(--org);border-radius:12px;padding:12px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;width:100%;box-sizing:border-box;backdrop-filter:blur(2px);">'
           +'<div style="font-size:9px;color:var(--org);letter-spacing:2px;font-weight:700;margin-bottom:2px;">'+(p.date||'日付未定')+'</div>'
           +'<div style="display:flex;align-items:center;gap:6px;">'+logoHtml+'<span style="font-size:13px;font-weight:900;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+p.name+'</span></div>'
           +'<div style="font-size:10px;color:#aaa;margin-top:2px;">'+p.stops.length+'スポット</div>'
           +'</button>'
-          +'<div style="position:absolute;top:4px;right:4px;display:flex;gap:4px;">'
-          +'<button onclick="event.stopPropagation();_sharePlan('+i+')" style="background:rgba(255,152,0,0.2);border:1px solid var(--org);border-radius:50%;width:22px;height:22px;color:var(--org);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">↗</button>'
-          +'<button onclick="event.stopPropagation();_editCustomPlan('+i+')" style="background:rgba(0,212,255,0.2);border:1px solid var(--ac);border-radius:50%;width:22px;height:22px;color:var(--ac);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✎</button>'
-          +'<button onclick="event.stopPropagation();_deleteCustomPlan('+i+')" style="background:rgba(255,68,68,0.2);border:1px solid var(--red);border-radius:50%;width:22px;height:22px;color:var(--red);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>'
-          +'</div>'
           +'</div>';
       });
       var cardArea=document.querySelector('#cardCreate');
