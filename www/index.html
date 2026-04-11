@@ -2047,14 +2047,18 @@ function _openMapPicker(sid){
     info.style.display='block';
     addrEl.innerHTML='📍 取得中...';
     _pickedName='';
+    var okBtn=document.getElementById('mapPickerOk');
+    if(okBtn){okBtn.disabled=true;okBtn.textContent='取得中...';}
     fetch(NAS_API+'/api/placename?lat='+_pickedLat+'&lng='+_pickedLng,{signal:AbortSignal.timeout(10000)})
     .then(function(r){return r.json();})
     .then(function(d){
       _pickedName=d.name||_pickedLat.toFixed(4)+', '+_pickedLng.toFixed(4);
-      addrEl.innerHTML='📍 <b style="font-size:16px;">'+_pickedName+'</b>';
-    }).catch(function(){
+      if(addrEl)addrEl.innerHTML='📍 <b style="font-size:16px;">'+_pickedName+'</b>';
+      if(okBtn){okBtn.disabled=false;okBtn.textContent='この場所を選択';}
+    }).catch(function(err){
       _pickedName=_pickedLat.toFixed(4)+', '+_pickedLng.toFixed(4);
-      addrEl.innerHTML='📍 '+_pickedName;
+      if(addrEl)addrEl.innerHTML='❌ '+err.message;
+      if(okBtn){okBtn.disabled=false;okBtn.textContent='この場所を選択';}
     });
   });
   document.getElementById('mapPickerOk').onclick=function(){
