@@ -1080,6 +1080,14 @@ function _showSettings(){
       <div style="font-size:12px;color:var(--txt);margin-bottom:4px;">BGM音量</div>
       <input type="range" min="0" max="50" value="${Math.round((appBgm?appBgm.volume:0.25)*100)}" oninput="if(appBgm)appBgm.volume=this.value/100;" style="width:100%;">
     </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;color:var(--org);font-weight:700;margin-bottom:4px;">👥 フレンド</div>
+      <div id="friendsList" style="font-size:13px;color:var(--txt);margin-bottom:8px;">読み込み中...</div>
+      <div style="display:flex;gap:6px;">
+        <input id="addFriendName" type="text" placeholder="フレンド名（ひらがな）" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid var(--org);border-radius:8px;padding:8px;color:#fff;font-size:13px;font-family:inherit;">
+        <button onclick="_addFriend()" style="background:var(--org);border:none;border-radius:8px;padding:8px 14px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">追加</button>
+      </div>
+    </div>
     <div style="display:flex;gap:8px;">
       <button onclick="var n=document.getElementById('settingsName').value.trim();if(n){_myName=n;localStorage.setItem('_riderName',n);_genWelcomeVoice(n);}document.getElementById('settingsPanel').remove();rnd();" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:10px;color:#000;font-size:14px;font-weight:800;cursor:pointer;">保存</button>
       <button onclick="document.getElementById('settingsPanel').remove();" style="flex:1;background:none;border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--txt);font-size:14px;cursor:pointer;">閉じる</button>
@@ -2266,7 +2274,14 @@ function _confirmSavePlan(){
     _tempPlanStops[0].noHwy=_tempSegNoHwy[0]||false;
   }
   var plans=JSON.parse(localStorage.getItem('_plans_'+_myName)||'[]');
-  plans.push({name:name,date:date,stops:_tempPlanStops,logo:_planLogoData||null,owner:_myName,created:Date.now()});
+  var planData={name:name,date:date,stops:_tempPlanStops,logo:_planLogoData||null,owner:_myName,created:Date.now()};
+  if(_editingPlanIdx>=0&&_editingPlanIdx<plans.length){
+    planData.created=plans[_editingPlanIdx].created;// 作成日保持
+    plans[_editingPlanIdx]=planData;
+    _editingPlanIdx=-1;
+  } else {
+    plans.push(planData);
+  }
   localStorage.setItem('_plans_'+_myName,JSON.stringify(plans));
   // WAV事前生成（バックグラウンド）
   fetch(NAS_API+'/api/voice/generate',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
@@ -2290,6 +2305,95 @@ function _deletePlan(idx){
   location.reload();
 }
 var _customPlanName='';
+// === フレンド管理 ===
+function _loadFriends(){
+  var fl=document.getElementById('friendsList');if(!fl)return;
+  fetch(NAS_API+'/api/friends?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.friends&&d.friends.length>0){
+      fl.innerHTML=d.friends.map(function(f){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.1);">'
+          +'<span>🏍 '+f+'</span>'
+          +'<button onclick="_removeFriend(\''+f+'\')" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;">削除</button>'
+          +'</div>';
+      }).join('');
+    } else {
+      fl.innerHTML='<div style="color:var(--sub);font-size:12px;">フレンドがいません</div>';
+    }
+  }).catch(function(){fl.innerHTML='<div style="color:var(--red);font-size:12px;">取得失敗</div>';});
+}
+function _addFriend(){
+  var input=document.getElementById('addFriendName');
+  var name=input?input.value.trim():'';
+  if(!name){alert('フレンド名を入力してください');return;}
+  fetch(NAS_API+'/api/friends/add',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
+    body:JSON.stringify({name:_myName,friend:name}),signal:AbortSignal.timeout(5000)})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok){input.value='';_loadFriends();spk(name+'さんをフレンドに追加したのだ！',true);}
+  }).catch(function(){alert('追加に失敗しました');});
+}
+function _removeFriend(friend){
+  if(!confirm(friend+'さんをフレンドから削除しますか？'))return;
+  fetch(NAS_API+'/api/friends/remove',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
+    body:JSON.stringify({name:_myName,friend:friend}),signal:AbortSignal.timeout(5000)})
+  .then(function(){_loadFriends();}).catch(function(){});
+}
+function _sharePlan(idx){
+  var plans=JSON.parse(localStorage.getItem('_plans_'+_myName)||'[]');
+  var p=plans[idx];if(!p)return;
+  fetch(NAS_API+'/api/friends?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(!d.friends||d.friends.length===0){alert('フレンドがいません。設定からフレンドを追加してください。');return;}
+    var friend=prompt('共有先のフレンド名:\n'+d.friends.join(', '));
+    if(!friend)return;
+    if(!d.friends.includes(friend)){alert(friend+'さんはフレンドではありません');return;}
+    fetch(NAS_API+'/api/plans/share',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
+      body:JSON.stringify({from:_myName,to:friend,plan:{name:p.name,date:p.date,stops:p.stops}}),
+      signal:AbortSignal.timeout(5000)})
+    .then(function(){spk(friend+'さんにプランを共有したのだ！',true);alert('共有しました！');})
+    .catch(function(){alert('共有に失敗しました');});
+  });
+}
+// 設定パネルでフレンド読み込み
+setTimeout(function(){if(document.getElementById('friendsList'))_loadFriends();},500);
+
+var _editingPlanIdx=-1;
+function _editCustomPlan(idx){
+  var plans=JSON.parse(localStorage.getItem('_plans_'+_myName)||'[]');
+  var p=plans[idx];if(!p)return;
+  _editingPlanIdx=idx;
+  _tempPlanStops=p.stops;
+  _tempPlanName=p.name;
+  _tempPlanDate=p.date||'';
+  _planLogoData=p.logo||null;
+  startPlanCreate();
+  // フォームに値を復元
+  var nameEl=document.getElementById('planName');if(nameEl)nameEl.value=p.name;
+  var dateEl=document.getElementById('planDate');if(dateEl)dateEl.value=p.date||'';
+  if(p.logo){
+    var prev=document.getElementById('planLogoPreview');
+    if(prev){prev.style.background='none';prev.innerHTML='<img src="'+p.logo+'" style="width:80px;height:80px;border-radius:16px;object-fit:cover;">';}
+  }
+  // スポットを復元
+  document.querySelectorAll('.planStop').forEach(function(s){s.remove();});
+  _planStopCount=0;
+  p.stops.forEach(function(s){
+    _addPlanStop();
+    var stops=document.querySelectorAll('.planStop');
+    var last=stops[stops.length-1];
+    if(last){
+      var ni=last.querySelector('.psName');if(ni)ni.value=s.name;
+      var li=last.querySelector('.psLat');if(li)li.value=s.lat;
+      var lgi=last.querySelector('.psLng');if(lgi)lgi.value=s.lng;
+      var ti=last.querySelector('.psType');if(ti)ti.value=s.type||'other';
+      var ri=last.querySelector('[id$=Result]');
+      if(ri){ri.style.display='block';ri.style.borderColor='var(--grn)';ri.innerHTML='📍 <b style="color:var(--grn);">'+s.name+'</b>';}
+    }
+  });
+}
 function _deleteCustomPlan(idx){
   if(!confirm('このプランを削除しますか？'))return;
   var plans=JSON.parse(localStorage.getItem('_plans_'+_myName)||'[]');
@@ -2556,12 +2660,40 @@ function _showCards(){
           +'<div style="display:flex;align-items:center;gap:6px;">'+logoHtml+'<span style="font-size:13px;font-weight:900;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+p.name+'</span></div>'
           +'<div style="font-size:10px;color:#aaa;margin-top:2px;">'+p.stops.length+'スポット</div>'
           +'</button>'
-          +'<button onclick="event.stopPropagation();_deleteCustomPlan('+i+')" style="position:absolute;top:4px;right:4px;background:rgba(255,68,68,0.2);border:1px solid var(--red);border-radius:50%;width:22px;height:22px;color:var(--red);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>'
+          +'<div style="position:absolute;top:4px;right:4px;display:flex;gap:4px;">'
+          +'<button onclick="event.stopPropagation();_sharePlan('+i+')" style="background:rgba(255,152,0,0.2);border:1px solid var(--org);border-radius:50%;width:22px;height:22px;color:var(--org);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">↗</button>'
+          +'<button onclick="event.stopPropagation();_editCustomPlan('+i+')" style="background:rgba(0,212,255,0.2);border:1px solid var(--ac);border-radius:50%;width:22px;height:22px;color:var(--ac);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✎</button>'
+          +'<button onclick="event.stopPropagation();_deleteCustomPlan('+i+')" style="background:rgba(255,68,68,0.2);border:1px solid var(--red);border-radius:50%;width:22px;height:22px;color:var(--red);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>'
+          +'</div>'
           +'</div>';
       });
       var cardArea=document.querySelector('#cardCreate');
       if(cardArea&&cardArea.parentElement)cardArea.parentElement.insertBefore(cp,cardArea.nextSibling);
     }
+  }
+  // 共有プラン表示
+  var spContainer=document.getElementById('sharedPlanCards');
+  if(spContainer)spContainer.remove();
+  if(show){
+    fetch(NAS_API+'/api/plans/shared?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.plans&&d.plans.length>0){
+        var sp2=document.createElement('div');sp2.id='sharedPlanCards';
+        sp2.style.cssText='width:100%;display:flex;flex-direction:column;gap:8px;margin-top:8px;';
+        sp2.innerHTML='<div style="font-size:11px;color:var(--sub);font-weight:700;">📨 共有されたプラン</div>';
+        d.plans.forEach(function(p,i){
+          sp2.innerHTML+='<button onclick="STOPS.custom='+JSON.stringify(p.stops).replace(/"/g,'&quot;')+';cDay=\'custom\';_customPlanName=\''+p.name.replace(/'/g,"\\'")+'\';startApp(\'custom\');" style="background:rgba(6,6,12,0.15);border:2px solid var(--pk);border-radius:12px;padding:10px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;width:100%;box-sizing:border-box;">'
+            +'<div style="font-size:9px;color:var(--pk);">from '+p.sharedBy+'</div>'
+            +'<div style="font-size:14px;font-weight:900;color:#fff;">'+p.name+'</div>'
+            +'<div style="font-size:10px;color:#aaa;">'+p.stops.length+'スポット</div>'
+            +'</button>';
+        });
+        var cpCards=document.getElementById('customPlanCards');
+        if(cpCards&&cpCards.parentElement)cpCards.parentElement.insertBefore(sp2,cpCards.nextSibling);
+        else{var cc=document.querySelector('#cardCreate');if(cc&&cc.parentElement)cc.parentElement.insertBefore(sp2,cc.nextSibling);}
+      }
+    }).catch(function(){});
   }
   // 名前をOKボタンで入力した時のみ音声再生（おかえりの時は2秒タイマーが担当）
   if(show&&!_planAnnounced&&!_myNameWasSet){
