@@ -38,10 +38,14 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .pc .lb{font-size:11px;color:var(--ac);text-transform:uppercase;letter-spacing:3px;margin-bottom:6px;font-weight:700;}
 .pc .nm{font-size:clamp(18px,5.5vw,32px);font-weight:900;line-height:1.2;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pc .mm{font-size:14px;color:var(--org);margin-bottom:12px;}
-.pc .sts{display:grid;grid-template-columns:1fr;gap:8px;}
-.pc .st{text-align:center;background:rgba(0,0,0,0.3);border-radius:10px;padding:14px 10px;}
-.pc .st .v{font-family:'Outfit';font-size:clamp(48px,15vw,80px);font-weight:900;color:var(--ac);white-space:nowrap;}
-.pc .st .l{font-size:16px;color:var(--txt);letter-spacing:1px;margin-top:3px;font-weight:600;}
+.pc .sts{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.pc .st{text-align:center;background:rgba(0,0,0,0.3);border-radius:10px;padding:12px 10px;}
+.pc .st .v{font-family:'Outfit';font-size:clamp(24px,8vw,42px);font-weight:900;color:var(--ac);white-space:nowrap;}
+.pc .st .l{font-size:14px;color:var(--txt);letter-spacing:1px;margin-top:3px;font-weight:600;}
+.pc.custom .sts{grid-template-columns:1fr;gap:8px;}
+.pc.custom .st{padding:14px 10px;}
+.pc.custom .st .v{font-size:clamp(48px,15vw,80px);}
+.pc.custom .st .l{font-size:16px;}
 .pc .pb{display:flex;justify-content:center;margin-top:10px;}
 .pc .ptb{background:#1a2a1a;border:1px solid var(--grn);color:var(--grn);padding:4px 16px;border-radius:20px;font-weight:800;font-family:'Outfit';font-size:16px;}
 #mapWrap{display:none;margin:8px 10px;border-radius:14px;overflow:hidden;border:2px solid var(--bdr);position:relative;}
@@ -442,9 +446,10 @@ function _drawRoute(result,noHwy){
   });
 }
 function _routeReq(origin,dest,waypoints,noHwy){
+  var isCustom=cDay==='custom';
   return{origin,destination:dest,waypoints:waypoints||[],
     travelMode:google.maps.TravelMode.DRIVING,
-    avoidFerries:true,avoidHighways:!!noHwy,avoidTolls:!!noHwy};
+    avoidFerries:true,avoidHighways:isCustom?!!noHwy:false,avoidTolls:!!noHwy};
 }
 // Fallback: route each pair 1-to-1
 function _route1to1(ds,chunk,delay){
@@ -457,11 +462,12 @@ function _route1to1(ds,chunk,delay){
         if(s==='OK'){console.log('[Route:1to1] OK '+r.routes[0].legs[0].distance.text);_drawRoute(r,a.noHwy);}
         else console.warn('[Route:1to1] FAILED '+s+': '+a.name+' → '+b.name);
       });
-    },delay+k*500);
+    },delay+k*1000);
   }
 }
 function fetchGoogleRoute(stops){
   if(stops.length<2)return;
+  _turnPoints=[];// 重複防止
   // カスタムプラン: 区間ごとに個別ルート検索（noHwy確実反映）
   if(cDay==='custom'){
     const ds=new google.maps.DirectionsService();
@@ -473,7 +479,7 @@ function fetchGoogleRoute(stops){
           if(s==='OK')_drawRoute(r,a.noHwy);
           else console.warn('[Route:custom] FAILED '+s+': '+a.name+' → '+b.name);
         });
-      },k*500);
+      },k*1000);
     }
     return;
   }
@@ -506,7 +512,7 @@ function fetchGoogleRoute(stops){
         if(status==='OK'){console.log('[Route] chunk '+idx+' OK');_drawRoute(result,ch.noHwy);}
         else{console.warn('[Route] chunk '+idx+' FAILED: '+status+', retrying 1-to-1');_route1to1(ds,s,0);}
       });
-    },idx*500);
+    },idx*1000);
   });
 }
 
@@ -1583,7 +1589,6 @@ function onGpsUpdate(p,announce_it){
     lastNI=ni.i;
     updateMap(gLat,gLng,st,ni.i);
     // ターンポイントが空ならルートを事前取得
-    if(_turnPoints.length===0)fetchGoogleRoute(st);
     // 中間画面のTTS終了を待ってから画面遷移（最低5秒表示）
     var _mc2=setInterval(function(){
       var mid0=document.getElementById('midScreen');
@@ -1826,7 +1831,7 @@ if(_hdrMode===0&&cDay!=='custom'){
   let t='';
   if(_myName)t+=`<div style="padding:6px 14px;font-size:15px;font-weight:700;color:var(--org);"><span onclick="var n=prompt('ライダー名:',_myName||'');if(n!==null){_myName=n;localStorage.setItem('_riderName',n);rnd();}" style="cursor:pointer;">${_myName}さん</span></div>`;
   // Current
-  t+=`<div class="pnl pc"><div class="lb">▶ いま向かっている場所</div>
+  t+=`<div class="pnl pc${cDay==='custom'?' custom':''}"><div class="lb">▶ いま向かっている場所</div>
     <div class="nm">${cS.name}</div>${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
     ${(()=>{const schM=pT(cS.time);const diff=gLat&&schM>0?eta-schM:0;const tc=!gLat||schM<=0?'var(--ac)':diff>0?'var(--red)':diff>=-5?'var(--ylw)':'var(--ac)';return `<div class="sts">
       <div class="st"><div class="v" style="color:${!gLat?'var(--ac)':dispDist>=100?'var(--red)':dispDist>=50?'var(--ylw)':'var(--ac)'}">${gLat?dispDist.toFixed(1):'--'}</div><div class="l">km</div></div>
