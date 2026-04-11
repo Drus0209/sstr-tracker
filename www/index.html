@@ -416,10 +416,11 @@ function clearMap(){
   mPolylines.forEach(p=>p.setMap(null));mPolylines=[];
 }
 var _turnPoints=[];// {lat,lng,dir:'右'|'左'|'斜め右'|'斜め左'|'Uターン',announced200:false,announced50:false}
-function _drawRoute(result){
+function _drawRoute(result,noHwy){
   const path=result.routes[0].overview_path;
+  const col=noHwy?'#2196f3':'#FF9800';// 一般道=青、高速=オレンジ
   const pl=new google.maps.Polyline({
-    path,map,strokeColor:'#FF9800',strokeWeight:8,strokeOpacity:0.85
+    path,map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85
   });
   mPolylines.push(pl);
   // ステップからターン情報を抽出
@@ -453,7 +454,7 @@ function _route1to1(ds,chunk,delay){
       const req=_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],a.noHwy||b.noHwy);
       console.log('[Route:1to1] '+a.name+' → '+b.name);
       _apiDir++;_apiSave();ds.route(req,(r,s)=>{
-        if(s==='OK'){console.log('[Route:1to1] OK '+r.routes[0].legs[0].distance.text);_drawRoute(r);}
+        if(s==='OK'){console.log('[Route:1to1] OK '+r.routes[0].legs[0].distance.text);_drawRoute(r,a.noHwy);}
         else console.warn('[Route:1to1] FAILED '+s+': '+a.name+' → '+b.name);
       });
     },delay+k*500);
@@ -469,7 +470,7 @@ function fetchGoogleRoute(stops){
       setTimeout(()=>{
         _apiDir++;_apiSave();
         ds.route(_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],a.noHwy),(r,s)=>{
-          if(s==='OK')_drawRoute(r);
+          if(s==='OK')_drawRoute(r,a.noHwy);
           else console.warn('[Route:custom] FAILED '+s+': '+a.name+' → '+b.name);
         });
       },k*500);
@@ -502,7 +503,7 @@ function fetchGoogleRoute(stops){
       const waypoints=s.slice(1,-1).map(p=>({location:{lat:p.lat,lng:p.lng},stopover:true}));
       console.log('[Route] chunk '+idx+'/'+chunks.length+': '+oName+' → '+dName+' (wp='+waypoints.length+', noHwy='+ch.noHwy+')');
       _apiDir++;_apiSave();ds.route(_routeReq(origin,dest,waypoints,ch.noHwy),(result,status)=>{
-        if(status==='OK'){console.log('[Route] chunk '+idx+' OK');_drawRoute(result);}
+        if(status==='OK'){console.log('[Route] chunk '+idx+' OK');_drawRoute(result,ch.noHwy);}
         else{console.warn('[Route] chunk '+idx+' FAILED: '+status+', retrying 1-to-1');_route1to1(ds,s,0);}
       });
     },idx*500);
@@ -584,10 +585,10 @@ function updateMap(lat,lng,stops,nI){
     const curStop=stops[nI];
     _apiDir++;_apiSave();ds.route({origin:{lat,lng},destination:{lat:tS.lat,lng:tS.lng},
       travelMode:google.maps.TravelMode.DRIVING,
-      avoidFerries:true,avoidHighways:false,avoidTolls:!!curStop.noHwy
+      avoidFerries:true,avoidHighways:!!curStop.noHwy,avoidTolls:!!curStop.noHwy
     },(result,status)=>{
       if(status==='OK'){
-        _drawRoute(result);
+        _drawRoute(result,curStop.noHwy);
       }
     });
     // Full route: all stops
