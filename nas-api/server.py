@@ -1,84 +1,341 @@
 #!/usr/bin/env python3
-"""SSTR API Server - APIカウンター + 交通情報"""
-import json
-import os
-import time
-from flask import Flask, jsonify, request
+"""SSTR API Server — NAS集中管理版"""
+import json,os,time,hashlib,urllib.parse,urllib.request
+from flask import Flask,jsonify,request,send_file
+app=Flask(__name__)
+BD=os.path.dirname(os.path.abspath(__file__))
 
-app = Flask(__name__)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CACHE_FILE = os.path.join(BASE_DIR, "stats_cache.json")
-TRAFFIC_FILE = os.path.join(BASE_DIR, "traffic.json")
+# === ディレクトリ・ファイル ===
+VD=os.path.join(BD,"voices");os.makedirs(VD,exist_ok=True)
+UD=os.path.join(BD,"users");os.makedirs(UD,exist_ok=True)
+RD=os.path.join(BD,"routes");os.makedirs(RD,exist_ok=True)
+TF=os.path.join(BD,"traffic.json")
+WF=os.path.join(BD,"weather.json")
+LF=os.path.join(BD,"locations.json")
+OF=os.path.join(BD,"orbis_cache.json")
+FF=os.path.join(BD,"friends.json")
+SF=os.path.join(BD,"shared_plans.json")
+UF=os.path.join(BD,"usage.json")
 
-def load_json(path, default):
+GMAPS_KEY="AIzaSyBwPBSu3pJ7LBsQ7WvSbTWiQsFY0R8cREY"
+
+def lj(p,d):
     try:
-        with open(path, "r") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return default
-
-def save_json(path, data):
-    with open(path, "w") as f:
-        json.dump(data, f, ensure_ascii=False)
+        with open(p,"r") as f:return json.load(f)
+    except:return d
+def sj(p,d):
+    with open(p,"w") as f:json.dump(d,f,ensure_ascii=False)
 
 @app.after_request
-def add_cors(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-    if request.method == "OPTIONS":
-        response.status_code = 204
-    return response
+def cors(r):
+    r.headers["Access-Control-Allow-Origin"]="*"
+    r.headers["Access-Control-Allow-Methods"]="GET,POST,DELETE,PUT"
+    r.headers["Access-Control-Allow-Headers"]="Content-Type"
+    if request.method=="OPTIONS":r.status_code=204
+    return r
 
-# === APIカウンター ===
+# =============================================
+# === ユーザーデータ管理 ===
+# =============================================
+@app.route("/api/userdata/<name>",methods=["GET"])
+def get_userdata(name):
+    fp=os.path.join(UD,name+".json")
+    if not os.path.exists(fp):return jsonify({"error":"not found"}),404
+    return jsonify(lj(fp,{}))
+
+@app.route("/api/userdata/<name>",methods=["POST","PUT","OPTIONS"])
+def save_userdata(name):
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json(force=True)
+    if not d:return jsonify({"error":"no data"}),400
+    fp=os.path.join(UD,name+".json")
+    existing=lj(fp,{})
+    existing.update(d)
+    existing["name"]=name
+    existing["updatedAt"]=time.time()
+    sj(fp,existing)
+    return jsonify({"ok":True})
+
+@app.route("/api/userdata/<name>",methods=["DELETE"])
+def delete_userdata(name):
+    fp=os.path.join(UD,name+".json")
+    if os.path.exists(fp):os.remove(fp)
+    return jsonify({"ok":True})
+
+@app.route("/api/users",methods=["GET"])
+def list_users():
+    users=[]
+    for f in os.listdir(UD):
+        if f.endswith(".json"):
+            users.append(f[:-5])
+    return jsonify({"users":users})
+
+# =============================================
+# === ルート検索キャッシュ（Directions API代行）===
+# =============================================
+@app.route("/api/route",methods=["POST","OPTIONS"])
+def route_search():
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json(force=True)
+    if not d or "origin" not in d or "destination" not in d:
+        return jsonify({"error":"origin, destination required"}),400
+    # キャッシュキー生成
+    o=d["origin"];dst=d["destination"]
+    wp=d.get("waypoints",[])
+    avoid=d.get("avoid","")  # "tolls","highways","tolls|highways"
+    cache_key_src="%s,%s_%s,%s_%s_%s" % (
+        "%.5f"%o["lat"],"%.5f"%o["lng"],
+        "%.5f"%dst["lat"],"%.5f"%dst["lng"],
+        json.dumps(wp,sort_keys=True),avoid)
+    cache_key=hashlib.md5(cache_key_src.encode()).hexdigest()
+    cache_fp=os.path.join(RD,cache_key+".json")
+    # キャッシュがあれば返す（24時間有効）
+    if os.path.exists(cache_fp):
+        cached=lj(cache_fp,None)
+        if cached and time.time()-cached.get("_cachedAt",0)<86400:
+            cached["_fromCache"]=True
+            return jsonify(cached)
+    # Google Directions API呼び出し
+    params={
+        "origin":"%.6f,%.6f"%(o["lat"],o["lng"]),
+        "destination":"%.6f,%.6f"%(dst["lat"],dst["lng"]),
+        "mode":"driving",
+        "language":"ja",
+        "key":GMAPS_KEY,
+    }
+    if wp:
+        wp_str="|".join(["%.6f,%.6f"%(w["lat"],w["lng"]) for w in wp])
+        params["waypoints"]="via:"+wp_str
+    if avoid:params["avoid"]=avoid
+    url="https://maps.googleapis.com/maps/api/directions/json?"+urllib.parse.urlencode(params)
+    try:
+        usage=lj(UF,{"maps":0,"directions":0})
+        usage["directions"]=usage.get("directions",0)+1
+        sj(UF,usage)
+        req=urllib.request.Request(url,headers={"User-Agent":"SSTR-Tracker/1.0"})
+        with urllib.request.urlopen(req,timeout=15) as r:
+            result=json.loads(r.read().decode())
+        result["_cachedAt"]=time.time()
+        result["_fromCache"]=False
+        sj(cache_fp,result)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error":str(e),"status":"FAILED"}),500
+
+# =============================================
+# === API使用量 ===
+# =============================================
 @app.route("/api/usage")
 @app.route("/api/stats")
-def stats():
-    data = load_json(CACHE_FILE, {"maps": 0, "directions": 0})
-    return jsonify(data)
+def stats():return jsonify(lj(UF,{"maps":0,"directions":0}))
 
+@app.route("/api/usage/increment",methods=["POST","OPTIONS"])
+def usage_increment():
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json(force=True) or {}
+    usage=lj(UF,{"maps":0,"directions":0})
+    if d.get("maps"):usage["maps"]=usage.get("maps",0)+d["maps"]
+    if d.get("directions"):usage["directions"]=usage.get("directions",0)+d["directions"]
+    sj(UF,usage)
+    return jsonify(usage)
+
+# =============================================
 # === 交通情報 ===
+# =============================================
 @app.route("/api/traffic")
-def get_traffic():
-    reports = load_json(TRAFFIC_FILE, [])
-    # 24時間以上前の通報は自動削除
-    now = time.time()
-    reports = [r for r in reports if now - r.get("ts", 0) < 86400]
-    save_json(TRAFFIC_FILE, reports)
-    return jsonify(reports)
+def traffic():
+    rr=lj(TF,[]);now=time.time()
+    rr=[r for r in rr if now-r.get("ts",0)<86400]
+    sj(TF,rr);return jsonify(rr)
 
-@app.route("/api/report", methods=["POST", "OPTIONS"])
-def post_report():
-    if request.method == "OPTIONS":
-        return "", 204
-    data = request.get_json()
-    if not data or "lat" not in data or "lng" not in data or "type" not in data:
-        return jsonify({"error": "lat, lng, type required"}), 400
+@app.route("/api/report",methods=["POST","OPTIONS"])
+def report():
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json()
+    if not d or "lat" not in d or "lng" not in d or "type" not in d:return jsonify({"error":"bad"}),400
+    r={"id":int(time.time()*1000),"lat":d["lat"],"lng":d["lng"],"type":d["type"],"memo":d.get("memo",""),"ts":time.time()}
+    rr=lj(TF,[]);rr.append(r);sj(TF,rr)
+    return jsonify({"ok":True,"id":r["id"]})
 
-    report = {
-        "id": int(time.time() * 1000),
-        "lat": data["lat"],
-        "lng": data["lng"],
-        "type": data["type"],  # accident, closure, police, construction, other
-        "memo": data.get("memo", ""),
-        "ts": time.time(),
-    }
-
-    reports = load_json(TRAFFIC_FILE, [])
-    reports.append(report)
-    save_json(TRAFFIC_FILE, reports)
-    return jsonify({"ok": True, "id": report["id"]})
-
-@app.route("/api/report/<int:report_id>", methods=["DELETE"])
+@app.route("/api/report/<int:report_id>",methods=["DELETE"])
 def delete_report(report_id):
-    reports = load_json(TRAFFIC_FILE, [])
-    reports = [r for r in reports if r["id"] != report_id]
-    save_json(TRAFFIC_FILE, reports)
-    return jsonify({"ok": True})
+    rr=lj(TF,[]);rr=[r for r in rr if r["id"]!=report_id];sj(TF,rr)
+    return jsonify({"ok":True})
 
+# =============================================
+# === 天気情報 ===
+# =============================================
+@app.route("/api/weather")
+def weather():return jsonify(lj(WF,{"points":[]}))
+
+# =============================================
+# === 位置共有 ===
+# =============================================
+@app.route("/api/location",methods=["POST","OPTIONS"])
+def post_location():
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json()
+    if not d or "name" not in d or "lat" not in d or "lng" not in d:return jsonify({"error":"bad"}),400
+    locs=lj(LF,{})
+    locs[d["name"]]={"lat":d["lat"],"lng":d["lng"],"speed":d.get("speed",0),"heading":d.get("heading",0),"ts":time.time()}
+    sj(LF,locs)
+    return jsonify({"ok":True})
+
+@app.route("/api/locations")
+def get_locations():
+    locs=lj(LF,{});now=time.time()
+    result=[{"name":k,**v} for k,v in locs.items() if now-v.get("ts",0)<300]
+    return jsonify(result)
+
+# =============================================
+# === 音声生成（VOICEVOX）===
+# =============================================
+@app.route("/api/voice/generate",methods=["POST","OPTIONS"])
+def generate_voice():
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json(force=True)
+    if not d or "text" not in d:return jsonify({"error":"text required"}),400
+    text=d["text"];key=d.get("key","custom");speaker=d.get("speaker",3)
+    try:
+        q=urllib.request.urlopen(urllib.request.Request(
+            "http://localhost:50021/audio_query?text="+urllib.parse.quote(text)+"&speaker="+str(speaker),
+            method="POST"),timeout=30).read()
+        wav=urllib.request.urlopen(urllib.request.Request(
+            "http://localhost:50021/synthesis?speaker="+str(speaker),
+            data=q,headers={"Content-Type":"application/json"},method="POST"),timeout=30).read()
+        fp=os.path.join(VD,key+".wav")
+        with open(fp,"wb") as f:f.write(wav)
+        return jsonify({"ok":True,"key":key,"size":len(wav)})
+    except Exception as e:
+        return jsonify({"error":str(e)}),500
+
+@app.route("/api/voice/<path:key>",methods=["GET","HEAD"])
+def get_voice(key):
+    key=urllib.parse.unquote(key)
+    fp=os.path.join(VD,key+".wav")
+    if os.path.exists(fp):return send_file(fp,mimetype="audio/wav")
+    return jsonify({"error":"not found"}),404
+
+# =============================================
+# === オービス（スピードカメラ）===
+# =============================================
+@app.route("/api/orbis")
+def orbis():return jsonify(lj(OF,{"cameras":[],"count":0}))
+
+# =============================================
+# === 場所名（ジオコーディング）===
+# =============================================
+_place_cache={}
+@app.route("/api/placename")
+def get_placename():
+    lat=request.args.get("lat");lng=request.args.get("lng")
+    if not lat or not lng:return jsonify({"error":"lat,lng required"}),400
+    ck="%.4f,%.4f"%(float(lat),float(lng))
+    if ck in _place_cache:return jsonify(_place_cache[ck])
+    try:
+        import re
+        gurl="https://maps.googleapis.com/maps/api/geocode/json?latlng=%s,%s&language=ja&key=%s"%(lat,lng,GMAPS_KEY)
+        gd=json.loads(urllib.request.urlopen(gurl,timeout=10).read().decode())
+        if gd.get("results"):
+            addr=gd["results"][0]["formatted_address"]
+            clean=re.sub(r"^日本[、,]\s*","",addr)
+            clean=re.sub(r"〒[\d-]+\s*","",clean)
+            clean=re.sub(r"[A-Z0-9]{2,}\+[A-Z0-9]+\s*","",clean).strip()
+            result={"name":clean,"address":addr}
+            _place_cache[ck]=result
+            return jsonify(result)
+    except:pass
+    return jsonify({"name":"%s,%s"%(lat,lng),"address":""})
+
+# =============================================
+# === フレンド管理 ===
+# =============================================
+@app.route("/api/friends",methods=["GET"])
+def get_friends():
+    name=request.args.get("name")
+    if not name:return jsonify({"error":"name required"}),400
+    friends=lj(FF,{})
+    return jsonify({"friends":friends.get(name,[])})
+
+@app.route("/api/friends/add",methods=["POST","OPTIONS"])
+def add_friend():
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json()
+    if not d or "name" not in d or "friend" not in d:return jsonify({"error":"bad"}),400
+    friends=lj(FF,{})
+    if d["name"] not in friends:friends[d["name"]]=[]
+    if d["friend"] not in friends[d["name"]]:friends[d["name"]].append(d["friend"])
+    if d["friend"] not in friends:friends[d["friend"]]=[]
+    if d["name"] not in friends[d["friend"]]:friends[d["friend"]].append(d["name"])
+    sj(FF,friends)
+    return jsonify({"ok":True})
+
+@app.route("/api/friends/remove",methods=["POST","OPTIONS"])
+def remove_friend():
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json()
+    if not d or "name" not in d or "friend" not in d:return jsonify({"error":"bad"}),400
+    friends=lj(FF,{})
+    if d["name"] in friends and d["friend"] in friends[d["name"]]:friends[d["name"]].remove(d["friend"])
+    if d["friend"] in friends and d["name"] in friends[d["friend"]]:friends[d["friend"]].remove(d["name"])
+    sj(FF,friends)
+    return jsonify({"ok":True})
+
+# =============================================
+# === プラン共有 ===
+# =============================================
+@app.route("/api/plans/share",methods=["POST","OPTIONS"])
+def share_plan():
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json()
+    if not d or "from" not in d or "to" not in d or "plan" not in d:return jsonify({"error":"bad"}),400
+    shared=lj(SF,{})
+    if d["to"] not in shared:shared[d["to"]]=[]
+    plan=d["plan"];plan["sharedBy"]=d["from"];plan["sharedAt"]=time.time()
+    shared[d["to"]].append(plan)
+    sj(SF,shared)
+    return jsonify({"ok":True})
+
+@app.route("/api/plans/shared")
+def get_shared_plans():
+    name=request.args.get("name")
+    if not name:return jsonify({"error":"name required"}),400
+    shared=lj(SF,{})
+    return jsonify({"plans":shared.get(name,[])})
+
+# =============================================
+# === カスタムプラン保存（NAS集中管理）===
+# =============================================
+@app.route("/api/plans/<name>",methods=["GET"])
+def get_plans(name):
+    fp=os.path.join(UD,name+".json")
+    ud=lj(fp,{})
+    return jsonify({"plans":ud.get("customPlans",[])})
+
+@app.route("/api/plans/<name>",methods=["POST","OPTIONS"])
+def save_plans(name):
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json(force=True)
+    if not d or "plans" not in d:return jsonify({"error":"plans required"}),400
+    fp=os.path.join(UD,name+".json")
+    ud=lj(fp,{})
+    ud["name"]=name
+    ud["customPlans"]=d["plans"]
+    ud["updatedAt"]=time.time()
+    sj(fp,ud)
+    return jsonify({"ok":True})
+
+# =============================================
 @app.route("/")
 def index():
-    return jsonify({"status": "ok", "endpoints": ["/api/usage", "/api/traffic", "/api/report"]})
+    return jsonify({"status":"ok","version":"2.0","endpoints":[
+        "/api/userdata/<name>","/api/users",
+        "/api/route","/api/usage",
+        "/api/traffic","/api/weather",
+        "/api/location","/api/locations",
+        "/api/voice/generate","/api/voice/<key>",
+        "/api/orbis","/api/placename",
+        "/api/friends","/api/plans/<name>","/api/plans/share"
+    ]})
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3456)
+if __name__=="__main__":app.run(host="0.0.0.0",port=3456)
