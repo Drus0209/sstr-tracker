@@ -59,8 +59,9 @@ def security_check():
         return jsonify({"error":"rate limited"}),429
     # OPTIONSは通す
     if request.method=="OPTIONS":return
-    # ヘルスチェックは認証不要
-    if request.path=="/":return
+    # 認証不要パス
+    if request.path=="/" or request.path=="/download/apk":return
+    if request.path.startswith("/pwa"):return  # PWAは認証不要
     # APIキー認証
     key=request.headers.get("X-API-Key") or request.args.get("key")
     if key!=API_KEY:
@@ -373,6 +374,35 @@ def save_plans(name):
     ud["updatedAt"]=time.time()
     sj(fp,ud)
     return jsonify({"ok":True})
+
+# =============================================
+# === APKダウンロード（認証不要）===
+# =============================================
+@app.route("/download/apk")
+def download_apk():
+    fp=os.path.join(BD,"sstr-tracker.apk")
+    if os.path.exists(fp):return send_file(fp,as_attachment=True,download_name="sstr-tracker.apk")
+    return jsonify({"error":"not found"}),404
+
+# =============================================
+# === PWA配信 ===
+# =============================================
+PWA_DIR=os.path.join(BD,"pwa")
+@app.route("/pwa/")
+def pwa_index():
+    r=send_file(os.path.join(PWA_DIR,"index.html"))
+    r.headers["Cache-Control"]="no-cache, no-store, must-revalidate"
+    r.headers["Pragma"]="no-cache"
+    r.headers["Expires"]="0"
+    return r
+@app.route("/pwa/<path:filename>")
+def pwa_static(filename):
+    fp=os.path.join(PWA_DIR,filename)
+    if not os.path.exists(fp):return jsonify({"error":"not found"}),404
+    r=send_file(fp)
+    if filename.endswith('.html'):
+        r.headers["Cache-Control"]="no-cache, no-store, must-revalidate"
+    return r
 
 # =============================================
 @app.route("/")
