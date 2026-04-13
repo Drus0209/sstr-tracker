@@ -140,7 +140,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
     <div class="adm" style="font-family:'Outfit';font-size:10px;color:var(--ylw);margin-top:4px;"></div>
   </div>
   <div style="position:absolute;top:20px;right:20px;z-index:2;text-align:right;"><div id="apiCntSplash"></div><div id="adminExitBtn" style="display:none;"><button onclick="_isAdmin=false;localStorage.setItem('_isAdmin','0');document.querySelector('.adm').textContent='';_showCards();document.getElementById('adminExitBtn').style.display='none';" style="background:rgba(255,68,68,0.15);border:1px solid var(--red);border-radius:8px;padding:6px 12px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;">🔓 管理者解除</button></div></div>
-  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin-top:-170px;">
+  <div id="cardContainer" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin-top:-170px;">
     <div style="width:100%;display:flex;flex-direction:column;gap:12px;">
       <div id="riderNameBox" style="background:rgba(20,30,50,0.85);border:2px solid var(--org);border-radius:16px;padding:18px 20px;text-align:center;">
         <div style="font-size:14px;color:var(--txt);font-weight:700;margin-bottom:10px;">ライダー名を入力（ひらがな）</div>
@@ -270,7 +270,7 @@ if(localStorage.getItem('_reqChecked')&&!localStorage.getItem('_consentAgreed'))
     var bb=document.getElementById('reqBubble');
     if(bb){bb.style.display='block';bb.textContent='問題がなければOKをタップするのだ！';}
     try{
-      window._rtap=new Audio('https://as5304t-c025.tail5d5c21.ts.net/api/voice/req_ok_tap');
+      window._rtap=new Audio(_nasAudio('/api/voice/req_ok_tap'));
       var _rtap=window._rtap;
       _rtap.volume=0.9;
       var _rzi2=document.getElementById('reqZunda');var _rzm2=null;
@@ -283,7 +283,7 @@ if(localStorage.getItem('_reqChecked')&&!localStorage.getItem('_consentAgreed'))
   _chk('画面',screen.width>=320&&screen.height>=480,screen.width+'x'+screen.height);
   // ずんだもん音声＋口パク
   try{
-    window._rca=new Audio('https://as5304t-c025.tail5d5c21.ts.net/api/voice/req_check');
+    window._rca=new Audio(_nasAudio('/api/voice/req_check'));
     var _rca=window._rca;
     _rca.volume=0.9;
     var _rzi=document.getElementById('reqZunda');
@@ -447,6 +447,37 @@ function showRouteOnly(stops){
 
 // Google Directions route
 let mPolylines=[];
+// === リルート機能 ===
+var _routePath=[];// 現在地→次スポットのルートポイント
+var _lastRerouteTime=0;
+var _rerouteThreshold=0.5;// km
+function _distToRoute(lat,lng){
+  if(_routePath.length<2)return 0;
+  var minD=Infinity;
+  for(var i=0;i<_routePath.length;i++){
+    var d=dK(lat,_routePath[i].lat,lng,_routePath[i].lng);
+    if(d<minD)minD=d;
+  }
+  return minD;
+}
+function _checkReroute(){
+  if(!gLat||_routePath.length<2)return;
+  var dist=_distToRoute(gLat,gLng);
+  var now=Date.now();
+  if(dist>_rerouteThreshold&&now-_lastRerouteTime>30000){
+    _lastRerouteTime=now;
+    console.log('[Reroute] Off route by '+dist.toFixed(2)+'km, rerouting...');
+    spk('ルートから外れたのだ。リルートするのだ。',true);
+    // ルートを再描画
+    var st=STOPS[cDay];
+    if(st){
+      var ni=fN(st);
+      lastRouteNI=-1;lastNI=-1;
+      clearMap();
+      updateMap(gLat,gLng,st,ni.i);
+    }
+  }
+}
 function clearMap(){
   if(mMe){mMe.setMap(null);mMe=null;}
   if(mTgt){mTgt.setMap(null);mTgt=null;}
@@ -458,34 +489,19 @@ function _isHwyStep(html){
   // ステップのinstructionsから高速道路/有料道路を判定
   if(!html)return false;
   var h=html.replace(/<[^>]*>/g,'');
+  // 「〜の表示」「〜方面」内の案内標識テキストを除外
+  h=h.replace(/\([^)]*の表示\)/g,'').replace(/\([^)]*方面[^)]*\)/g,'');
   return /自動車道|高速|有料|首都高|Toll|toll/.test(h);
 }
-function _drawRoute(result){
-  // ステップごとに高速/一般道を判定して色分け描画
-  var curPath=[],curHwy=false;
-  function _flush(){
-    if(curPath.length>1){
-      var col=curHwy?'#FF9800':'#2196f3';
-      var pl=new google.maps.Polyline({path:curPath,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
-      mPolylines.push(pl);
-    }
-    curPath=[];
-  }
+function _drawRoute(result,noHwy){
+  // noHwyフラグでルート全体の色を決定
+  var col=noHwy?'#2196f3':'#FF9800';
+  var path=result.routes[0].overview_path;
+  var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
+  mPolylines.push(pl);
+  // ターン情報を抽出
   result.routes[0].legs.forEach(leg=>{
     leg.steps.forEach(step=>{
-      var hwy=_isHwyStep(step.instructions);
-      if(curPath.length>0&&hwy!==curHwy){
-        // 道路種別が変わった→前の区間を描画
-        _flush();
-        // 前の最後の点を引き継ぎ（繋がるように）
-        curPath=[step.start_location];
-      }
-      curHwy=hwy;
-      // ステップのパスを追加
-      if(step.path)step.path.forEach(function(p){curPath.push(p);});
-      else if(step.lat_lngs)step.lat_lngs.forEach(function(p){curPath.push(p);});
-      else{curPath.push(step.start_location);curPath.push(step.end_location);}
-      // ターン情報を抽出
       if(step.maneuver){
         var dir=null;
         if(step.maneuver==='turn-right')dir='右';
@@ -500,12 +516,11 @@ function _drawRoute(result){
       }
     });
   });
-  _flush();// 最後の区間
 }
 // === NASルート検索（Directions APIキャッシュ付き）===
 function _nasRoute(origin,dest,waypoints,avoid,cb){
   var body={origin:origin,destination:dest,waypoints:waypoints||[],avoid:avoid||""};
-  fetch(NAS_API+'/api/route',{method:'POST',headers:{'Content-Type':'application/json'},
+  _nf(NAS_API+'/api/route',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify(body),signal:AbortSignal.timeout(20000)})
   .then(function(r){return r.json();})
   .then(function(d){
@@ -518,22 +533,36 @@ function _nasRoute(origin,dest,waypoints,avoid,cb){
   }).catch(function(e){console.warn('[NAS Route] error: '+e);cb(null);});
 }
 // NASレスポンスからPolyline描画用データに変換
-function _nasDrawRoute(d){
+function _nasDrawRoute(d,noHwy){
   if(!d||!d.routes||!d.routes[0])return;
   var route=d.routes[0];
-  // encoded polylineをデコード
+  // noHwy指定時は全体をその色で描画
+  if(noHwy!==undefined){
+    var path=_decodePoly(route.overview_polyline?route.overview_polyline.points:'');
+    if(path.length>1){
+      var col=noHwy?'#2196f3':'#FF9800';
+      var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
+      mPolylines.push(pl);
+    }
+  } else {
+    // noHwy未指定: ステップごとに判定
+    (route.legs||[]).forEach(function(leg){
+      (leg.steps||[]).forEach(function(step){
+        var hwy=_isHwyStep(step.html_instructions||'');
+        var path=_decodePoly(step.polyline?step.polyline.points:'');
+        if(path.length>1){
+          var col=hwy?'#FF9800':'#2196f3';
+          var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
+          mPolylines.push(pl);
+        }
+      });
+    });
+  }
+  // ターン情報を抽出
   var legs=route.legs||[];
   legs.forEach(function(leg){
     var steps=leg.steps||[];
     steps.forEach(function(step){
-      var hwy=_isHwyStep(step.html_instructions||'');
-      // ポリラインデコード
-      var path=_decodePoly(step.polyline?step.polyline.points:'');
-      if(path.length>1){
-        var col=hwy?'#FF9800':'#2196f3';
-        var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
-        mPolylines.push(pl);
-      }
       // ターン情報
       if(step.maneuver){
         var dir=null;
@@ -566,17 +595,17 @@ function _decodePoly(enc){
 }
 // Google JS API経由のルート検索（NAS失敗時のフォールバック）
 function _routeReq(origin,dest,waypoints,noHwy){
-  var isCustom=cDay==='custom';
   return{origin,destination:dest,waypoints:waypoints||[],
     travelMode:google.maps.TravelMode.DRIVING,
-    avoidFerries:true,avoidHighways:isCustom?!!noHwy:false,avoidTolls:!!noHwy};
+    avoidFerries:true,avoidHighways:!!noHwy,avoidTolls:!!noHwy};
 }
 function _fallbackRoute1to1(ds,chunk,delay){
   for(let k=0;k<chunk.length-1;k++){
     const a=chunk[k],b=chunk[k+1];
     setTimeout(()=>{
-      ds.route(_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],a.noHwy||b.noHwy),(r,s)=>{
-        if(s==='OK')_drawRoute(r);
+      var _fNoHwy=a.noHwy||b.noHwy;
+      ds.route(_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],_fNoHwy),(r,s)=>{
+        if(s==='OK')_drawRoute(r,_fNoHwy);
       });
     },delay+k*1000);
   }
@@ -591,10 +620,10 @@ function fetchGoogleRoute(stops){
       var avoid=a.noHwy?'tolls|highways':'';
       setTimeout(function(){
         _nasRoute({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],avoid,function(d){
-          if(d)_nasDrawRoute(d);
+          if(d)_nasDrawRoute(d,a.noHwy);
           else{
             var ds=new google.maps.DirectionsService();
-            ds.route(_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],a.noHwy),function(r,s){if(s==='OK')_drawRoute(r);});
+            ds.route(_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],a.noHwy),function(r,s){if(s==='OK')_drawRoute(r,a.noHwy);});
           }
         });
       },k*500);
@@ -623,15 +652,15 @@ function fetchGoogleRoute(stops){
       const origin={lat:s[0].lat,lng:s[0].lng};
       const dest={lat:s[s.length-1].lat,lng:s[s.length-1].lng};
       const wp=s.slice(1,-1).map(p=>({lat:p.lat,lng:p.lng}));
-      var avoid=ch.noHwy?'tolls':'';
+      var avoid=ch.noHwy?'tolls|highways':'';
       console.log('[Route] chunk '+idx+'/'+chunks.length+': '+s[0].name+' → '+s[s.length-1].name);
       _nasRoute(origin,dest,wp,avoid,function(d){
-        if(d)_nasDrawRoute(d);
+        if(d)_nasDrawRoute(d,ch.noHwy);
         else{
           var ds=new google.maps.DirectionsService();
           var gWp=s.slice(1,-1).map(p=>({location:{lat:p.lat,lng:p.lng},stopover:true}));
           ds.route(_routeReq(origin,dest,gWp,ch.noHwy),function(r,st){
-            if(st==='OK')_drawRoute(r);
+            if(st==='OK')_drawRoute(r,ch.noHwy);
             else _fallbackRoute1to1(ds,s,0);
           });
         }
@@ -665,7 +694,7 @@ function toggleNight(){nightMode=!nightMode;if(map)map.setOptions({styles:mapSty
 function initMap(){
   if(map)return;
   _apiMaps++;
-  fetch(NAS_API+'/api/usage/increment',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"maps":1}',signal:AbortSignal.timeout(5000)}).catch(function(){});
+  _nf(NAS_API+'/api/usage/increment',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"maps":1}',signal:AbortSignal.timeout(5000)}).catch(function(){});
   map=new google.maps.Map(document.getElementById('map'),{
     center:{lat:35.69,lng:139.84},zoom:16,maxZoom:22,
     isFractionalZoomEnabled:true,
@@ -716,12 +745,20 @@ function updateMap(lat,lng,stops,nI){
     const _routeNoHwy=nI===0&&curStop.startNoHwy!==undefined?curStop.startNoHwy:curStop.noHwy;
     var _rtAvoid=_routeNoHwy?'tolls|highways':'';
     _nasRoute({lat:lat,lng:lng},{lat:tS.lat,lng:tS.lng},[],_rtAvoid,function(d){
-      if(d)_nasDrawRoute(d);
-      else{
+      if(d){
+        _nasDrawRoute(d,_routeNoHwy);
+        // リルート用にパス保存
+        try{_routePath=_decodePoly(d.routes[0].overview_polyline.points);}catch(e){_routePath=[];}
+      } else{
         var ds=new google.maps.DirectionsService();
         ds.route({origin:{lat,lng},destination:{lat:tS.lat,lng:tS.lng},
           travelMode:google.maps.TravelMode.DRIVING,avoidFerries:true,
-          avoidHighways:!!_routeNoHwy,avoidTolls:!!_routeNoHwy},(r,s)=>{if(s==='OK')_drawRoute(r);});
+          avoidHighways:!!_routeNoHwy,avoidTolls:!!_routeNoHwy},(r,s)=>{
+          if(s==='OK'){
+            _drawRoute(r,_routeNoHwy);
+            try{_routePath=r.routes[0].overview_path.map(function(p){return{lat:p.lat(),lng:p.lng()};});}catch(e){_routePath=[];}
+          }
+        });
       }
     });
     // Full route: all stops
@@ -939,9 +976,19 @@ function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 
 // === 交通情報 ===
 const NAS_API='https://as5304t-c025.tail5d5c21.ts.net';
+const NAS_KEY='sstr2026_k4w4s4k1_zx4r';
+// NAS API認証付きfetch
+function _nf(url,opts){
+  opts=opts||{};
+  if(!opts.headers)opts.headers={};
+  if(typeof opts.headers==='object'&&!Array.isArray(opts.headers))opts.headers['X-API-Key']=NAS_KEY;
+  return fetch(url,opts);
+}
+// NAS Audio URL（認証キー付き）
+function _nasAudio(path){return NAS_API+path+(path.indexOf('?')>=0?'&':'?')+'key='+NAS_KEY;}
 const OWM_KEY='58130931e870f8c89a6eb88eaa5b525c';
 // NASからAPI使用量を取得
-fetch(NAS_API+'/api/usage',{signal:AbortSignal.timeout(5000)}).then(function(r){return r.json();}).then(function(d){_apiMaps=d.maps||0;_apiDir=d.directions||0;}).catch(function(){});
+_nf(NAS_API+'/api/usage',{signal:AbortSignal.timeout(5000)}).then(function(r){return r.json();}).then(function(d){_apiMaps=d.maps||0;_apiDir=d.directions||0;}).catch(function(){});
 let _rainLayer=null,_rainOn=false;
 let _trafficReports=[];
 let _trafficMarkers=[];
@@ -950,7 +997,7 @@ let _weatherMarkers=[];
 let _lastRainNotify=0;
 let _rainEffect=null;
 function fetchWeather(){
-  fetch(NAS_API+'/api/weather',{signal:AbortSignal.timeout(5000)})
+  _nf(NAS_API+'/api/weather',{signal:AbortSignal.timeout(5000)})
     .then(function(r){return r.json();})
     .then(function(d){
       _weatherData=d.points||[];
@@ -1018,7 +1065,7 @@ setInterval(fetchWeather,300000);
 const _trafficIcons={accident:'🚨',closure:'⛔',police:'👮',construction:'🚧',other:'⚠️'};
 const _trafficLabels={accident:'事故',closure:'通行止め',police:'取り締まり',construction:'工事',other:'その他'};
 function fetchTraffic(){
-  fetch(NAS_API+'/api/traffic',{signal:AbortSignal.timeout(5000)})
+  _nf(NAS_API+'/api/traffic',{signal:AbortSignal.timeout(5000)})
     .then(r=>r.json())
     .then(d=>{const prev=_trafficReports.length;_trafficReports=d;showTrafficOnMap();if(gLat&&d.length>prev){const newest=d[d.length-1];const dist=dK(gLat,gLng,newest.lat,newest.lng);if(dist<30)spk('この先、'+(_trafficLabels[newest.type]||'')+'の情報があるのだ。'+(newest.memo||''),true);}})
     .catch(()=>{});
@@ -1040,7 +1087,7 @@ function showTrafficOnMap(){
 function submitReport(type){
   if(!gLat){alert('GPS未取得');return;}
   const memo=prompt(_trafficLabels[type]+' メモ（任意）：')||'';
-  fetch(NAS_API+'/api/report',{method:'POST',headers:{'Content-Type':'application/json'},
+  _nf(NAS_API+'/api/report',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({lat:gLat,lng:gLng,type,memo}),signal:AbortSignal.timeout(5000)})
     .then(r=>r.json())
     .then(()=>{spk(_trafficLabels[type]+'情報を共有しました',true);fetchTraffic();})
@@ -1118,7 +1165,7 @@ function _startGps(gpsBox,_dotInterval){
     var _wavDone=false;
     var _waitWav=setInterval(function(){
       if(_wavDone)return;
-      fetch(NAS_API+'/api/voice/plan_'+encodeURIComponent(_myName),{signal:AbortSignal.timeout(3000)})
+      _nf(NAS_API+'/api/voice/plan_'+encodeURIComponent(_myName),{signal:AbortSignal.timeout(3000)})
         .then(function(r){
           if(r.ok&&!_wavDone){
             _wavDone=true;
@@ -1127,7 +1174,7 @@ function _startGps(gpsBox,_dotInterval){
             gpsBox.remove();
             if(appBgm)appBgm.volume=0.1;
             _zundaShow(_myName+'さん、ツーリングプランを選択してほしいのだ！');
-            var pa=new Audio(NAS_API+'/api/voice/plan_'+encodeURIComponent(_myName));
+            var pa=new Audio(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)));
             pa.volume=0.9;pa.playbackRate=_voiceSpeed;
             pa.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);};
             pa.play().catch(function(){});
@@ -1154,11 +1201,11 @@ function _startGps(gpsBox,_dotInterval){
 function _genWelcomeVoice(name){
   var hdr={'Content-Type':'application/json; charset=utf-8'};
   // プラン選択用WAV → 完了後におかえり用WAV
-  fetch(NAS_API+'/api/voice/generate',{method:'POST',headers:hdr,
+  _nf(NAS_API+'/api/voice/generate',{method:'POST',headers:hdr,
     body:JSON.stringify({text:name+'さん、ツーリングプランを選択してほしいのだ！',key:'plan_'+name}),
     signal:AbortSignal.timeout(30000)})
   .then(function(){
-    return fetch(NAS_API+'/api/voice/generate',{method:'POST',headers:hdr,
+    return _nf(NAS_API+'/api/voice/generate',{method:'POST',headers:hdr,
       body:JSON.stringify({text:name+'さん、おかえりなのだ！',key:'welcome_'+name}),
       signal:AbortSignal.timeout(30000)});
   }).catch(function(){});
@@ -1169,14 +1216,14 @@ var _myName=localStorage.getItem('_riderName')||'';
 var _nasPlansCache=null;// NASから取得したプラン（null=未取得）
 function _saveToNas(){
   if(!_myName)return;
-  fetch(NAS_API+'/api/userdata/'+encodeURIComponent(_myName),{method:'POST',
+  _nf(NAS_API+'/api/userdata/'+encodeURIComponent(_myName),{method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({isAdmin:_isAdmin}),
     signal:AbortSignal.timeout(5000)}).catch(function(){});
 }
 function _loadPlans(cb){
   if(!_myName){cb([]);return;}
-  fetch(NAS_API+'/api/plans/'+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
+  _nf(NAS_API+'/api/plans/'+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
   .then(function(r){return r.json();})
   .then(function(d){
     var plans=d.plans||[];
@@ -1191,7 +1238,7 @@ function _savePlans(plans){
   if(!_myName)return;
   _nasPlansCache=plans;
   localStorage.setItem('_plans_'+_myName,JSON.stringify(plans));
-  fetch(NAS_API+'/api/plans/'+encodeURIComponent(_myName),{method:'POST',
+  _nf(NAS_API+'/api/plans/'+encodeURIComponent(_myName),{method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({plans:plans}),
     signal:AbortSignal.timeout(10000)}).catch(function(){});
@@ -1199,7 +1246,7 @@ function _savePlans(plans){
 // NASからユーザーデータ復元（起動時）
 function _restoreFromNas(){
   if(!_myName)return;
-  fetch(NAS_API+'/api/userdata/'+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
+  _nf(NAS_API+'/api/userdata/'+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
   .then(function(r){if(!r.ok)throw '';return r.json();})
   .then(function(d){
     if(d.isAdmin)_isAdmin=true;
@@ -1211,13 +1258,13 @@ _restoreFromNas();
 var _riderMarkers={};
 function sendMyLocation(){
   if(!gLat||!_myName)return;
-  fetch(NAS_API+'/api/location',{method:'POST',headers:{'Content-Type':'application/json'},
+  _nf(NAS_API+'/api/location',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({name:_myName,lat:gLat,lng:gLng,speed:gSpeed,heading:gHeading||0}),
     signal:AbortSignal.timeout(5000)}).catch(function(){});
 }
 function fetchRiderLocations(){
   if(!_myName)return;
-  fetch(NAS_API+'/api/locations',{signal:AbortSignal.timeout(5000)})
+  _nf(NAS_API+'/api/locations',{signal:AbortSignal.timeout(5000)})
     .then(function(r){return r.json();})
     .then(function(locs){
       if(!map)return;
@@ -1281,8 +1328,21 @@ function _showSettings(){
       <button onclick="var n=document.getElementById('settingsName').value.trim();if(n){_myName=n;localStorage.setItem('_riderName',n);_genWelcomeVoice(n);}document.getElementById('settingsPanel').remove();rnd();" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:10px;color:#000;font-size:14px;font-weight:800;cursor:pointer;">保存</button>
       <button onclick="document.getElementById('settingsPanel').remove();" style="flex:1;background:none;border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--txt);font-size:14px;cursor:pointer;">閉じる</button>
     </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <button onclick="_deleteUser()" style="width:100%;background:none;border:1px solid var(--red);border-radius:8px;padding:10px;color:var(--red);font-size:13px;cursor:pointer;">🗑 ユーザーデータを削除</button>
+    </div>
   `;
   document.body.appendChild(p);_navPush('settings',function(){p.remove();});
+}
+function _deleteUser(){
+  if(!confirm('ライダー名・プラン・フレンドなど全てのデータを削除します。よろしいですか？'))return;
+  if(!confirm('本当に削除しますか？この操作は取り消せません。'))return;
+  // NASから削除
+  if(_myName)_nf(NAS_API+'/api/userdata/'+encodeURIComponent(_myName),{method:'DELETE',headers:{'X-API-Key':NAS_KEY}}).catch(function(){});
+  // ローカル削除
+  localStorage.clear();
+  sessionStorage.clear();
+  location.reload();
 }
 var _voiceSpeed=parseFloat(localStorage.getItem('_voiceSpeed')||'1.2');
 function _setSpeed(s){_voiceSpeed=s;localStorage.setItem('_voiceSpeed',s);}
@@ -1437,7 +1497,7 @@ const ORBIS=[
 ];
 let _orbisState={};// {index: 'none'|'far'|'near'|'passed'}
 // NASからオービスデータを取得してマージ
-fetch(NAS_API+'/api/orbis',{signal:AbortSignal.timeout(10000)}).then(r=>r.json()).then(d=>{
+_nf(NAS_API+'/api/orbis',{signal:AbortSignal.timeout(10000)}).then(r=>r.json()).then(d=>{
   if(d.cameras&&d.cameras.length>0){
     var existing=ORBIS.map(o=>o.lat.toFixed(3)+','+o.lng.toFixed(3));
     var added=0;
@@ -1483,7 +1543,7 @@ var _turnVoiceKeys={'右':'right','左':'left','斜め右':'sright','斜め左':
 function _playTurnVoice(dir,urgent){
   var key=_turnVoiceKeys[dir]||'right';
   var wavKey=urgent?'turn_50_'+key:'turn_200_'+key;
-  var a=new Audio(NAS_API+'/api/voice/'+wavKey);
+  var a=new Audio(_nasAudio('/api/voice/'+wavKey));
   a.volume=0.9;a.playbackRate=_voiceSpeed;
   if(appBgm&&!_bgmFading)appBgm.volume=0.05;
   _zundaShow(urgent?'まもなく'+dir+'なのだ！':'200メートル先、'+dir+'なのだ。');
@@ -1676,7 +1736,7 @@ let roadDist=null,lastRoadDistCI=-1;
 var roadDur=null;// 所要時間（秒）
 function fetchRoadDist(lat,lng,stop){
   try{
-    _nasRoute({lat:lat,lng:lng},{lat:stop.lat,lng:stop.lng},[],stop.noHwy?'tolls':'',function(d){
+    _nasRoute({lat:lat,lng:lng},{lat:stop.lat,lng:stop.lng},[],stop.noHwy?'tolls|highways':'',function(d){
       if(d&&d.routes&&d.routes[0]){
         roadDist=d.routes[0].legs.reduce(function(s,l){return s+l.distance.value;},0)/1000;
         roadDur=d.routes[0].legs.reduce(function(s,l){return s+l.duration.value;},0);
@@ -1711,6 +1771,7 @@ function onGpsUpdate(p,announce_it){
   checkDistAnnounce();
   checkFuel();
   checkRest();
+  _checkReroute();
   // Throttle everything else to 5 seconds
   const now=Date.now();
   if(!announce_it && now-lastUpdate<5000){pendingPos=p;return;}
@@ -2234,7 +2295,7 @@ function _openMapPicker(sid){
     _pickedName='';
     var okBtn=document.getElementById('mapPickerOk');
     if(okBtn){okBtn.disabled=true;okBtn.textContent='取得中...';}
-    fetch(NAS_API+'/api/placename?lat='+_pickedLat+'&lng='+_pickedLng,{signal:AbortSignal.timeout(10000)})
+    _nf(NAS_API+'/api/placename?lat='+_pickedLat+'&lng='+_pickedLng,{signal:AbortSignal.timeout(10000)})
     .then(function(r){return r.json();})
     .then(function(d){
       _pickedName=d.name||_pickedLat.toFixed(4)+', '+_pickedLng.toFixed(4);
@@ -2450,10 +2511,10 @@ function _confirmSavePlan(){
   }
   _savePlans(plans);
   // WAV事前生成（バックグラウンド）
-  fetch(NAS_API+'/api/voice/generate',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
+  _nf(NAS_API+'/api/voice/generate',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
     body:JSON.stringify({text:name+'が選択されたのだ！',key:'selected_'+name}),
     signal:AbortSignal.timeout(15000)}).catch(function(){});
-  var _psAudio=new Audio(NAS_API+'/api/voice/plan_saved');
+  var _psAudio=new Audio(_nasAudio('/api/voice/plan_saved'));
   _psAudio.volume=0.9;_psAudio.playbackRate=_voiceSpeed;
   _zundaShow('プランを保存したのだ！');_zundaMouthStart();
   _psAudio.onended=function(){_zundaMouthStop();_zundaHide();};
@@ -2474,7 +2535,7 @@ var _customPlanName='';
 // === フレンド管理 ===
 function _loadFriends(){
   var fl=document.getElementById('friendsList');if(!fl)return;
-  fetch(NAS_API+'/api/friends?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
+  _nf(NAS_API+'/api/friends?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
   .then(function(r){return r.json();})
   .then(function(d){
     if(d.friends&&d.friends.length>0){
@@ -2493,7 +2554,7 @@ function _addFriend(){
   var input=document.getElementById('addFriendName');
   var name=input?input.value.trim():'';
   if(!name){alert('フレンド名を入力してください');return;}
-  fetch(NAS_API+'/api/friends/add',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
+  _nf(NAS_API+'/api/friends/add',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
     body:JSON.stringify({name:_myName,friend:name}),signal:AbortSignal.timeout(5000)})
   .then(function(r){return r.json();})
   .then(function(d){
@@ -2502,21 +2563,21 @@ function _addFriend(){
 }
 function _removeFriend(friend){
   if(!confirm(friend+'さんをフレンドから削除しますか？'))return;
-  fetch(NAS_API+'/api/friends/remove',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
+  _nf(NAS_API+'/api/friends/remove',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
     body:JSON.stringify({name:_myName,friend:friend}),signal:AbortSignal.timeout(5000)})
   .then(function(){_loadFriends();}).catch(function(){});
 }
 function _sharePlan(idx){
   var plans=(_nasPlansCache||JSON.parse(localStorage.getItem('_plans_'+_myName)||'[]'));
   var p=plans[idx];if(!p)return;
-  fetch(NAS_API+'/api/friends?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
+  _nf(NAS_API+'/api/friends?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
   .then(function(r){return r.json();})
   .then(function(d){
     if(!d.friends||d.friends.length===0){alert('フレンドがいません。設定からフレンドを追加してください。');return;}
     var friend=prompt('共有先のフレンド名:\n'+d.friends.join(', '));
     if(!friend)return;
     if(!d.friends.includes(friend)){alert(friend+'さんはフレンドではありません');return;}
-    fetch(NAS_API+'/api/plans/share',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
+    _nf(NAS_API+'/api/plans/share',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
       body:JSON.stringify({from:_myName,to:friend,plan:{name:p.name,date:p.date,stops:p.stops}}),
       signal:AbortSignal.timeout(5000)})
     .then(function(){spk(friend+'さんにプランを共有したのだ！',true);alert('共有しました！');})
@@ -2616,7 +2677,7 @@ function startApp(mode){
   _navPush('mainApp',function(){goHome();});
   playAppBgm();
 
-  const titles={sstr:'SSTR 2026',nippon1:'にっぽん応援ツーリング 2026 ①',nippon2:'にっぽん応援ツーリング 2026 ②',custom:_customPlanName||'カスタムプラン'};
+  const titles={sstr:'SSTR',nippon1:'にっぽん応援ツーリング 2026 ①',nippon2:'にっぽん応援ツーリング 2026 ②',custom:_customPlanName||'カスタムプラン'};
   const title=titles[mode]||'SSTR 2026';
 
   // 中間画面
@@ -2669,7 +2730,7 @@ function startApp(mode){
       a.play().catch(function(){a.onerror();});
     } else if(mode==='custom'){
       // カスタム: NAS WAV（保存時に事前生成済み）
-      var a=new Audio(NAS_API+'/api/voice/'+encodeURIComponent('selected_'+title));
+      var a=new Audio(_nasAudio('/api/voice/'+encodeURIComponent('selected_'+title)));
       _currentAudio=a;a.volume=0.9;a.playbackRate=_voiceSpeed;
       a.onended=_done;a.onerror=function(){_done();spk(title+'が選択されたのだ。',true,cb);};
       a.play().catch(function(){_done();spk(title+'が選択されたのだ。',true,cb);});
@@ -2712,7 +2773,7 @@ function _startSplashAudio(){
       function _playPlanSelect(){
         _zundaShow(_myName+'さん、ツーリングプランを選ぶのだ！');
         function _psFallback(){spk(_myName+'さん、ツーリングプランを選ぶのだ！',true,function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();});}
-        var _planWav=new Audio(NAS_API+'/api/voice/plan_'+encodeURIComponent(_myName));
+        var _planWav=new Audio(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)));
         _planWav.volume=0.9;_planWav.playbackRate=_voiceSpeed;
         _planWav.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();};
         _planWav.onerror=_psFallback;
@@ -2722,7 +2783,7 @@ function _startSplashAudio(){
         // アプリ起動1回目: おかえり → プラン選択
         sessionStorage.setItem('_saidOkaeri','1');
         _zundaShow(_myName+'さん、おかえりなのだ！');
-        var _welcomeWav=new Audio(NAS_API+'/api/voice/welcome_'+encodeURIComponent(_myName));
+        var _welcomeWav=new Audio(_nasAudio('/api/voice/welcome_'+encodeURIComponent(_myName)));
         _welcomeWav.volume=0.9;_welcomeWav.playbackRate=_voiceSpeed;
         _welcomeWav.onended=function(){_playPlanSelect();};
         _welcomeWav.onerror=function(){
@@ -2739,7 +2800,7 @@ function _startSplashAudio(){
     } else {
       // 初回: 初めまして → 名前入力を促す
       _zundaShow('初めましてなのだ！');
-      var _hajimeAudio=new Audio(NAS_API+'/api/voice/hajimemashite');
+      var _hajimeAudio=new Audio(_nasAudio('/api/voice/hajimemashite'));
       _hajimeAudio.volume=0.9;_hajimeAudio.playbackRate=_voiceSpeed;
       _zundaMouthStart();
       _hajimeAudio.onended=function(){
@@ -2780,19 +2841,22 @@ function _showCards(){
   if(adminPanel)adminPanel.remove();
   var exitBtn=document.getElementById('adminExitBtn');
   if(exitBtn)exitBtn.style.display=_isAdmin?'block':'none';
+  var cc0=document.getElementById('cardContainer');
+  if(cc0)cc0.style.marginTop=(_isAdmin&&show)?'-30px':'-170px';
   if(_isAdmin&&show){
     var d2='none';
     var cs2=document.getElementById('cardSstr');if(cs2)cs2.style.display=d2;
     var cn12=document.getElementById('cardNippon1');if(cn12)cn12.style.display=d2;
     var cn22=document.getElementById('cardNippon2');if(cn22)cn22.style.display=d2;
     var cc2=document.getElementById('cardCreate');if(cc2)cc2.style.display=d2;
+    var cpc2=document.getElementById('customPlanCards');if(cpc2)cpc2.style.display=d2;
     var ap=document.createElement('div');ap.id='adminVersionPanel';
-    ap.style.cssText='width:100%;background:rgba(20,30,50,0.9);border:2px solid var(--ylw);border-radius:16px;padding:18px;margin-top:20px;';
+    ap.style.cssText='width:100%;background:rgba(20,30,50,0.9);border:2px solid var(--ylw);border-radius:16px;padding:18px;margin-top:12px;';
     ap.innerHTML='<div style="font-size:16px;font-weight:900;color:var(--ylw);margin-bottom:14px;">🔑 システム情報</div>'
       +'<div id="adminVersionList" style="font-size:15px;color:var(--txt);"></div>'
 ;
-    var cardArea=document.querySelector('#cardCreate');
-    if(cardArea&&cardArea.parentElement)cardArea.parentElement.insertBefore(ap,cardArea);
+    var cardArea=document.getElementById('riderNameBox');
+    if(cardArea&&cardArea.parentElement)cardArea.parentElement.appendChild(ap);
     // 各データソースのバージョンを取得
     var vl=document.getElementById('adminVersionList');
     function _fmtDate(dateStr){
@@ -2814,20 +2878,20 @@ function _showCards(){
     _addRow('Maps Key','...'+document.querySelector('script[src*=maps]').src.split('key=')[1].slice(-6),'-',null);
     _addRow('OWM Key','...'+OWM_KEY.slice(-6),'-',null);
     // NASデータ非同期取得（maxAgeH: 超えたら黄色、2倍で赤）
-    fetch(NAS_API+'/api/usage',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
+    _nf(NAS_API+'/api/usage',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
       _addRow('APIカウンター','Maps:'+d.maps+' Dir:'+d.directions,d.timestamp,6);// 6h超で黄色
     }).catch(()=>{_addRow('APIカウンター','取得失敗','-',null);});
-    fetch(NAS_API+'/api/orbis',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
-      _addRow('オービス(OSM)',d.count+'台',d.updated,48);// 48h超で黄色
+    _nf(NAS_API+'/api/orbis',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
+      _addRow('オービス(OSM)',d.count+'台',d.updated,168);// 7日超で黄色
     }).catch(()=>{_addRow('オービス(OSM)','取得失敗','-',null);});
-    fetch(NAS_API+'/api/weather',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
+    _nf(NAS_API+'/api/weather',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
       var pts=d.points?d.points.length:(d.length||0);
       _addRow('天気データ',pts+'地点',d.updated||new Date().toISOString(),1);
     }).catch(()=>{_addRow('天気データ','取得失敗','-',null);});
-    fetch(NAS_API+'/api/locations',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
+    _nf(NAS_API+'/api/locations',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
       _addRow('ライダー位置',d.length+'人','-',null);
     }).catch(()=>{});
-    fetch(NAS_API+'/api/voice/hajimemashite',{method:'HEAD',signal:AbortSignal.timeout(5000)}).then(r=>{
+    _nf(NAS_API+'/api/voice/hajimemashite',{method:'HEAD',signal:AbortSignal.timeout(5000)}).then(r=>{
       _addRow('VOICEVOX',r.ok?'稼働中':'停止','-',null);
     }).catch(()=>{_addRow('VOICEVOX','接続失敗','-',null);});
     return;
@@ -2840,7 +2904,7 @@ function _showCards(){
   // 保存済みカスタムプラン表示
   var cpContainer=document.getElementById('customPlanCards');
   if(cpContainer)cpContainer.remove();
-  if(show){
+  if(show&&!_isAdmin){
     var plans=(_nasPlansCache||JSON.parse(localStorage.getItem('_plans_'+_myName)||'[]'));
     if(plans.length>0){
       var cp=document.createElement('div');cp.id='customPlanCards';
@@ -2863,7 +2927,7 @@ function _showCards(){
   var spContainer=document.getElementById('sharedPlanCards');
   if(spContainer)spContainer.remove();
   if(show){
-    fetch(NAS_API+'/api/plans/shared?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
+    _nf(NAS_API+'/api/plans/shared?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.plans&&d.plans.length>0){
@@ -2904,7 +2968,7 @@ _showCards();
 let _cloudStats=null;
 function fetchCloudStats(){
   if(!_isAdmin)return;
-  fetch('https://as5304t-c025.tail5d5c21.ts.net/api/usage',{signal:AbortSignal.timeout(5000)})
+  _nf(NAS_API+'/api/usage',{signal:AbortSignal.timeout(5000)})
     .then(r=>r.json())
     .then(d=>{_cloudStats=d;_apiMaps=d.maps;_apiDir=d.directions;_apiSave();})
     .catch(()=>{

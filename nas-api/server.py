@@ -1,9 +1,26 @@
 #!/usr/bin/env python3
-"""SSTR API Server — NAS集中管理版"""
-import json,os,time,hashlib,urllib.parse,urllib.request
-from flask import Flask,jsonify,request,send_file
+"""SSTR API Server — NAS集中管理版（セキュリティ強化）"""
+import json,os,time,hashlib,urllib.parse,urllib.request,functools,re,secrets
+from flask import Flask,jsonify,request,send_file,abort
 app=Flask(__name__)
 BD=os.path.dirname(os.path.abspath(__file__))
+
+# === セキュリティ設定 ===
+API_KEY="sstr2026_k4w4s4k1_zx4r"
+
+# レート制限: IP毎に1分間のリクエスト数を制限
+_rate_limit={}
+_rate_max=120  # 1分あたり最大リクエスト数
+_rate_ban={}   # BANされたIP
+
+# ファイル名サニタイズ（パストラバーサル防止）
+def safe_name(name):
+    name=re.sub(r'[/\\\.]{2,}','',name)  # ../防止
+    name=re.sub(r'[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3000-\u303Fー\-]','_',name)
+    return name[:100]  # 最大100文字
+
+# リクエストサイズ制限
+app.config['MAX_CONTENT_LENGTH']=1*1024*1024  # 1MB
 
 # === ディレクトリ・ファイル ===
 VD=os.path.join(BD,"voices");os.makedirs(VD,exist_ok=True)
@@ -30,15 +47,42 @@ def sj(p,d):
 def cors(r):
     r.headers["Access-Control-Allow-Origin"]="*"
     r.headers["Access-Control-Allow-Methods"]="GET,POST,DELETE,PUT"
-    r.headers["Access-Control-Allow-Headers"]="Content-Type"
+    r.headers["Access-Control-Allow-Headers"]="Content-Type,X-API-Key"
     if request.method=="OPTIONS":r.status_code=204
     return r
+
+@app.before_request
+def security_check():
+    ip=request.remote_addr
+    # BANチェック（5分間）
+    if ip in _rate_ban and time.time()-_rate_ban[ip]<300:
+        return jsonify({"error":"rate limited"}),429
+    # OPTIONSは通す
+    if request.method=="OPTIONS":return
+    # ヘルスチェックは認証不要
+    if request.path=="/":return
+    # APIキー認証
+    key=request.headers.get("X-API-Key") or request.args.get("key")
+    if key!=API_KEY:
+        # 不正アクセスログ
+        print("[SECURITY] Unauthorized: %s %s from %s"%(request.method,request.path,ip))
+        return jsonify({"error":"unauthorized"}),401
+    # レート制限
+    now=time.time()
+    if ip not in _rate_limit:_rate_limit[ip]=[]
+    _rate_limit[ip]=[t for t in _rate_limit[ip] if now-t<60]
+    _rate_limit[ip].append(now)
+    if len(_rate_limit[ip])>_rate_max:
+        _rate_ban[ip]=now
+        print("[SECURITY] Rate limit exceeded, banned: %s"%ip)
+        return jsonify({"error":"rate limited"}),429
 
 # =============================================
 # === ユーザーデータ管理 ===
 # =============================================
 @app.route("/api/userdata/<name>",methods=["GET"])
 def get_userdata(name):
+    name=safe_name(name)
     fp=os.path.join(UD,name+".json")
     if not os.path.exists(fp):return jsonify({"error":"not found"}),404
     return jsonify(lj(fp,{}))
@@ -46,6 +90,7 @@ def get_userdata(name):
 @app.route("/api/userdata/<name>",methods=["POST","PUT","OPTIONS"])
 def save_userdata(name):
     if request.method=="OPTIONS":return "",204
+    name=safe_name(name)
     d=request.get_json(force=True)
     if not d:return jsonify({"error":"no data"}),400
     fp=os.path.join(UD,name+".json")
@@ -58,6 +103,7 @@ def save_userdata(name):
 
 @app.route("/api/userdata/<name>",methods=["DELETE"])
 def delete_userdata(name):
+    name=safe_name(name)
     fp=os.path.join(UD,name+".json")
     if os.path.exists(fp):os.remove(fp)
     return jsonify({"ok":True})
@@ -212,6 +258,7 @@ def generate_voice():
 @app.route("/api/voice/<path:key>",methods=["GET","HEAD"])
 def get_voice(key):
     key=urllib.parse.unquote(key)
+    key=safe_name(key)
     fp=os.path.join(VD,key+".wav")
     if os.path.exists(fp):return send_file(fp,mimetype="audio/wav")
     return jsonify({"error":"not found"}),404
@@ -308,6 +355,7 @@ def get_shared_plans():
 # =============================================
 @app.route("/api/plans/<name>",methods=["GET"])
 def get_plans(name):
+    name=safe_name(name)
     fp=os.path.join(UD,name+".json")
     ud=lj(fp,{})
     return jsonify({"plans":ud.get("customPlans",[])})
@@ -315,6 +363,7 @@ def get_plans(name):
 @app.route("/api/plans/<name>",methods=["POST","OPTIONS"])
 def save_plans(name):
     if request.method=="OPTIONS":return "",204
+    name=safe_name(name)
     d=request.get_json(force=True)
     if not d or "plans" not in d:return jsonify({"error":"plans required"}),400
     fp=os.path.join(UD,name+".json")
