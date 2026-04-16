@@ -1,0 +1,3 @@
+# Always Freeアイドル回収対策: 毎時0分に1分間CPU負荷
+# インストール: sudo cp stress-keepalive /etc/cron.d/ && sudo chmod 644 /etc/cron.d/stress-keepalive
+0 * * * * root /usr/bin/stress-ng --cpu 1 --timeout 60s >/dev/null 2>&1

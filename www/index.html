@@ -286,7 +286,7 @@ if(localStorage.getItem('_reqChecked')&&!localStorage.getItem('_consentAgreed'))
     try{
       window._rtap=new Audio(_nasAudio('/api/voice/req_ok_tap'));
       var _rtap=window._rtap;
-      _rtap.volume=0.9;
+      _rtap.volume=1.0;
       var _rzi2=document.getElementById('reqZunda');var _rzm2=null;
       _rtap.onplay=function(){if(_rzi2)_rzm2=setInterval(function(){_rzi2.src=_rzi2.src.includes('close')?'zundamon_open.png':'zundamon_close.png';},150);};
       _rtap.onended=function(){if(_rzm2)clearInterval(_rzm2);if(_rzi2)_rzi2.src='zundamon_close.png';};
@@ -299,7 +299,7 @@ if(localStorage.getItem('_reqChecked')&&!localStorage.getItem('_consentAgreed'))
   try{
     window._rca=new Audio(_nasAudio('/api/voice/req_check'));
     var _rca=window._rca;
-    _rca.volume=0.9;
+    _rca.volume=1.0;
     var _rzi=document.getElementById('reqZunda');
     window._rzm=null;
     _rca.onplay=function(){
@@ -472,7 +472,7 @@ function selectMapZoom(zoom){
 }
 
 function setView(mode){
-  showMapMenu=false;vM=mode;lastRouteNI=-1;
+  showMapMenu=false;vM=mode;
   if(mode==='map'){
     initMap();
     const mw=document.getElementById('mapWrap');
@@ -526,6 +526,23 @@ function _distToRoute(lat,lng){
   }
   return minD;
 }
+// ルート上にスナップ: 最近接の線分上の点を返す。閾値(km)内ならスナップ、外ならnull
+function _snapToRoute(lat,lng,thresholdKm){
+  if(_routePath.length<2)return null;
+  var best=null,bestD=Infinity;
+  for(var i=0;i<_routePath.length-1;i++){
+    var a=_routePath[i],b=_routePath[i+1];
+    var dy=b.lat-a.lat,dx=b.lng-a.lng;
+    var len2=dy*dy+dx*dx;
+    var t=len2>0?((lat-a.lat)*dy+(lng-a.lng)*dx)/len2:0;
+    if(t<0)t=0;else if(t>1)t=1;
+    var sLat=a.lat+t*dy,sLng=a.lng+t*dx;
+    var d=dK(lat,lng,sLat,sLng);
+    if(d<bestD){bestD=d;best={lat:sLat,lng:sLng,dist:d};}
+  }
+  if(best&&best.dist<=thresholdKm)return best;
+  return null;
+}
 function _checkReroute(){
   if(!gLat||_routePath.length<2)return;
   var dist=_distToRoute(gLat,gLng);
@@ -533,10 +550,7 @@ function _checkReroute(){
   if(dist>_rerouteThreshold&&now-_lastRerouteTime>30000){
     _lastRerouteTime=now;
     console.log('[Reroute] Off route by '+dist.toFixed(2)+'km, rerouting...');
-    _stopAllAudio();
-    var _rrA=new Audio(new URL('voice/reroute.wav',window.location.href).href);
-    _currentAudio=_rrA;_rrA.volume=0.9;_rrA.playbackRate=_voiceSpeed;
-    _rrA.play().catch(function(){spk('ルートから外れたのだ。リルートするのだ。',true);});
+    spk('ルートから外れたのだ。リルートするのだ。',true);
     // ルートを再描画
     var st=STOPS[cDay];
     if(st){
@@ -553,7 +567,22 @@ function clearMap(){
   mStops.forEach(m=>m.setMap(null));mStops=[];
   mPolylines.forEach(p=>p.setMap(null));mPolylines=[];
 }
-var _turnPoints=[];// {lat,lng,dir:'右'|'左'|'斜め右'|'斜め左'|'Uターン',announced200:false,announced50:false}
+var _turnPoints=[];// {lat,lng,dir:'右'|'左'|'鋭角右'|'鋭角左'|'Uターン',announced200:false,announced50:false}
+var _turnPointsOld=[];
+function _resetTurnPoints(){_turnPointsOld=_turnPoints.slice();_turnPoints=[];}
+function _pushTurnPoint(lat,lng,dir){
+  for(var j=0;j<_turnPoints.length;j++){
+    if(dK(lat,lng,_turnPoints[j].lat,_turnPoints[j].lng)*1000<50)return;// 50m以内は重複スキップ
+  }
+  // 旧ポイントから近接マッチでアナウンス済みフラグを引き継ぐ（再アナウンス防止）
+  var a200=false,a50=false;
+  for(var k=0;k<_turnPointsOld.length;k++){
+    if(dK(lat,lng,_turnPointsOld[k].lat,_turnPointsOld[k].lng)*1000<50){
+      a200=_turnPointsOld[k].announced200;a50=_turnPointsOld[k].announced50;break;
+    }
+  }
+  _turnPoints.push({lat:lat,lng:lng,dir:dir,announced200:a200,announced50:a50});
+}
 function _isHwyStep(html){
   // ステップのinstructionsから高速道路/有料道路を判定
   if(!html)return false;
@@ -575,12 +604,10 @@ function _drawRoute(result,noHwy){
         var dir=null;
         if(step.maneuver==='turn-right')dir='右';
         else if(step.maneuver==='turn-left')dir='左';
-        else if(step.maneuver==='turn-slight-right'||step.maneuver==='fork-right'||step.maneuver==='ramp-right')dir='斜め右';
-        else if(step.maneuver==='turn-slight-left'||step.maneuver==='fork-left'||step.maneuver==='ramp-left')dir='斜め左';
         else if(step.maneuver==='turn-sharp-right')dir='鋭角右';
         else if(step.maneuver==='turn-sharp-left')dir='鋭角左';
         if(dir){
-          _turnPoints.push({lat:step.start_location.lat(),lng:step.start_location.lng(),dir:dir,announced200:false,announced50:false});
+          _pushTurnPoint(step.start_location.lat(),step.start_location.lng(),dir);
         }
       }
     });
@@ -637,12 +664,10 @@ function _nasDrawRoute(d,noHwy){
         var dir=null;
         if(step.maneuver==='turn-right')dir='右';
         else if(step.maneuver==='turn-left')dir='左';
-        else if(step.maneuver==='turn-slight-right'||step.maneuver==='fork-right'||step.maneuver==='ramp-right')dir='斜め右';
-        else if(step.maneuver==='turn-slight-left'||step.maneuver==='fork-left'||step.maneuver==='ramp-left')dir='斜め左';
         else if(step.maneuver==='turn-sharp-right')dir='鋭角右';
         else if(step.maneuver==='turn-sharp-left')dir='鋭角左';
         if(dir&&step.start_location){
-          _turnPoints.push({lat:step.start_location.lat,lng:step.start_location.lng,dir:dir,announced200:false,announced50:false});
+          _pushTurnPoint(step.start_location.lat,step.start_location.lng,dir);
         }
       }
     });
@@ -681,7 +706,7 @@ function _fallbackRoute1to1(ds,chunk,delay){
 }
 function fetchGoogleRoute(stops){
   if(stops.length<2)return;
-  _turnPoints=[];
+  _resetTurnPoints();
   // カスタムプラン: 区間ごとに個別ルート検索
   if(cDay==='custom'){
     for(let k=0;k<stops.length-1;k++){
@@ -766,6 +791,7 @@ function initMap(){
   _nf(NAS_API+'/api/usage/increment',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"maps":1}',signal:AbortSignal.timeout(5000)}).catch(function(){});
   map=new google.maps.Map(document.getElementById('map'),{
     center:{lat:35.69,lng:139.84},zoom:16,maxZoom:22,
+    mapId:'2e05890c66eed0edd93b1b2d',// ベクターマップ（setHeading対応）
     isFractionalZoomEnabled:true,
     disableDefaultUI:true,zoomControl:true,
     styles:mapStyles[nightMode?'night':'day']
@@ -784,13 +810,15 @@ function updateMap(lat,lng,stops,nI){
     mMe=new google.maps.Marker({map:map,zIndex:100,
       icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
         fillColor:'#00d4ff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,
-        rotation:gHeading||0}});
+        rotation:0}});
   }
-  mMe.setPosition({lat,lng});
+  // ルート上にスナップ(30m以内)
+  var _snap=_snapToRoute(lat,lng,_rerouteThreshold);
+  mMe.setPosition(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat,lng});
   if(gHeading!==null){
     mMe.setIcon({path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
       fillColor:'#00d4ff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,
-      rotation:gHeading});
+      rotation:0});
   }
   const tI=nI,tS=stops[tI];
   // Rebuild when nearest stop changes
@@ -845,8 +873,11 @@ function updateMap(lat,lng,stops,nI){
       });
     }
   }
-  // Center on user only in street zoom mode
-  if(zoomMode===0)map.panTo({lat,lng});
+  // Center on user only in street zoom mode (スナップ位置に合わせる)
+  if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat,lng});
+  // 近接のみヘディングアップ、エリア/全体は北固定
+  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);}
+  else map.setHeading(0);
 }
 
 let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
@@ -855,9 +886,11 @@ function applyZoomMode(){
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
-    // 最大ズーム・現在地中心
+    // 最大ズーム・現在地中心・ヘディングアップ
     map.setZoom(19);map.panTo({lat:gLat,lng:gLng});
+    if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
   } else if(zoomMode===1){
+    map.setHeading(0);// エリアは北固定
     // 3ストップ先まで収まるようfitBounds
     const bounds=new google.maps.LatLngBounds();
     bounds.extend({lat:gLat,lng:gLng});
@@ -865,6 +898,7 @@ function applyZoomMode(){
     map.fitBounds(bounds,{top:60,bottom:120,left:40,right:40});
   } else {
     // 全体ルート
+    map.setHeading(0);// 全体は北固定
     const bounds=new google.maps.LatLngBounds();
     bounds.extend({lat:gLat,lng:gLng});
     st.forEach(s=>bounds.extend({lat:s.lat,lng:s.lng}));
@@ -885,19 +919,56 @@ function sGoal(){tn(523,.15,'sine',0);tn(659,.15,'sine',.12);tn(784,.15,'sine',.
 function lBGM(e){const f=e.target.files[0];if(!f)return;if(bgm)bgm.pause();bgm=new Audio(URL.createObjectURL(f));bgm.volume=0.5;bgm.play();document.getElementById('bi').textContent='🎵 '+f.name;document.getElementById('bi').style.display='block';}
 const _spkQ=[];let _spkBusy=false;
 var _currentAudio=null;// 現在再生中のAudio要素
+var _audioGen=0;// 音声世代トークン: _stopAllAudio毎に+1、古い世代は再生しない
+// 新しい音声を _currentAudio にセットする時は必ずこれを通す（古い再生を確実に停止）
+function _setCurrentAudio(a){
+  if(_currentAudio&&_currentAudio!==a){try{_currentAudio.pause();_currentAudio.src='';}catch(e){}}
+  _currentAudio=a;
+}
 function _stopAllAudio(){
+  _audioGen++;
   _spkQ.length=0;_spkBusy=false;_spkCallback=null;
-  if(_currentAudio){try{_currentAudio.pause();}catch(e){}_currentAudio=null;}
+  if(_currentAudio){try{_currentAudio.pause();_currentAudio.src='';}catch(e){}_currentAudio=null;}
   _zundaMouthStop();_zundaHide();
   var _tts=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.TextToSpeech;
   if(_tts)_tts.stop().catch(function(){});
   else if('speechSynthesis'in window)speechSynthesis.cancel();
 }
+// WebAudio経由でWAV再生（iOSのautoplay制限を回避。AudioContextはタップでresume済）
+function _playWA(url,opts){
+  opts=opts||{};
+  var st={stopped:false,src:null,gain:null};
+  var h={_isWA:true,src:'',
+    pause:function(){st.stopped=true;if(st.src){try{st.src.stop();}catch(e){}}st.src=null;}
+  };
+  (function(){
+    try{if(aC.state!=='running')aC.resume();}catch(e){}
+    fetch(url,{cache:'no-store'}).then(function(r){
+      if(!r.ok)throw new Error('http '+r.status);
+      return r.arrayBuffer();
+    }).then(function(buf){
+      if(st.stopped)return null;
+      return aC.decodeAudioData(buf);
+    }).then(function(ab){
+      if(!ab||st.stopped)return;
+      var s=aC.createBufferSource();s.buffer=ab;
+      s.playbackRate.value=opts.rate||1.0;
+      var g=aC.createGain();g.gain.value=(opts.volume!=null?opts.volume:1.0);
+      s.connect(g);g.connect(aC.destination);
+      s.onended=function(){if(!st.stopped&&opts.onended)opts.onended();};
+      st.src=s;st.gain=g;s.start(0);
+    }).catch(function(e){
+      if(st.stopped)return;
+      if(opts.onerror)opts.onerror(e);
+    });
+  })();
+  return h;
+}
 // 音声再生ヘルパー: 前の音声を止めてから再生（重複防止）
 function _playOne(audio){
   if(_currentAudio&&_currentAudio!==audio){try{_currentAudio.pause();}catch(e){}}
   if(_spkBusy){_spkQ.length=0;_spkBusy=false;}// spkキューもクリア
-  _currentAudio=audio;
+  _setCurrentAudio(audio);
   return audio;
 }
 // ずんだもん音声マッピング
@@ -922,6 +993,9 @@ function _findZunda(t){
     if(dm>=1&&dm<=999)return 'voice/dist_'+dm+'m.wav';}}
   if(t.match(/約[\d.]+キロ先/)){var m4=t.match(/([\d.]+)キロ/);if(m4){var dk=Math.round(parseFloat(m4[1])*10);
     if(dk>=10&&dk<=6999)return 'voice/dist_'+dk+'t.wav';}}
+  if(t.match(/まもなく(右|左|斜め右|斜め左|鋭角右|鋭角左|Uターン)なのだ/)){var tmu=t.match(/まもなく(右|左|斜め右|斜め左|鋭角右|鋭角左|Uターン)/);if(tmu){var tku=_turnVoiceKeys[tmu[1]]||'right';return 'voice/turn_50_'+tku+'.wav';}}
+  if(t.match(/200メートル先、(右|左|斜め右|斜め左|鋭角右|鋭角左|Uターン)なのだ/)){var tm2=t.match(/、(右|左|斜め右|斜め左|鋭角右|鋭角左|Uターン)/);if(tm2){var tk2=_turnVoiceKeys[tm2[1]]||'right';return 'voice/turn_200_'+tk2+'.wav';}}
+  if(t.match(/ルートから外れた.*リルート/))return 'voice/reroute.wav';
   if(t.match(/雨の予報/))return 'voice/rain_ahead.wav';
   if(t.match(/SSTR.*選択/))return 'voice/sstr_selected.wav';
   if(t.match(/ツーリングプランを選ぶ/))return 'voice/splash_welcome.wav';
@@ -935,6 +1009,10 @@ function _findZunda(t){
   if(t.match(/2時間走ってる/))return 'voice/rest_2h.wav';
   if(t.match(/チェックインも忘れず/))return 'voice/checkin.wav';
   if(t.match(/まもなく.*なのだ/))return 'voice/approaching.wav';
+  if(t.match(/ルートから外れた/))return 'voice/reroute.wav';
+  if(t.match(/速度注意/))return 'voice/orbis_speed.wav';
+  if(t.match(/次の曲/))return 'voice/bgm_next.wav';
+  if(t.match(/前の曲/))return 'voice/bgm_prev.wav';
   return null;
 }
 var _zundaMouthInterval=null;
@@ -974,6 +1052,9 @@ var _spkCallback=null;// spk完了コールバック
 function _spkNext(){
   if(_spkQ.length===0){_spkBusy=false;_spkRestore();_zundaMouthStop();_zundaHide();if(_spkCallback){var cb=_spkCallback;_spkCallback=null;cb();}return;}
   _spkBusy=true;var t=_spkQ.shift();
+  // ターン案内テキストなら音声再生タイミングで矢印表示
+  var _tm=t.match(/^(?:まもなく|200メートル先、)(右|左|斜め右|斜め左|鋭角右|鋭角左|Uターン)なのだ/);
+  if(_tm){var _urgent=t.startsWith('まもなく');if(typeof _showTurnArrow==='function')_showTurnArrow(_tm[1],_urgent);}
   var zf=_findZunda(t);
   if(zf){
     _zundaShow(t);
@@ -981,16 +1062,17 @@ function _spkNext(){
     var localUrl=new URL(zf,window.location.href).href;
     var nasUrl=_nasAudio('/api/voice/'+zf.replace('voice/','').replace('.wav',''));
     var a=new Audio(localUrl);
-    _currentAudio=a;
-    a.volume=0.9;a.playbackRate=_voiceSpeed;
-    a.onended=function(){_currentAudio=null;_zundaMouthStop();_zundaHide();_spkNext();};
+    _setCurrentAudio(a);
+    a.volume=1.0;a.playbackRate=_voiceSpeed;
+    a.onended=function(){if(_currentAudio!==a)return;_currentAudio=null;_zundaMouthStop();_zundaHide();setTimeout(_spkNext,800);};
     a.onerror=function(){
+      if(_currentAudio!==a)return;// 二重発火防止
       // ローカル失敗→NASから再生
       var a2=new Audio(nasUrl);
-      _currentAudio=a2;a2.volume=0.9;a2.playbackRate=_voiceSpeed;
-      a2.onended=function(){_currentAudio=null;_zundaMouthStop();_zundaHide();_spkNext();};
-      a2.onerror=function(){_currentAudio=null;_spkFallback(t);};
-      a2.play().catch(function(){_currentAudio=null;_spkFallback(t);});
+      _setCurrentAudio(a2);a2.volume=1.0;a2.playbackRate=_voiceSpeed;
+      a2.onended=function(){if(_currentAudio!==a2)return;_currentAudio=null;_zundaMouthStop();_zundaHide();setTimeout(_spkNext,800);};
+      a2.onerror=function(){if(_currentAudio!==a2)return;_currentAudio=null;_spkFallback(t);};
+      a2.play().catch(function(){if(_currentAudio!==a2)return;_currentAudio=null;_spkFallback(t);});
     };
     a.play().catch(function(){a.onerror();});
     return;
@@ -998,35 +1080,49 @@ function _spkNext(){
   _spkFallback(t);
 }
 function _spkFallback(t){
-  // NAS VOICEVOXで動的生成を試みる
+  // NAS VOICEVOXで動的生成（最大3回リトライ、タイムアウト30秒）
   var key='dyn_'+encodeURIComponent(t).replace(/%/g,'').slice(0,60);
+  var gen=_audioGen;
   _zundaShow(t);
-  _nf(NAS_API+'/api/voice/generate',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({text:t,key:key}),signal:AbortSignal.timeout(10000)})
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(d.ok){
-      var a=new Audio(_nasAudio('/api/voice/'+key));
-      _currentAudio=a;a.volume=0.9;a.playbackRate=_voiceSpeed;
-      a.onended=function(){_currentAudio=null;_zundaMouthStop();_zundaHide();_spkNext();};
-      a.onerror=function(){_currentAudio=null;_spkTts(t);};
-      a.play().catch(function(){_spkTts(t);});
-    } else {_spkTts(t);}
-  }).catch(function(){_spkTts(t);});
+  function _tryGen(attempt){
+    if(gen!==_audioGen)return;// stale
+    _nf(NAS_API+'/api/voice/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text:t,key:key}),signal:AbortSignal.timeout(30000)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(gen!==_audioGen)return;
+      if(d&&d.ok){
+        var savedKey=d.key||key;// サーバー正規化後のキーを使う
+        var a=new Audio(_nasAudio('/api/voice/'+savedKey));
+        _setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
+        a.onended=function(){if(_currentAudio!==a)return;_currentAudio=null;_zundaMouthStop();_zundaHide();setTimeout(_spkNext,800);};
+        a.onerror=function(){if(_currentAudio!==a)return;_currentAudio=null;_spkTts(t);};
+        a.play().catch(function(){if(_currentAudio!==a)return;try{a.pause();a.src='';}catch(e){}_currentAudio=null;_spkTts(t);});
+      } else if(attempt<3){
+        setTimeout(function(){_tryGen(attempt+1);},1000*attempt);
+      } else {_spkTts(t);}
+    }).catch(function(){
+      if(gen!==_audioGen)return;
+      if(attempt<3)setTimeout(function(){_tryGen(attempt+1);},1000*attempt);
+      else _spkTts(t);
+    });
+  }
+  _tryGen(1);
 }
 function _spkTts(t){
-  // 最終フォールバック: 端末TTS
-  var _tts=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.TextToSpeech;
-  if(_tts){_tts.speak({text:t,lang:'ja-JP',rate:1.3}).then(_spkNext).catch(_spkNext);}
-  else if('speechSynthesis'in window){var u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';u.rate=1.3;u.onend=_spkNext;u.onerror=_spkNext;speechSynthesis.speak(u);}
-  else{_spkNext();}
+  // ずんだもん以外のシステムTTSはユーザー指示で無効化（混入防止）
+  setTimeout(_spkNext,800);
 }
 var _appReady=false;
 // spk(text, force, onDone) — onDone: キュー完了時コールバック
-function spk(t,force,onDone){if(!force&&iM)return;if(!force&&!_appReady)return;if(!_spkBusy){if(appBgm&&!_bgmFading)appBgm.volume=0.05;if(bgm&&!bgm.paused)bgm.volume=0.1;}if(onDone)_spkCallback=onDone;
-  // キューが3以上溜まったら古いものを捨てる（重複防止）
+var _spkLast={};// テキスト別の直近再生時刻
+function spk(t,force,onDone){if(!force&&iM)return;if(!force&&!_appReady)return;
+  // 直近10秒以内に同一テキストが再生/キューされていればスキップ（重複防止）
+  var _now=Date.now();if(!force&&_spkLast[t]&&_now-_spkLast[t]<10000)return;_spkLast[t]=_now;
+  if(_spkQ.indexOf(t)>=0)return;// キューに同一テキストあれば追加しない
+  if(!_spkBusy){if(appBgm&&!_bgmFading)appBgm.volume=0.05;if(bgm&&!bgm.paused)bgm.volume=0.1;}if(onDone)_spkCallback=onDone;
   if(_spkQ.length>=3)_spkQ.splice(0,_spkQ.length-1);
-  _spkQ.push(t);if(!_spkBusy)_spkNext();}
+  _spkQ.push(t);if(!_spkBusy)setTimeout(_spkNext,800);}
 // Optimized: only search ±3 stops from last known position (100km/h × 5s = 140m max)
 function fN(stops){
   if(!gLat)return{i:0,d:0};
@@ -1085,6 +1181,29 @@ function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 // === 交通情報 ===
 const NAS_API='https://as5304t-c025.tail5d5c21.ts.net';
 const NAS_KEY='sstr2026_k4w4s4k1_zx4r';
+const APP_VERSION='260414';
+// === バージョンチェック（強制アップデート）===
+function _checkAppVersion(){
+  _nf(NAS_API+'/api/version',{signal:AbortSignal.timeout(8000)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d||!d.minVersion)return;
+      if(APP_VERSION<d.minVersion){
+        var isAndroid=(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform()==='android');
+        var apkUrl=d.apkUrl||(NAS_API+'/download/apk');
+        var btn=isAndroid
+          ?'<a href="'+apkUrl+'" style="display:inline-block;padding:14px 28px;background:#ff9100;color:#000;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;">APKをダウンロード</a>'
+          :'<button onclick="location.reload(true)" style="padding:14px 28px;background:#ff9100;color:#000;border:none;border-radius:8px;font-weight:bold;font-size:16px;cursor:pointer;">再読込して更新</button>';
+        var html='<div style="position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#fff;padding:20px;">'
+          +'<div style="max-width:400px;text-align:center;">'
+          +'<div style="font-size:22px;font-weight:bold;margin-bottom:16px;">アップデートが必要です</div>'
+          +'<div style="font-size:14px;line-height:1.6;margin-bottom:24px;opacity:0.9;">現在: v.'+APP_VERSION+'<br>最新: v.'+(d.latest||d.minVersion)+'<br><br>このバージョンはサポートされていません。更新してから利用してください。</div>'
+          +btn+'</div></div>';
+        var w=document.createElement('div');w.innerHTML=html;document.body.appendChild(w.firstChild);
+      }
+    }).catch(function(){});// オフライン時はスキップ
+}
+setTimeout(_checkAppVersion,2000);
 // NAS API認証付きfetch
 function _nf(url,opts){
   opts=opts||{};
@@ -1245,9 +1364,8 @@ function _onNameOk2(v){
 function _firstTimeGps(){
   _firstTimeFlow=true;
   // ずんだもん音声再生 → 完了後にダイアログ
-  spk('GPS情報を取得するのだ！',true,function(){
-    _showGpsDots();
-  });
+  if(!window._gpsAnnounced){window._gpsAnnounced=true;spk('GPS情報を取得するのだ！',true,function(){_showGpsDots();});}
+  else{_showGpsDots();}
 }
 function _showGpsDots(){
   var gpsBox=document.createElement('div');
@@ -1282,10 +1400,13 @@ function _startGps(gpsBox,_dotInterval){
             gpsBox.remove();
             if(appBgm)appBgm.volume=0.1;
             _zundaShow(_myName+'さん、ツーリングプランを選択してほしいのだ！');
-            var pa=new Audio(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)));
-            pa.volume=0.9;pa.playbackRate=_voiceSpeed;
-            pa.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);};
-            pa.play().catch(function(){});
+            function _paFallback(){spk(_myName+'さん、ツーリングプランを選択してほしいのだ！',true,function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);});}
+            var pa=_playWA(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)),{
+              volume:1.0,rate:_voiceSpeed,
+              onended:function(){if(_currentAudio===pa)_currentAudio=null;if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);},
+              onerror:function(){if(_currentAudio!==pa)return;_paFallback();}
+            });
+            _setCurrentAudio(pa);
             _planAnnounced=true;
             _showCards();
           }
@@ -1296,7 +1417,7 @@ function _startGps(gpsBox,_dotInterval){
   }
   navigator.geolocation.getCurrentPosition(function(p){
     gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
-    if(p.coords.heading!==null&&!isNaN(p.coords.heading)&&p.coords.speed>1)gHeading=p.coords.heading;
+    if(p.coords.heading!==null&&!isNaN(p.coords.heading)&&p.coords.speed>3)gHeading=p.coords.heading;
     _gpsReady=true;
     if(_minWait)_afterGps();
   },function(){
@@ -1477,7 +1598,11 @@ function _deleteUser(){
   sessionStorage.clear();
   location.reload();
 }
-var _voiceSpeed=parseFloat(localStorage.getItem('_voiceSpeed')||'1.2');
+// v260414cはデフォルト1.4（音程維持）。旧保存値を一度だけリセット
+if(!localStorage.getItem('_speedMigrated_v260414c')){localStorage.setItem('_voiceSpeed','1.4');localStorage.setItem('_speedMigrated_v260414c','1');}
+var _voiceSpeed=parseFloat(localStorage.getItem('_voiceSpeed')||'1.4');
+// 全Audio要素に音程維持を自動適用（play時にフック）
+(function(){try{var _op=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){try{this.preservesPitch=true;this.mozPreservesPitch=true;this.webkitPreservesPitch=true;}catch(e){}return _op.apply(this,arguments);};}catch(e){}})();
 function _setSpeed(s){_voiceSpeed=s;localStorage.setItem('_voiceSpeed',s);}
 
 // 音声認識は無効（インカム使用のため）
@@ -1674,29 +1799,20 @@ function _showTurnArrow(dir,urgent){
 }
 var _turnVoiceKeys={'右':'right','左':'left','斜め右':'sright','斜め左':'sleft','鋭角右':'right','鋭角左':'left','Uターン':'left'};
 function _playTurnVoice(dir,urgent){
-  var key=_turnVoiceKeys[dir]||'right';
-  var wavKey=urgent?'turn_50_'+key:'turn_200_'+key;
-  var a=new Audio(_nasAudio('/api/voice/'+wavKey));
-  a.volume=0.9;a.playbackRate=_voiceSpeed;
-  if(appBgm&&!_bgmFading)appBgm.volume=0.05;
-  _zundaShow(urgent?'まもなく'+dir+'なのだ！':'200メートル先、'+dir+'なのだ。');
-  _zundaMouthStart();
-  a.onended=function(){_zundaMouthStop();if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);};
-  a.onerror=function(){_zundaMouthStop();_zundaHide();spk(urgent?'まもなく'+dir+'なのだ。':'200メートル先、'+dir+'なのだ。');};
-  a.play().catch(function(){a.onerror();});
+  // spk()キュー経由にして他音声に横入りせず順番に再生
+  spk(urgent?'まもなく'+dir+'なのだ！':'200メートル先、'+dir+'なのだ。');
 }
 function checkTurns(){
   if(!gLat||_turnPoints.length===0)return;
+  if(zoomMode!==0)return;// 道案内は近接ズームのみ
   for(var i=0;i<_turnPoints.length;i++){
     var tp=_turnPoints[i];
     var d=dK(gLat,gLng,tp.lat,tp.lng)*1000;// メートル
     if(d<=200&&d>50&&!tp.announced200){
       tp.announced200=true;
-      _showTurnArrow(tp.dir,false);
-      _playTurnVoice(tp.dir,false);
+      _playTurnVoice(tp.dir,false);// 矢印は_spkNextで音声と同期して表示
     } else if(d<=50&&!tp.announced50){
       tp.announced50=true;
-      _showTurnArrow(tp.dir,true);
       _playTurnVoice(tp.dir,true);
     }
     // 通過後リセット（500m以上離れたら再利用可能に）
@@ -1764,15 +1880,9 @@ var _orbisInterval=null,_orbisFlashInterval=null;
 function _orbisRepeatAlert(o,times){
   if(_orbisInterval)clearInterval(_orbisInterval);
   if(_orbisFlashInterval)clearInterval(_orbisFlashInterval);
-  // TTS: 3回フル + 5回短縮
+  // TTS: フル1回 + 短縮1回
   spk('まもなくオービスなのだ！速度注意なのだ！',true);
-  spk('まもなくオービスなのだ！速度注意なのだ！',true);
-  spk('まもなくオービスなのだ！速度注意なのだ！',true);
-  spk('速度注意！',true);
-  spk('速度注意！',true);
-  spk('速度注意！',true);
-  spk('速度注意！',true);
-  spk('速度注意！',true);
+  spk('速度注意なのだ！',true);
   // 上部バナー（15秒表示）
   var bn=document.createElement('div');
   bn.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#cc0000,#ff2222);border-bottom:3px solid #ff4444;padding:14px;text-align:center;font-size:16px;font-weight:900;color:#fff;';
@@ -1842,8 +1952,13 @@ function emergGoal(){
       var col=ratio>1.2?'#00e676':ratio>=1.0?'#ffd740':'#ff4444';
       var statusTxt=ratio>1.2?'余裕あり':ratio>=1.0?'ギリギリ':'間に合わない！';
       var goalVoice=ratio>1.2?'voice/goal_余裕.wav':ratio>=1.0?'voice/goal_ギリギリ.wav':'voice/goal_間に合わない.wav';
-      var ga=new Audio(new URL(goalVoice,window.location.href).href);
-      ga.volume=0.9;ga.play().catch(function(){});
+      var goalText=ratio>1.2?'千里浜まで余裕があるのだ。':ratio>=1.0?'千里浜までギリギリなのだ。':'千里浜まで間に合わないのだ！';
+      _stopAllAudio();
+      var _ga=_playWA(new URL(goalVoice,window.location.href).href,{
+        volume:1.0,
+        onerror:function(){spk(goalText,true);}
+      });
+      _setCurrentAudio(_ga);
       vM='map';rnd();
       var p=document.createElement('div');
       p.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#111118;border:2px solid '+col+';border-radius:16px;padding:20px;min-width:280px;text-align:center;';
@@ -1880,21 +1995,24 @@ function fetchRoadDist(lat,lng,stop){
 
 // Fast: just move the marker without rebuilding everything
 function moveMarker(lat,lng){
+  // ルート上にスナップ(30m以内)。外れていたら実GPS位置
+  var snap=_snapToRoute(lat,lng,_rerouteThreshold);
+  var dLat=snap?snap.lat:lat,dLng=snap?snap.lng:lng;
   if(mMe){
-    mMe.setPosition({lat,lng});
-    if(gHeading!==null){
-      mMe.setIcon({path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
-        fillColor:'#00d4ff',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,
-        rotation:gHeading});
-    }
+    mMe.setPosition({lat:dLat,lng:dLng});
+    // ヘディングアップなので矢印は常に上向き固定（地図側が回転）
   }
-  if(map&&zoomMode===0)map.panTo({lat,lng});
+  if(map&&zoomMode===0)map.panTo({lat:dLat,lng:dLng});
+  if(map){
+    if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);}
+    else map.setHeading(0);
+  }
 }
 
 function onGpsUpdate(p,announce_it){
   gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
   // Store heading (null when stationary)
-  if(p.coords.heading!==null && !isNaN(p.coords.heading) && p.coords.speed>1){
+  if(p.coords.heading!==null && !isNaN(p.coords.heading) && p.coords.speed>3){
     gHeading=p.coords.heading;
   }
   // Always move marker immediately (fast)
@@ -2121,7 +2239,7 @@ function rnd(){
       <div style="text-align:center;flex:1;padding:0 8px;height:70px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;">
         ${gLat&&rally&&cDay!=='custom'&&pT(cS.time)>0?`${(()=>{const schM=pT(cS.time);const diffM=schM-nwM;const absDiff=Math.abs(diffM);const ahead=diffM>=0;const dh=Math.floor(absDiff/60).toString().padStart(2,'0');const dm=Math.floor(absDiff%60).toString().padStart(2,'0');const now=new Date();const ds=now.getSeconds().toString().padStart(2,'0');const col=ahead?'var(--ac)':'var(--red)';const lbl=ahead?'余裕':'遅れ';const sign=ahead?'+':'-';return `<div style="font-family:'Outfit';font-size:10px;color:${col};letter-spacing:1px;">${lbl}</div><div style="font-family:'Outfit';font-size:45px;font-weight:900;color:${col};line-height:1;letter-spacing:2px;">${sign}${dh}:${dm}:${ds}</div><div style="font-size:9px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()}</div>`;})()}`:(gLat?`${(()=>{
 if(_hdrMode===0&&cDay!=='custom'){
-  const now=new Date();const goal=new Date(2026,4,23,19,0,0);let remS=Math.floor((goal-now)/1000);const over=remS<0;if(over)remS=Math.abs(remS);const rd=Math.floor(remS/86400),rh=Math.floor((remS%86400)/3600),rm=Math.floor((remS%3600)/60),rs=remS%60;const col=over?'var(--red)':remS<3600?'var(--ylw)':'var(--ac)';const lbl=over?'超過':rd>0?'5/23 19:00まで':'19:00まで';const timeStr=rd>0?rd+'日'+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0'):(over?'-':'')+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0');
+  const now=new Date();const goal=new Date(2026,4,23,19,0,0);let remS=Math.floor((goal-now)/1000);const over=remS<0;if(over)remS=Math.abs(remS);const rd=Math.floor(remS/86400),rh=Math.floor((remS%86400)/3600),rm=Math.floor((remS%3600)/60),rs=remS%60;const col=over?'var(--red)':remS<3600?'var(--ylw)':'var(--grn)';const lbl=over?'超過':rd>0?'5/23 19:00まで':'19:00まで';const timeStr=rd>0?rd+'日'+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0'):(over?'-':'')+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0');
   return '<div style="font-family:Outfit;font-size:10px;color:'+col+';letter-spacing:1px;">'+lbl+'</div><div style="font-family:Outfit;font-size:'+(rd>0?'32':'45')+'px;font-weight:900;color:'+col+';line-height:1;letter-spacing:2px;">'+timeStr+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
 } else if(_hdrMode===1||(_hdrMode===0&&cDay==='custom')){
   const distM=Math.round(dispDist*1000);
@@ -2131,8 +2249,10 @@ if(_hdrMode===0&&cDay!=='custom'){
 } else {
   const _etaFS=Math.floor(eta*60);const _etaFMod=((_etaFS%(1440*60))+(1440*60))%(1440*60);const etaH=Math.floor(_etaFMod/3600),etaM2=Math.floor((_etaFMod%3600)/60),etaS2=(_etaFMod%60);
   const schM=pT(cS.time);const diffM=schM>0?eta-schM:0;
-  const etaCol=schM<=0?'var(--ac)':diffM>0?'var(--red)':diffM>=-5?'var(--ylw)':'var(--ac)';
-  const etaLbl=schM<=0?'到着予定':diffM>0?'到着予定（遅れ）':diffM>=-5?'到着予定（ギリギリ）':'到着予定';
+  const etaCol=schM<=0?'var(--ac)':cDay==='custom'?'var(--grn)':!isRallyDay()?'var(--ac)':diffM>0?'var(--red)':diffM>=-5?'var(--ylw)':'var(--grn)';
+  const etaLbl='到着予定';
+  // 予定時刻を現在のETAに追従（カスタムプランは常に到着予想=予定扱い）
+  if(cDay==='custom'&&cS&&eta>0)cS.time=etaH.toString().padStart(2,'0')+':'+etaM2.toString().padStart(2,'0');
   return '<div style="font-family:Outfit;font-size:10px;color:'+etaCol+';letter-spacing:1px;">'+etaLbl+'</div><div style="font-family:Outfit;font-size:45px;font-weight:900;color:'+etaCol+';line-height:1;letter-spacing:2px;">'+etaH.toString().padStart(2,'0')+':'+etaM2.toString().padStart(2,'0')+':'+etaS2.toString().padStart(2,'0')+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
 }
 })()}`:'')}
@@ -2194,7 +2314,7 @@ if(_hdrMode===0&&cDay!=='custom'){
   // Current
   t+=`<div class="pnl pc${cDay==='custom'?' custom':''}"><div class="lb">▶ いま向かっている場所</div>
     <div class="nm">${cS.name}</div>${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
-    ${(()=>{const schM=pT(cS.time);const diff=gLat&&schM>0?eta-schM:0;const tc=!gLat||schM<=0?'var(--ac)':diff>0?'var(--red)':diff>=-5?'var(--ylw)':'var(--ac)';return `<div class="sts">
+    ${(()=>{const schM=pT(cS.time);const diff=gLat&&schM>0?eta-schM:0;const tc=!gLat||schM<=0?'var(--ac)':cDay==='custom'?'var(--grn)':!isRallyDay()?'var(--ac)':diff>0?'var(--red)':diff>=-5?'var(--ylw)':'var(--grn)';return `<div class="sts">
       <div class="st"><div class="v" style="color:${!gLat?'var(--ac)':dispDist>=100?'var(--red)':dispDist>=50?'var(--ylw)':'var(--ac)'}">${gLat?dispDist.toFixed(1):'--'}</div><div class="l">km</div></div>
       <div class="st"><div class="v" style="color:${tc}">${gLat?eH+':'+eM+':'+eS:cS.time}</div><div class="l">着${gLat&&Math.floor(diff)>0?'<span style="color:'+tc+'"> +'+Math.floor(diff)+'分</span>':''}</div></div>
     </div>
@@ -2648,7 +2768,7 @@ function _confirmSavePlan(){
     body:JSON.stringify({text:name+'が選択されたのだ！',key:'selected_'+name}),
     signal:AbortSignal.timeout(15000)}).catch(function(){});
   var _psAudio=new Audio(_nasAudio('/api/voice/plan_saved'));
-  _psAudio.volume=0.9;_psAudio.playbackRate=_voiceSpeed;
+  _psAudio.volume=1.0;_psAudio.playbackRate=_voiceSpeed;
   _zundaShow('プランを保存したのだ！');_zundaMouthStart();
   _psAudio.onended=function(){_zundaMouthStop();_zundaHide();};
   _psAudio.onerror=function(){_zundaMouthStop();_zundaHide();};
@@ -2863,13 +2983,13 @@ function startApp(mode){
     if(mode==='sstr'){
       // SSTR: ローカルWAV
       var a=new Audio(new URL('voice/sstr_selected.wav',window.location.href).href);
-      _currentAudio=a;a.volume=0.9;a.playbackRate=_voiceSpeed;
+      _setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
       a.onended=_done;a.onerror=function(){spk(title+'が選択されたのだ。',true,cb);};
       a.play().catch(function(){a.onerror();});
     } else if(mode==='custom'){
       // カスタム: NAS WAV（保存時に事前生成済み）
       var a=new Audio(_nasAudio('/api/voice/'+encodeURIComponent('selected_'+title)));
-      _currentAudio=a;a.volume=0.9;a.playbackRate=_voiceSpeed;
+      _setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
       a.onended=_done;a.onerror=function(){_done();spk(title+'が選択されたのだ。',true,cb);};
       a.play().catch(function(){_done();spk(title+'が選択されたのだ。',true,cb);});
     } else {
@@ -2888,12 +3008,12 @@ function startApp(mode){
       gpsArea.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;gap:12px;"><div style="width:40px;height:40px;border:3px solid rgba(0,212,255,0.3);border-top:3px solid #00d4ff;border-radius:50%;animation:spin 1s linear infinite;"></div><div class="gpsDots" style="font-size:20px;font-weight:700;color:#00d4ff;">GPS情報取得中.</div></div>';
       var _dotCount=0;
       var _dotInterval=setInterval(function(){_dotCount=(_dotCount+1)%3;var dots='.'.repeat(_dotCount+1);var el=mid.querySelector('.gpsDots');if(el)el.textContent='GPS情報取得中'+dots;},600);
-      spk('GPS情報を取得するのだ！',true);
+      if(!window._gpsAnnounced){window._gpsAnnounced=true;spk('GPS情報を取得するのだ！',true);}
       var _gpsOk=false,_minOk=false;
       var _minTimer=setTimeout(function(){_minOk=true;if(_gpsOk){clearInterval(_dotInterval);_goMain();}},3000);
       navigator.geolocation.getCurrentPosition(function(p){
         gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
-        if(p.coords.heading!==null&&!isNaN(p.coords.heading)&&p.coords.speed>1)gHeading=p.coords.heading;
+        if(p.coords.heading!==null&&!isNaN(p.coords.heading)&&p.coords.speed>3)gHeading=p.coords.heading;
         _gpsOk=true;
         if(_minOk){clearInterval(_dotInterval);_goMain();}
       },function(){clearInterval(_dotInterval);_goMain();},{enableHighAccuracy:true,timeout:15000});
@@ -2913,23 +3033,26 @@ function _startSplashAudio(){
         _zundaShow(_myName+'さん、ツーリングプランを選ぶのだ！');
         function _psFallback(){spk(_myName+'さん、ツーリングプランを選ぶのだ！',true,function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();});}
         var _planWav=new Audio(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)));
-        _planWav.volume=0.9;_planWav.playbackRate=_voiceSpeed;
-        _planWav.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();};
-        _planWav.onerror=_psFallback;
-        _planWav.play().catch(_psFallback);
+        _setCurrentAudio(_planWav);// _stopAllAudioで止められるよう登録
+        _planWav.volume=1.0;_planWav.playbackRate=_voiceSpeed;
+        _planWav.onended=function(){if(_currentAudio===_planWav)_currentAudio=null;if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();};
+        _planWav.onerror=function(){if(_currentAudio!==_planWav)return;_psFallback();};
+        _planWav.play().catch(function(){if(_currentAudio!==_planWav)return;_psFallback();});
       }
       if(!sessionStorage.getItem('_saidOkaeri')){
         // アプリ起動1回目: おかえり → プラン選択
         sessionStorage.setItem('_saidOkaeri','1');
         _zundaShow(_myName+'さん、おかえりなのだ！');
         var _welcomeWav=new Audio(_nasAudio('/api/voice/welcome_'+encodeURIComponent(_myName)));
-        _welcomeWav.volume=0.9;_welcomeWav.playbackRate=_voiceSpeed;
-        _welcomeWav.onended=function(){_playPlanSelect();};
+        _setCurrentAudio(_welcomeWav);// _stopAllAudioで止められるよう登録
+        _welcomeWav.volume=1.0;_welcomeWav.playbackRate=_voiceSpeed;
+        _welcomeWav.onended=function(){if(_currentAudio===_welcomeWav){_currentAudio=null;_playPlanSelect();}};
         _welcomeWav.onerror=function(){
-          // NAS失敗時: spkフォールバック
+          if(_currentAudio!==_welcomeWav)return;// 既にstopされた
           spk(_myName+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});
         };
         _welcomeWav.play().catch(function(){
+          if(_currentAudio!==_welcomeWav)return;
           spk(_myName+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});
         });
       } else {
@@ -2940,14 +3063,14 @@ function _startSplashAudio(){
       // 初回: 初めまして → 名前入力を促す
       _zundaShow('初めましてなのだ！');
       var _hajimeAudio=new Audio(_nasAudio('/api/voice/hajimemashite'));
-      _hajimeAudio.volume=0.9;_hajimeAudio.playbackRate=_voiceSpeed;
+      _hajimeAudio.volume=1.0;_hajimeAudio.playbackRate=_voiceSpeed;
       _zundaMouthStart();
       _hajimeAudio.onended=function(){
         _zundaMouthStop();
         setTimeout(function(){
           _zundaShow('ライダー名を入力してほしいのだ！');
           window._splashAudio=new Audio(new URL('voice/enter_name.wav',window.location.href).href);
-          window._splashAudio.volume=0.9;
+          window._splashAudio.volume=1.0;
           window._splashAudio.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,2000);};
           window._splashAudio.play().catch(function(){});
         },500);
@@ -2956,7 +3079,7 @@ function _startSplashAudio(){
         _zundaMouthStop();
         _zundaShow('ライダー名を入力してほしいのだ！');
         window._splashAudio=new Audio(new URL('voice/enter_name.wav',window.location.href).href);
-        window._splashAudio.volume=0.9;
+        window._splashAudio.volume=1.0;
         window._splashAudio.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,2000);};
         window._splashAudio.play().catch(function(){});
       };
@@ -3036,9 +3159,11 @@ function _showCards(){
     return;
   }
   var d=show?'block':'none';
-  var cs=document.getElementById('cardSstr');if(cs)cs.style.display=d;
-  var cn1=document.getElementById('cardNippon1');if(cn1)cn1.style.display=d;
-  var cn2=document.getElementById('cardNippon2');if(cn2)cn2.style.display=d;
+  var isAPK=!!window.Capacitor;
+  var dApk=(show&&isAPK)?'block':'none';
+  var cs=document.getElementById('cardSstr');if(cs)cs.style.display=dApk;
+  var cn1=document.getElementById('cardNippon1');if(cn1)cn1.style.display=dApk;
+  var cn2=document.getElementById('cardNippon2');if(cn2)cn2.style.display=dApk;
   var cc=document.getElementById('cardCreate');if(cc)cc.style.display=d;
   // 保存済みカスタムプラン表示
   var cpContainer=document.getElementById('customPlanCards');
@@ -3092,7 +3217,7 @@ function _showCards(){
     if(appBgm)appBgm.volume=0.1;
     _zundaShow('ツーリングプランを選ぶのだ！');
     var _pw=new Audio(new URL('voice/splash_welcome.wav',window.location.href).href);
-    _pw.volume=0.9;_pw.playbackRate=_voiceSpeed;
+    _pw.volume=1.0;_pw.playbackRate=_voiceSpeed;
     _pw.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);};
     _pw.play().catch(function(){});
   }

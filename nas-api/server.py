@@ -36,6 +36,18 @@ UF=os.path.join(BD,"usage.json")
 
 GMAPS_KEY="AIzaSyBwPBSu3pJ7LBsQ7WvSbTWiQsFY0R8cREY"
 
+# === APIイベントログ（パフォーマンス分析用） ===
+LOG_DIR=os.path.join(BD,"logs");os.makedirs(LOG_DIR,exist_ok=True)
+def log_event(event_type,duration_ms,status,meta=None):
+    """イベントをJSONLで日毎ファイルに追記。失敗しても本処理を妨げない。"""
+    try:
+        day=time.strftime("%Y%m%d")
+        fp=os.path.join(LOG_DIR,"api_events_"+day+".jsonl")
+        rec={"t":time.time(),"type":event_type,"ms":round(duration_ms,1),"status":status}
+        if meta:rec["meta"]=meta
+        with open(fp,"a") as f:f.write(json.dumps(rec,ensure_ascii=False)+"\n")
+    except:pass
+
 def lj(p,d):
     try:
         with open(p,"r") as f:return json.load(f)
@@ -49,7 +61,23 @@ def cors(r):
     r.headers["Access-Control-Allow-Methods"]="GET,POST,DELETE,PUT"
     r.headers["Access-Control-Allow-Headers"]="Content-Type,X-API-Key"
     if request.method=="OPTIONS":r.status_code=204
+    # 全リクエストを自動ログ
+    try:
+        if hasattr(request,"_log_t0") and not request.path.startswith("/api/voice_stats") and request.path!="/api/voice/generate":
+            dur=(time.time()-request._log_t0)*1000
+            # パス先頭2セグメントで分類: /api/voice/xxx → http_api_voice / /api/route → http_api_route
+            parts=[p for p in request.path.strip("/").split("/") if p][:2]
+            etype="http_"+"_".join(parts) if parts else "http_root"
+            status="ok" if r.status_code<400 else "error"
+            meta={"path":request.path,"method":request.method,"code":r.status_code}
+            if r.status_code>=400:meta["ip"]=request.remote_addr
+            log_event(etype,dur,status,meta)
+    except:pass
     return r
+
+@app.before_request
+def _log_start():
+    request._log_t0=time.time()
 
 @app.before_request
 def security_check():
@@ -174,7 +202,14 @@ def route_search():
 # =============================================
 @app.route("/api/usage")
 @app.route("/api/stats")
-def stats():return jsonify(lj(UF,{"maps":0,"directions":0}))
+def stats():
+    s=lj(os.path.join(BD,"stats_cache.json"),None)
+    u=lj(UF,{"maps":0,"directions":0})
+    if s and isinstance(s,dict) and "directions" in s:
+        r={"maps":max(s.get("maps",0),u.get("maps",0)),"directions":max(s.get("directions",0),u.get("directions",0))}
+        if "timestamp" in s:r["timestamp"]=s["timestamp"]
+        return jsonify(r)
+    return jsonify(u)
 
 @app.route("/api/usage/increment",methods=["POST","OPTIONS"])
 def usage_increment():
@@ -237,24 +272,159 @@ def get_locations():
 # =============================================
 # === 音声生成（VOICEVOX）===
 # =============================================
+VOICEVOX_HOSTS=[
+    ("pc","http://100.87.205.49:50021",8),    # 優先: PCの高速VOICEVOX (Tailscale)
+    ("nas","http://localhost:50021",30),       # フォールバック: NAS内Docker
+]
+def _call_voicevox(host,text,speaker,timeout):
+    q=urllib.request.urlopen(urllib.request.Request(
+        host+"/audio_query?text="+urllib.parse.quote(text)+"&speaker="+str(speaker),
+        method="POST"),timeout=timeout).read()
+    wav=urllib.request.urlopen(urllib.request.Request(
+        host+"/synthesis?speaker="+str(speaker),
+        data=q,headers={"Content-Type":"application/json"},method="POST"),timeout=timeout).read()
+    return wav
+
 @app.route("/api/voice/generate",methods=["POST","OPTIONS"])
 def generate_voice():
     if request.method=="OPTIONS":return "",204
     d=request.get_json(force=True)
     if not d or "text" not in d:return jsonify({"error":"text required"}),400
     text=d["text"];key=d.get("key","custom");speaker=d.get("speaker",3)
+    key=safe_name(key)# 保存ファイル名とGET側のキー正規化を一致させる
+    last_err=None
+    for name,host,tmo in VOICEVOX_HOSTS:
+        t0=time.time()
+        try:
+            wav=_call_voicevox(host,text,speaker,tmo)
+            fp=os.path.join(VD,key+".wav")
+            with open(fp,"wb") as f:f.write(wav)
+            log_event("voice_generate",(time.time()-t0)*1000,"ok",{"key":key,"size":len(wav),"len":len(text),"host":name})
+            return jsonify({"ok":True,"key":key,"size":len(wav),"host":name})
+        except Exception as e:
+            last_err=str(e)
+            log_event("voice_generate",(time.time()-t0)*1000,"error",{"key":key,"err":last_err[:200],"len":len(text),"host":name})
+    return jsonify({"error":last_err or "all hosts failed"}),500
+
+@app.route("/api/voice_stats")
+def voice_stats():
+    """直近N日のAPIイベントを集計。クエリ ?days=1 (デフォルト1)"""
     try:
-        q=urllib.request.urlopen(urllib.request.Request(
-            "http://localhost:50021/audio_query?text="+urllib.parse.quote(text)+"&speaker="+str(speaker),
-            method="POST"),timeout=30).read()
-        wav=urllib.request.urlopen(urllib.request.Request(
-            "http://localhost:50021/synthesis?speaker="+str(speaker),
-            data=q,headers={"Content-Type":"application/json"},method="POST"),timeout=30).read()
-        fp=os.path.join(VD,key+".wav")
-        with open(fp,"wb") as f:f.write(wav)
-        return jsonify({"ok":True,"key":key,"size":len(wav)})
-    except Exception as e:
-        return jsonify({"error":str(e)}),500
+        days=max(1,min(int(request.args.get("days","1")),7))
+    except:
+        days=1
+    records=[]
+    for i in range(days):
+        day=time.strftime("%Y%m%d",time.localtime(time.time()-i*86400))
+        fp=os.path.join(LOG_DIR,"api_events_"+day+".jsonl")
+        if os.path.exists(fp):
+            try:
+                with open(fp,"r") as f:
+                    for line in f:
+                        try:records.append(json.loads(line))
+                        except:pass
+            except:pass
+    by_type={}
+    for r in records:
+        t=r.get("type","unknown")
+        if t not in by_type:by_type[t]={"count":0,"ok":0,"error":0,"total_ms":0,"max_ms":0,"errors":[]}
+        b=by_type[t]
+        b["count"]+=1
+        if r.get("status")=="ok":b["ok"]+=1
+        elif r.get("status")=="error":
+            b["error"]+=1
+            e=r.get("meta",{}).get("err","")
+            if e and len(b["errors"])<5:b["errors"].append(e)
+        ms=r.get("ms",0)
+        b["total_ms"]+=ms
+        if ms>b["max_ms"]:b["max_ms"]=ms
+    for t,b in by_type.items():
+        b["avg_ms"]=round(b["total_ms"]/b["count"],1) if b["count"]>0 else 0
+        del b["total_ms"]
+    return jsonify({"days":days,"total_events":len(records),"by_type":by_type})
+
+@app.route("/api/log_tail")
+def log_tail():
+    """直近Nイベントを返す（監視ダッシュボード用）。?n=100"""
+    try:n=max(1,min(int(request.args.get("n","50")),500))
+    except:n=50
+    day=time.strftime("%Y%m%d")
+    fp=os.path.join(LOG_DIR,"api_events_"+day+".jsonl")
+    events=[]
+    if os.path.exists(fp):
+        try:
+            with open(fp,"r") as f:
+                lines=f.readlines()[-n:]
+                for line in lines:
+                    try:events.append(json.loads(line))
+                    except:pass
+        except:pass
+    return jsonify({"events":events})
+
+@app.route("/monitor")
+def monitor_page():
+    """PC ブラウザ向けライブモニタ。?key=APIKEY でアクセス"""
+    # security_checkで既に認証済
+    return MONITOR_HTML.replace("__API_KEY__",API_KEY)
+
+MONITOR_HTML="""<!DOCTYPE html><html><head><meta charset="utf-8"><title>SSTR NAS Monitor</title>
+<style>
+body{font-family:-apple-system,sans-serif;background:#06060c;color:#e8e8f0;margin:0;padding:20px;}
+h1{color:#00d4ff;margin:0 0 10px;font-size:20px;}
+.sub{color:#888;font-size:12px;margin-bottom:20px;}
+table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px;}
+th{background:#111118;color:#00d4ff;text-align:left;padding:8px;border-bottom:1px solid #333;}
+td{padding:6px 8px;border-bottom:1px solid #1e1e2e;}
+tr:hover{background:#111118;}
+.ok{color:#00e676;}
+.err{color:#ff4444;font-weight:700;}
+.slow{color:#ffd740;}
+.box{background:#111118;border:1px solid #1e1e2e;border-radius:8px;padding:15px;margin-bottom:20px;}
+h2{color:#ff9100;font-size:14px;margin:0 0 10px;}
+.ev{font-family:monospace;font-size:11px;padding:3px 0;border-bottom:1px solid #1a1a22;}
+.ev.err{color:#ff6666;}
+.ts{color:#666;}
+.err-list{color:#ff9999;font-size:11px;margin-top:5px;}
+#status{float:right;font-size:11px;color:#00e676;}
+#status.stale{color:#ff9100;}
+</style></head><body>
+<h1>SSTR NAS Monitor <span id="status">●</span></h1>
+<div class="sub">3秒毎更新 / API key: __API_KEY__</div>
+<div class="box"><h2>📊 集計（直近24h）</h2><div id="stats"></div></div>
+<div class="box"><h2>📜 直近イベント（最新50件）</h2><div id="events"></div></div>
+<script>
+const KEY="__API_KEY__";
+async function refresh(){
+  try{
+    const s=await fetch("/api/voice_stats?days=1",{headers:{"X-API-Key":KEY}}).then(r=>r.json());
+    const e=await fetch("/api/log_tail?n=50",{headers:{"X-API-Key":KEY}}).then(r=>r.json());
+    let h='<table><tr><th>エンドポイント</th><th>件数</th><th>成功</th><th>エラー</th><th>平均ms</th><th>最大ms</th><th>直近エラー</th></tr>';
+    const types=Object.keys(s.by_type||{}).sort();
+    for(const t of types){const b=s.by_type[t];
+      const errCls=b.error>0?'err':'ok';
+      const slowCls=b.avg_ms>3000?'slow':'';
+      h+=`<tr><td>${t}</td><td>${b.count}</td><td class="ok">${b.ok}</td><td class="${errCls}">${b.error}</td><td class="${slowCls}">${b.avg_ms}</td><td>${b.max_ms}</td><td class="err-list">${(b.errors||[]).slice(0,2).join('<br>')}</td></tr>`;
+    }
+    h+='</table>';
+    document.getElementById('stats').innerHTML=h;
+    let eh='';
+    for(const ev of (e.events||[]).slice().reverse()){
+      const d=new Date(ev.t*1000);
+      const ts=d.toTimeString().slice(0,8);
+      const cls=ev.status==='error'?'ev err':'ev';
+      const meta=ev.meta?JSON.stringify(ev.meta).slice(0,120):'';
+      eh+=`<div class="${cls}"><span class="ts">${ts}</span> <b>${ev.type}</b> ${ev.ms}ms [${ev.status}] ${meta}</div>`;
+    }
+    document.getElementById('events').innerHTML=eh||'<div style="color:#666">イベント無し</div>';
+    document.getElementById('status').textContent='● '+new Date().toTimeString().slice(0,8);
+    document.getElementById('status').className='';
+  }catch(ex){
+    document.getElementById('status').textContent='● 接続エラー';
+    document.getElementById('status').className='stale';
+  }
+}
+refresh();setInterval(refresh,3000);
+</script></body></html>"""
 
 @app.route("/api/voice/<path:key>",methods=["GET","HEAD"])
 def get_voice(key):
@@ -374,6 +544,18 @@ def save_plans(name):
     ud["updatedAt"]=time.time()
     sj(fp,ud)
     return jsonify({"ok":True})
+
+# =============================================
+# === バージョン情報（認証不要）===
+# =============================================
+@app.route("/api/version")
+def api_version():
+    # minVersion: これより古いと強制更新 / latest: 最新推奨バージョン
+    return jsonify({
+        "minVersion":"260414",
+        "latest":"260414",
+        "apkUrl":"/download/apk"
+    })
 
 # =============================================
 # === APKダウンロード（認証不要）===

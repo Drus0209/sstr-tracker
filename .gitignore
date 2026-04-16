@@ -4,3 +4,15 @@ www/voice/
 sstr-tracker.apk
 *.apk
 .claude/
+
+# ローカル作業用スクリプト
+_*.py
+_*.ps1
+_*.bat
+
+# OCI secrets
+oci/.env
+
+# ずんだもん画像生成作業ファイル
+_zunda_*
+*.jfif
