@@ -163,18 +163,11 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
         </div>
       </button>
 
-      <div style="display:flex;gap:8px;width:100%;">
-      <button onclick="_showNipponDaySelect()" id="cardNippon1" class="sparkle" style="display:none;flex:1;background:rgba(6,6,12,0.15);border:2px solid #4caf50;border-radius:12px;padding:12px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;backdrop-filter:blur(2px);">
-        <div style="font-size:9px;color:#4caf50;letter-spacing:2px;font-weight:700;margin-bottom:2px;">05/02–06</div>
-        <div class="sparkle"><img src="greenlabel_logo.png" style="height:36px;" onerror="this.outerHTML='<span style=font-size:13px;font-weight:900;color:#fff>にっぽん応援 GW</span>'"></div>
-        <div style="font-size:10px;color:#aaa;margin-top:2px;">R4P 16極踏破 5日間</div>
+      <button onclick="_showNipponDaySelect()" id="cardNippon1" class="sparkle" style="display:none;width:100%;background:rgba(6,6,12,0.15);border:2px solid #4caf50;border-radius:16px;padding:20px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;backdrop-filter:blur(2px);">
+        <div style="font-size:10px;color:#4caf50;letter-spacing:3px;font-weight:700;margin-bottom:4px;">05/02–06</div>
+        <div class="sparkle"><img src="greenlabel_logo.png" style="height:36px;" onerror="this.outerHTML='<span style=font-family:Outfit;font-size:20px;font-weight:900;color:#fff>にっぽん応援ツーリング 2026</span>'"></div>
+        <div style="font-size:11px;color:#aaa;margin-top:4px;">R4P 16極踏破 5日間</div>
       </button>
-      <button onclick="alert('にっぽん応援ツーリング 2026 ②\n\n現在準備中です。\nしばらくお待ちください。')" id="cardNippon2" class="sparkle" style="display:none;flex:1;background:rgba(6,6,12,0.15);border:2px solid #4caf50;border-radius:12px;padding:12px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;backdrop-filter:blur(2px);opacity:0.5;">
-        <div style="font-size:9px;color:#4caf50;letter-spacing:2px;font-weight:700;margin-bottom:2px;">TBD</div>
-        <div class="sparkle"><img src="greenlabel_logo.png" style="height:36px;" onerror="this.outerHTML='<span style=font-size:13px;font-weight:900;color:#fff>にっぽん応援 後半</span>'"></div>
-        <div style="font-size:10px;color:#aaa;margin-top:2px;">準備中…</div>
-      </button>
-      </div>
     </div>
   </div>
   <div style="position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:1;padding:0 20px;">
@@ -1494,7 +1487,7 @@ function _showNipponDaySelect(){
     {key:'nippon1_4',label:'Day4 5/5',sub:'熊本→神崎鼻→和布刈→毘沙ノ鼻→岡山',cp:'CP15,CP13,CP8'},
     {key:'nippon1_5',label:'Day5 5/6',sub:'岡山→大島 帰還',cp:'帰路'},
   ];
-  var html='<div style="font-size:16px;font-weight:900;color:#4caf50;margin-bottom:14px;">🗾 にっぽん応援 GW遠征</div>';
+  var html='<div style="font-size:16px;font-weight:900;color:#4caf50;margin-bottom:4px;">🗾 にっぽん応援ツーリング</div><div style="font-size:12px;color:#aaa;margin-bottom:14px;">2026/05/02〜05/06</div>';
   days.forEach(function(dy){
     html+='<button onclick="cDay=\''+dy.key+'\';document.getElementById(\'nipponDaySelect\').remove();_navRemove(\'nipponDay\');startApp(\'nippon1\')" style="display:block;width:100%;margin-bottom:8px;background:rgba(76,175,80,0.1);border:1px solid #4caf50;border-radius:10px;padding:10px;text-align:left;cursor:pointer;color:#fff;font-family:inherit;">'
       +'<div style="font-size:14px;font-weight:900;">'+dy.label+'</div>'
@@ -2273,7 +2266,7 @@ if(_hdrMode===0&&cDay!=='custom'){
     document.getElementById('mapWrap').style.display='none';
     const tc2={move:'dv',michi:'dm',noto:'dn',goal:'dg',qk:'dq',gs:'ds',other:'do'};
     let fl=`<div style="padding:0 10px 20px;">`;
-    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';fl+=`<div class="fi ${c}"><div class="dot ${tc2[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}<span class="tm">${s.time}</span></div>`;});
+    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';fl+=`<div class="fi ${c}"><div class="dot ${tc2[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}${cDay.startsWith('nippon1_')?'':'<span class="tm">'+s.time+'</span>'}</div>`;});
     fl+=`</div>`;
     document.getElementById('btm').innerHTML=fl;
     return;
@@ -2353,7 +2346,7 @@ if(_hdrMode===0&&cDay!=='custom'){
     <div id="bi" style="display:${bgm?'block':'none'};text-align:center;font-size:11px;color:var(--pk);padding:2px;"></div>
     ${cDay!=='custom'?'<div class="dtabs"><div class="dtab '+(cDay==='day1'?'act':'')+'" onclick="cDay=\'day1\';rnd();">Day1 (5/23)</div><div class="dtab '+(cDay==='day2'?'act':'')+'" onclick="cDay=\'day2\';rnd();">Day2 (5/24)</div></div>':''}`;
     b+=`<div class="fl ${sFl?'show':''}"><div class="fh">📋 全ストップ</div>`;
-    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';b+=`<div class="fi ${c}"><div class="dot ${tc[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}<span class="tm">${s.time}</span></div>`;});
+    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';b+=`<div class="fi ${c}"><div class="dot ${tc[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}${cDay.startsWith('nippon1_')?'':'<span class="tm">'+s.time+'</span>'}</div>`;});
     b+=`</div>`;
   } else {
     // 地図タブ
@@ -3109,7 +3102,6 @@ function _showCards(){
     var d2='none';
     var cs2=document.getElementById('cardSstr');if(cs2)cs2.style.display=d2;
     var cn12=document.getElementById('cardNippon1');if(cn12)cn12.style.display=d2;
-    var cn22=document.getElementById('cardNippon2');if(cn22)cn22.style.display=d2;
     var cc2=document.getElementById('cardCreate');if(cc2)cc2.style.display=d2;
     var cpc2=document.getElementById('customPlanCards');if(cpc2)cpc2.style.display=d2;
     var ap=document.createElement('div');ap.id='adminVersionPanel';
@@ -3163,7 +3155,6 @@ function _showCards(){
   var dApk=(show&&isAPK)?'block':'none';
   var cs=document.getElementById('cardSstr');if(cs)cs.style.display=dApk;
   var cn1=document.getElementById('cardNippon1');if(cn1)cn1.style.display=dApk;
-  var cn2=document.getElementById('cardNippon2');if(cn2)cn2.style.display=dApk;
   var cc=document.getElementById('cardCreate');if(cc)cc.style.display=d;
   // 保存済みカスタムプラン表示
   var cpContainer=document.getElementById('customPlanCards');

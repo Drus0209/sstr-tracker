@@ -1,0 +1,129 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['127.0.0.1:9093']
+
+rule_files:
+  - alert_rules.yml
+
+scrape_configs:
+  # OCI VM自身
+  - job_name: 'oci-node'
+    static_configs:
+      - targets: ['127.0.0.1:9100']
+        labels:
+          host: 'sstr-monitor-oci'
+
+  # NAS Node Exporter (Tailscale経由)
+  - job_name: 'nas-node'
+    static_configs:
+      - targets: ['100.76.6.43:9100']
+        labels:
+          host: 'nas-as5304t'
+
+  # PC Windows Exporter (Tailscale経由)
+  - job_name: 'pc-windows'
+    static_configs:
+      - targets: ['100.87.205.49:9182']
+        labels:
+          host: 'pc-windows'
+
+  # Flask API HTTP監視
+  - job_name: 'flask-api'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://as5304t-c025.tail5d5c21.ts.net/api/version
+        labels:
+          service: 'Flask API'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+
+  # VOICEVOX PC HTTP監視
+  - job_name: 'voicevox-pc'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://100.87.205.49:50021/version
+        labels:
+          service: 'VOICEVOX PC'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+
+  # VOICEVOX NAS HTTP監視
+  - job_name: 'voicevox-nas'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://100.76.6.43:50021/version
+        labels:
+          service: 'VOICEVOX NAS'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+
+  # ICMP Ping監視
+  - job_name: 'ping'
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets: ['100.76.6.43']
+        labels:
+          service: 'NAS Ping'
+      - targets: ['100.87.205.49']
+        labels:
+          service: 'PC Ping'
+      - targets: ['100.64.1.21']
+        labels:
+          service: 'Switch Ping'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9115
+
+  # スイッチ SNMP監視
+  - job_name: 'switch-snmp'
+    metrics_path: /snmp
+    params:
+      auth: [public_v2]
+      module: [if_mib]
+    static_configs:
+      - targets:
+          - 100.64.1.21
+        labels:
+          host: 'switch-sg3210'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9116

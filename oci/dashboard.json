@@ -1,0 +1,133 @@
+{
+  "dashboard": {
+    "title": "SSTR2026 インフラ監視",
+    "tags": ["sstr"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {"from": "now-1h", "to": "now"},
+    "panels": [
+      {
+        "id": 1, "type": "stat", "title": "サービス稼働状況",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {"expr": "probe_success", "legendFormat": "{{service}}", "refId": "A"}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [{"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}, "1": {"text": "UP", "color": "green"}}}],
+            "thresholds": {"steps": [{"value": null, "color": "red"}, {"value": 1, "color": "green"}]}
+          }
+        },
+        "options": {"colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "reduceOptions": {"calcs": ["lastNotNull"]}, "text": {"titleSize": 18, "valueSize": 36}}
+      },
+      {
+        "id": 2, "type": "timeseries", "title": "HTTP応答時間",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {"expr": "probe_http_duration_seconds{phase=\"transfer\"}", "legendFormat": "{{service}}", "refId": "A"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "s", "custom": {"fillOpacity": 10}}}
+      },
+      {
+        "id": 3, "type": "timeseries", "title": "Ping応答時間",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {"expr": "probe_icmp_duration_seconds{phase=\"rtt\"}", "legendFormat": "{{instance}}", "refId": "A"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "s", "custom": {"fillOpacity": 10}}}
+      },
+      {
+        "id": 4, "type": "timeseries", "title": "NAS CPU使用率",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 12},
+        "targets": [
+          {"expr": "100 - (avg by(host) (rate(node_cpu_seconds_total{mode=\"idle\",host=\"nas-as5304t\"}[5m])) * 100)", "legendFormat": "CPU %", "refId": "A"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"value": null, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 90, "color": "red"}]}}}
+      },
+      {
+        "id": 5, "type": "timeseries", "title": "NAS メモリ使用率",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 12},
+        "targets": [
+          {"expr": "(1 - node_memory_MemAvailable_bytes{host=\"nas-as5304t\"} / node_memory_MemTotal_bytes{host=\"nas-as5304t\"}) * 100", "legendFormat": "Memory %", "refId": "A"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"value": null, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 90, "color": "red"}]}}}
+      },
+      {
+        "id": 6, "type": "timeseries", "title": "NAS ディスク使用率",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
+        "targets": [
+          {"expr": "(1 - node_filesystem_avail_bytes{host=\"nas-as5304t\",mountpoint=\"/volume1\"} / node_filesystem_size_bytes{host=\"nas-as5304t\",mountpoint=\"/volume1\"}) * 100", "legendFormat": "Disk %", "refId": "A"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"value": null, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 85, "color": "red"}]}}}
+      },
+      {
+        "id": 7, "type": "timeseries", "title": "PC CPU使用率",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 20},
+        "targets": [
+          {"expr": "100 - (avg(rate(windows_cpu_time_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "CPU %", "refId": "A"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"value": null, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 90, "color": "red"}]}}}
+      },
+      {
+        "id": 8, "type": "timeseries", "title": "PC メモリ使用率",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 20},
+        "targets": [
+          {"expr": "(1 - windows_memory_physical_free_bytes / windows_memory_physical_total_bytes) * 100", "legendFormat": "Memory %", "refId": "A"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"value": null, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 90, "color": "red"}]}}}
+      },
+      {
+        "id": 9, "type": "timeseries", "title": "OCI CPU使用率",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 20},
+        "targets": [
+          {"expr": "100 - (avg by(host) (rate(node_cpu_seconds_total{mode=\"idle\",host=\"sstr-monitor-oci\"}[5m])) * 100)", "legendFormat": "CPU %", "refId": "A"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"value": null, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 90, "color": "red"}]}}}
+      },
+      {
+        "id": 10, "type": "timeseries", "title": "スイッチ ポート帯域",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+        "targets": [
+          {"expr": "rate(ifHCInOctets{instance=\"100.64.1.21\"}[5m]) * 8", "legendFormat": "In {{ifDescr}}", "refId": "A"},
+          {"expr": "rate(ifHCOutOctets{instance=\"100.64.1.21\"}[5m]) * 8", "legendFormat": "Out {{ifDescr}}", "refId": "B"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "bps", "custom": {"fillOpacity": 10}}}
+      },
+      {
+        "id": 11, "type": "stat", "title": "スイッチ ポートリンク状態",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+        "targets": [
+          {"expr": "ifOperStatus{instance=\"100.64.1.21\"} == 1", "legendFormat": "{{ifDescr}}", "refId": "A"}
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [{"type": "value", "options": {"1": {"text": "UP", "color": "green"}, "2": {"text": "DOWN", "color": "red"}}}],
+            "thresholds": {"steps": [{"value": null, "color": "red"}, {"value": 1, "color": "green"}]}
+          }
+        },
+        "options": {"colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "reduceOptions": {"calcs": ["lastNotNull"]}, "text": {"titleSize": 14, "valueSize": 24}}
+      },
+      {
+        "id": 12, "type": "timeseries", "title": "NAS ネットワークI/O",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 36},
+        "targets": [
+          {"expr": "rate(node_network_receive_bytes_total{host=\"nas-as5304t\",device=~\"eth.\"}[5m]) * 8", "legendFormat": "In {{device}}", "refId": "A"},
+          {"expr": "rate(node_network_transmit_bytes_total{host=\"nas-as5304t\",device=~\"eth.\"}[5m]) * 8", "legendFormat": "Out {{device}}", "refId": "B"}
+        ],
+        "fieldConfig": {"defaults": {"unit": "bps", "custom": {"fillOpacity": 10}}}
+      },
+      {
+        "id": 13, "type": "timeseries", "title": "NAS ロードアベレージ",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36},
+        "targets": [
+          {"expr": "node_load1{host=\"nas-as5304t\"}", "legendFormat": "1m", "refId": "A"},
+          {"expr": "node_load5{host=\"nas-as5304t\"}", "legendFormat": "5m", "refId": "B"},
+          {"expr": "node_load15{host=\"nas-as5304t\"}", "legendFormat": "15m", "refId": "C"}
+        ],
+        "fieldConfig": {"defaults": {"custom": {"fillOpacity": 5}}}
+      }
+    ],
+    "schemaVersion": 39
+  },
+  "overwrite": true
+}

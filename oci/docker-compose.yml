@@ -1,73 +1,72 @@
 services:
-  mysql:
-    image: mysql:8.0-oracle
-    container_name: zbx-mysql
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
     restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - prometheus-data:/prometheus
     command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_bin
-      - --default-authentication-plugin=mysql_native_password
-    environment:
-      MYSQL_DATABASE: zabbix
-      MYSQL_USER: zabbix
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-    volumes:
-      - mysql-data:/var/lib/mysql
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=90d
+      - --web.listen-address=:9090
+      - --web.enable-admin-api
 
-  zabbix-server:
-    image: zabbix/zabbix-server-mysql:alpine-7.0-latest
-    container_name: zbx-server
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
     restart: unless-stopped
-    depends_on: [mysql]
-    environment:
-      DB_SERVER_HOST: mysql
-      MYSQL_DATABASE: zabbix
-      MYSQL_USER: zabbix
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-    ports:
-      - "10051:10051"
-    volumes:
-      - zbx-server-data:/var/lib/zabbix
-
-  zabbix-web:
-    image: zabbix/zabbix-web-nginx-mysql:alpine-7.0-latest
-    container_name: zbx-web
-    restart: unless-stopped
-    depends_on: [mysql, zabbix-server]
-    environment:
-      ZBX_SERVER_HOST: zabbix-server
-      DB_SERVER_HOST: mysql
-      MYSQL_DATABASE: zabbix
-      MYSQL_USER: zabbix
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      PHP_TZ: Asia/Tokyo
-    ports:
-      - "8080:8080"
-
-  zabbix-agent:
-    image: zabbix/zabbix-agent2:alpine-7.0-latest
-    container_name: zbx-agent
-    restart: unless-stopped
-    privileged: true
-    pid: host
     network_mode: host
     environment:
-      ZBX_HOSTNAME: sstr-monitor-oci
-      ZBX_SERVER_HOST: 127.0.0.1
-
-  zabbix-snmptraps:
-    image: zabbix/zabbix-snmptraps:alpine-7.0-latest
-    container_name: zbx-snmptraps
-    restart: unless-stopped
-    ports:
-      - "162:1162/udp"
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
+      GF_SERVER_HTTP_PORT: "3000"
     volumes:
-      - snmptraps:/var/lib/zabbix/snmptraps
+      - grafana-data:/var/lib/grafana
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --web.listen-address=:9093
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --web.listen-address=:9100
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./blackbox.yml:/etc/blackbox_exporter/config.yml
+
+  snmp-exporter:
+    image: prom/snmp-exporter:latest
+    container_name: snmp-exporter
+    restart: unless-stopped
+    network_mode: host
 
 volumes:
-  mysql-data:
-  zbx-server-data:
-  snmptraps:
+  prometheus-data:
+  grafana-data:

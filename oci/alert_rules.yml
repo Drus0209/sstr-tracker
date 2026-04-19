@@ -1,0 +1,55 @@
+groups:
+  - name: availability
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} ダウン"
+          description: "{{ $labels.instance }} が2分以上応答なし"
+
+      - alert: HTTPProbeFailure
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.service }} HTTP応答なし"
+          description: "{{ $labels.instance }} が2分以上HTTP応答なし"
+
+      - alert: ICMPPingFailure
+        expr: probe_success{job="ping"} == 0
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ping失敗: {{ $labels.instance }}"
+          description: "{{ $labels.instance }} が3分以上Ping応答なし"
+
+  - name: resources
+    rules:
+      - alert: HighCPU
+        expr: 100 - (avg by(host) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} CPU 90%超"
+
+      - alert: HighMemory
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} メモリ 90%超"
+
+      - alert: DiskSpaceLow
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} ディスク 85%超"
