@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """SSTR API Server — NAS集中管理版（セキュリティ強化）"""
-import json,os,time,hashlib,urllib.parse,urllib.request,functools,re,secrets
+import json,os,time,hashlib,urllib.parse,urllib.request,functools,re,secrets,sqlite3,threading
 from flask import Flask,jsonify,request,send_file,abort
 app=Flask(__name__)
 BD=os.path.dirname(os.path.abspath(__file__))
@@ -33,6 +33,72 @@ OF=os.path.join(BD,"orbis_cache.json")
 FF=os.path.join(BD,"friends.json")
 SF=os.path.join(BD,"shared_plans.json")
 UF=os.path.join(BD,"usage.json")
+
+# === SQLite ===
+DB_PATH=os.path.join(BD,"sstr.db")
+_db_local=threading.local()
+def get_db():
+    if not hasattr(_db_local,'conn') or _db_local.conn is None:
+        _db_local.conn=sqlite3.connect(DB_PATH,timeout=10)
+        _db_local.conn.execute("PRAGMA journal_mode=WAL")
+        _db_local.conn.execute("PRAGMA busy_timeout=5000")
+        _db_local.conn.row_factory=sqlite3.Row
+    return _db_local.conn
+
+def init_db():
+    db=sqlite3.connect(DB_PATH,timeout=10)
+    db.execute("PRAGMA journal_mode=WAL")
+    db.execute("PRAGMA busy_timeout=5000")
+    db.executescript("""
+        CREATE TABLE IF NOT EXISTS locations (
+            name TEXT PRIMARY KEY,
+            lat REAL, lng REAL, speed REAL DEFAULT 0,
+            heading REAL DEFAULT 0, ts REAL
+        );
+        CREATE TABLE IF NOT EXISTS usage_counter (
+            id INTEGER PRIMARY KEY CHECK(id=1),
+            maps INTEGER DEFAULT 0, directions INTEGER DEFAULT 0
+        );
+        INSERT OR IGNORE INTO usage_counter(id,maps,directions) VALUES(1,0,0);
+        CREATE TABLE IF NOT EXISTS friends (
+            user_name TEXT, friend_name TEXT,
+            PRIMARY KEY(user_name, friend_name)
+        );
+        CREATE TABLE IF NOT EXISTS shared_plans (
+            name TEXT PRIMARY KEY, plan TEXT, updated REAL
+        );
+    """)
+    # 既存JSONデータ移行
+    import json as _j
+    # locations
+    try:
+        locs=_j.load(open(os.path.join(BD,"locations.json")))
+        for k,v in locs.items():
+            db.execute("INSERT OR REPLACE INTO locations VALUES(?,?,?,?,?,?)",
+                (k,v.get("lat"),v.get("lng"),v.get("speed",0),v.get("heading",0),v.get("ts",0)))
+    except: pass
+    # usage
+    try:
+        u=_j.load(open(os.path.join(BD,"usage.json")))
+        db.execute("UPDATE usage_counter SET maps=?,directions=? WHERE id=1",(u.get("maps",0),u.get("directions",0)))
+    except: pass
+    # friends
+    try:
+        fr=_j.load(open(os.path.join(BD,"friends.json")))
+        for user,flist in fr.items():
+            if isinstance(flist,list):
+                for f in flist:
+                    db.execute("INSERT OR IGNORE INTO friends VALUES(?,?)",(user,f))
+    except: pass
+    # shared_plans
+    try:
+        sp=_j.load(open(os.path.join(BD,"shared_plans.json")))
+        for name,plan in sp.items():
+            db.execute("INSERT OR REPLACE INTO shared_plans VALUES(?,?,?)",(name,_j.dumps(plan,ensure_ascii=False),time.time()))
+    except: pass
+    db.commit()
+    db.close()
+init_db()
 
 GMAPS_KEY="AIzaSyBwPBSu3pJ7LBsQ7WvSbTWiQsFY0R8cREY"
 
@@ -184,9 +250,9 @@ def route_search():
     if avoid:params["avoid"]=avoid
     url="https://maps.googleapis.com/maps/api/directions/json?"+urllib.parse.urlencode(params)
     try:
-        usage=lj(UF,{"maps":0,"directions":0})
-        usage["directions"]=usage.get("directions",0)+1
-        sj(UF,usage)
+        db=get_db()
+        db.execute("UPDATE usage_counter SET directions=directions+1 WHERE id=1")
+        db.commit()
         req=urllib.request.Request(url,headers={"User-Agent":"SSTR-Tracker/1.0"})
         with urllib.request.urlopen(req,timeout=15) as r:
             result=json.loads(r.read().decode())
@@ -204,7 +270,9 @@ def route_search():
 @app.route("/api/stats")
 def stats():
     s=lj(os.path.join(BD,"stats_cache.json"),None)
-    u=lj(UF,{"maps":0,"directions":0})
+    db=get_db()
+    row=db.execute("SELECT maps,directions FROM usage_counter WHERE id=1").fetchone()
+    u={"maps":row["maps"],"directions":row["directions"]} if row else {"maps":0,"directions":0}
     if s and isinstance(s,dict) and "directions" in s:
         r={"maps":max(s.get("maps",0),u.get("maps",0)),"directions":max(s.get("directions",0),u.get("directions",0))}
         if "timestamp" in s:r["timestamp"]=s["timestamp"]
@@ -258,23 +326,25 @@ def post_location():
     if request.method=="OPTIONS":return "",204
     d=request.get_json()
     if not d or "name" not in d or "lat" not in d or "lng" not in d:return jsonify({"error":"bad"}),400
-    locs=lj(LF,{})
-    locs[d["name"]]={"lat":d["lat"],"lng":d["lng"],"speed":d.get("speed",0),"heading":d.get("heading",0),"ts":time.time()}
-    sj(LF,locs)
+    db=get_db()
+    db.execute("INSERT OR REPLACE INTO locations VALUES(?,?,?,?,?,?)",
+        (d["name"],d["lat"],d["lng"],d.get("speed",0),d.get("heading",0),time.time()))
+    db.commit()
     return jsonify({"ok":True})
 
 @app.route("/api/locations")
 def get_locations():
-    locs=lj(LF,{});now=time.time()
-    result=[{"name":k,**v} for k,v in locs.items() if now-v.get("ts",0)<300]
+    db=get_db();now=time.time()
+    rows=db.execute("SELECT name,lat,lng,speed,heading,ts FROM locations WHERE ts>?",(now-300,)).fetchall()
+    result=[{"name":r["name"],"lat":r["lat"],"lng":r["lng"],"speed":r["speed"],"heading":r["heading"],"ts":r["ts"]} for r in rows]
     return jsonify(result)
 
 # =============================================
 # === 音声生成（VOICEVOX）===
 # =============================================
 VOICEVOX_HOSTS=[
-    ("pc","http://100.87.205.49:50021",8),    # 優先: PCの高速VOICEVOX (Tailscale)
-    ("nas","http://localhost:50021",30),       # フォールバック: NAS内Docker
+    ("nas","http://localhost:50021",30),   # プライマリ: NAS Docker
+    ("pc","http://100.87.205.49:50021",8),  # フォールバック: PC (起動時のみ)
 ]
 def _call_voicevox(host,text,speaker,timeout):
     q=urllib.request.urlopen(urllib.request.Request(
