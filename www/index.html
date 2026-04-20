@@ -279,7 +279,7 @@ if(localStorage.getItem('_reqChecked')&&!localStorage.getItem('_consentAgreed'))
     try{
       window._rtap=new Audio(_nasAudio('/api/voice/req_ok_tap'));
       var _rtap=window._rtap;
-      _rtap.volume=1.0;
+      _rtap.volume=1.0;_rtap.playbackRate=_voiceSpeed;
       var _rzi2=document.getElementById('reqZunda');var _rzm2=null;
       _rtap.onplay=function(){if(_rzi2)_rzm2=setInterval(function(){_rzi2.src=_rzi2.src.includes('close')?'zundamon_open.png':'zundamon_close.png';},150);};
       _rtap.onended=function(){if(_rzm2)clearInterval(_rzm2);if(_rzi2)_rzi2.src='zundamon_close.png';};
@@ -292,7 +292,7 @@ if(localStorage.getItem('_reqChecked')&&!localStorage.getItem('_consentAgreed'))
   try{
     window._rca=new Audio(_nasAudio('/api/voice/req_check'));
     var _rca=window._rca;
-    _rca.volume=1.0;
+    _rca.volume=1.0;_rca.playbackRate=_voiceSpeed;
     var _rzi=document.getElementById('reqZunda');
     window._rzm=null;
     _rca.onplay=function(){
@@ -1080,7 +1080,7 @@ function _spkFallback(t){
   function _tryGen(attempt){
     if(gen!==_audioGen)return;// stale
     _nf(NAS_API+'/api/voice/generate',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text:t,key:key}),signal:AbortSignal.timeout(30000)})
+      body:JSON.stringify({text:t,key:key}),signal:AbortSignal.timeout(120000)})
     .then(function(r){return r.json();})
     .then(function(d){
       if(gen!==_audioGen)return;
@@ -1394,19 +1394,29 @@ function _startGps(gpsBox,_dotInterval){
             if(appBgm)appBgm.volume=0.1;
             _zundaShow(_myName+'さん、ツーリングプランを選択してほしいのだ！');
             function _paFallback(){spk(_myName+'さん、ツーリングプランを選択してほしいのだ！',true,function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);});}
-            var pa=_playWA(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)),{
-              volume:1.0,rate:_voiceSpeed,
-              onended:function(){if(_currentAudio===pa)_currentAudio=null;if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);},
-              onerror:function(){if(_currentAudio!==pa)return;_paFallback();}
-            });
-            _setCurrentAudio(pa);
+            if(window.Capacitor){
+              // Android: Audio要素で再生
+              var pa=new Audio(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)));
+              _setCurrentAudio(pa);pa.volume=1.0;pa.playbackRate=_voiceSpeed;
+              pa.onended=function(){if(_currentAudio===pa)_currentAudio=null;if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);};
+              pa.onerror=function(){if(_currentAudio!==pa)return;_paFallback();};
+              pa.play().catch(function(){if(_currentAudio!==pa)return;_paFallback();});
+            } else {
+              // iOS/PWA: WebAudio経由（autoplay制限回避）
+              var pa=_playWA(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)),{
+                volume:1.0,rate:_voiceSpeed,
+                onended:function(){if(_currentAudio===pa)_currentAudio=null;if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);},
+                onerror:function(){if(_currentAudio!==pa)return;_paFallback();}
+              });
+              _setCurrentAudio(pa);
+            }
             _planAnnounced=true;
             _showCards();
           }
         }).catch(function(){});// まだ生成中、リトライ
     },1500);
     // 30秒で諦めてフォールバック
-    setTimeout(function(){clearInterval(_waitWav);clearInterval(_dotInterval);gpsBox.remove();_showCards();},30000);
+    setTimeout(function(){clearInterval(_waitWav);clearInterval(_dotInterval);gpsBox.remove();_showCards();},120000);
   }
   navigator.geolocation.getCurrentPosition(function(p){
     gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
@@ -1422,14 +1432,14 @@ function _startGps(gpsBox,_dotInterval){
 // === NAS音声生成 ===
 function _genWelcomeVoice(name){
   var hdr={'Content-Type':'application/json; charset=utf-8'};
-  // プラン選択用WAV → 完了後におかえり用WAV
+  // 直列生成: 1つずつ完了を待ってから次へ（NAS CPU負荷分散）
   _nf(NAS_API+'/api/voice/generate',{method:'POST',headers:hdr,
     body:JSON.stringify({text:name+'さん、ツーリングプランを選択してほしいのだ！',key:'plan_'+name}),
-    signal:AbortSignal.timeout(30000)})
+    signal:AbortSignal.timeout(120000)})
   .then(function(){
     return _nf(NAS_API+'/api/voice/generate',{method:'POST',headers:hdr,
       body:JSON.stringify({text:name+'さん、おかえりなのだ！',key:'welcome_'+name}),
-      signal:AbortSignal.timeout(30000)});
+      signal:AbortSignal.timeout(120000)});
   }).catch(function(){});
 }
 
@@ -1592,8 +1602,8 @@ function _deleteUser(){
   location.reload();
 }
 // v260414cはデフォルト1.4（音程維持）。旧保存値を一度だけリセット
-if(!localStorage.getItem('_speedMigrated_v260414c')){localStorage.setItem('_voiceSpeed','1.4');localStorage.setItem('_speedMigrated_v260414c','1');}
-var _voiceSpeed=parseFloat(localStorage.getItem('_voiceSpeed')||'1.4');
+if(!localStorage.getItem('_speedMigrated_v260414c')){localStorage.setItem('_voiceSpeed','1.1');localStorage.setItem('_speedMigrated_v260414c','1');}
+var _voiceSpeed=parseFloat(localStorage.getItem('_voiceSpeed')||'1.1');
 // 全Audio要素に音程維持を自動適用（play時にフック）
 (function(){try{var _op=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){try{this.preservesPitch=true;this.mozPreservesPitch=true;this.webkitPreservesPitch=true;}catch(e){}return _op.apply(this,arguments);};}catch(e){}})();
 function _setSpeed(s){_voiceSpeed=s;localStorage.setItem('_voiceSpeed',s);}
@@ -1947,11 +1957,20 @@ function emergGoal(){
       var goalVoice=ratio>1.2?'voice/goal_余裕.wav':ratio>=1.0?'voice/goal_ギリギリ.wav':'voice/goal_間に合わない.wav';
       var goalText=ratio>1.2?'千里浜まで余裕があるのだ。':ratio>=1.0?'千里浜までギリギリなのだ。':'千里浜まで間に合わないのだ！';
       _stopAllAudio();
-      var _ga=_playWA(new URL(goalVoice,window.location.href).href,{
-        volume:1.0,
-        onerror:function(){spk(goalText,true);}
-      });
-      _setCurrentAudio(_ga);
+      if(window.Capacitor){
+        // Android: Audio要素
+        var _ga=new Audio(new URL(goalVoice,window.location.href).href);
+        _setCurrentAudio(_ga);_ga.volume=1.0;_ga.playbackRate=_voiceSpeed;
+        _ga.onerror=function(){spk(goalText,true);};
+        _ga.play().catch(function(){spk(goalText,true);});
+      } else {
+        // iOS/PWA: WebAudio
+        var _ga=_playWA(new URL(goalVoice,window.location.href).href,{
+          volume:1.0,rate:_voiceSpeed,
+          onerror:function(){spk(goalText,true);}
+        });
+        _setCurrentAudio(_ga);
+      }
       vM='map';rnd();
       var p=document.createElement('div');
       p.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#111118;border:2px solid '+col+';border-radius:16px;padding:20px;min-width:280px;text-align:center;';
@@ -2036,7 +2055,7 @@ function onGpsUpdate(p,announce_it){
     if(cDay==='day1'&&_hit){
       if(appBgm)appBgm.volume=0.05;if(bgm)bgm.volume=0.1;
       const ff=new Audio(new URL('sentou-syouri-remix.mp3',window.location.href).href);
-      ff.volume=0.8;ff.play().catch(()=>sGoal());
+      ff.volume=0.8;ff.playbackRate=_voiceSpeed;ff.play().catch(()=>sGoal());
       ff.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;if(bgm)bgm.volume=0.5;};
       const _msgs={15:'15ポイント達成なのだ！完走条件クリアなのだ！おめでとうなのだ！',20:'20ポイント達成なのだ！すごいのだ！',25:'25ポイント達成なのだ！絶好調なのだ！',30:'30ポイント達成なのだ！あと少しなのだ！',34:'34ポイント！全ポイント制覇なのだ！おめでとうなのだ！'};
       spk(_msgs[_hit],true);
@@ -3063,7 +3082,7 @@ function _startSplashAudio(){
         setTimeout(function(){
           _zundaShow('ライダー名を入力してほしいのだ！');
           window._splashAudio=new Audio(new URL('voice/enter_name.wav',window.location.href).href);
-          window._splashAudio.volume=1.0;
+          window._splashAudio.volume=1.0;window._splashAudio.playbackRate=_voiceSpeed;
           window._splashAudio.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,2000);};
           window._splashAudio.play().catch(function(){});
         },500);
@@ -3072,7 +3091,7 @@ function _startSplashAudio(){
         _zundaMouthStop();
         _zundaShow('ライダー名を入力してほしいのだ！');
         window._splashAudio=new Audio(new URL('voice/enter_name.wav',window.location.href).href);
-        window._splashAudio.volume=1.0;
+        window._splashAudio.volume=1.0;window._splashAudio.playbackRate=_voiceSpeed;
         window._splashAudio.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,2000);};
         window._splashAudio.play().catch(function(){});
       };
