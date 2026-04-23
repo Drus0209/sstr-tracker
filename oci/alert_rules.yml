@@ -53,3 +53,32 @@ groups:
           severity: warning
         annotations:
           summary: "{{ $labels.host }} ディスク 85%超"
+
+  - name: fetch_freshness
+    rules:
+      - alert: WeatherDataStale
+        expr: time() - fetch_last_update_seconds{file="weather_json"} > 1800
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NAS weather.json が30分以上更新されていません"
+          description: "fetch_weather ループが停止している可能性。最終更新から{{ humanizeDuration $value }}"
+
+      - alert: UsageStatsStale
+        expr: time() - fetch_last_update_seconds{file="stats_cache_json"} > 21600
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NAS stats_cache.json が6時間以上更新されていません"
+          description: "fetch_stats ループが停止している可能性。最終更新から{{ humanizeDuration $value }}"
+
+      - alert: OrbisCacheStale
+        expr: time() - fetch_last_update_seconds{file="orbis_cache_json"} > 172800
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "NAS orbis_cache.json が2日以上更新されていません"
+          description: "fetch_orbis ループが停止している可能性"

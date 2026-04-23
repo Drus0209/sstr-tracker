@@ -49,9 +49,26 @@ def main():
     except Exception:
         pass
 
+    # Places API (Places Backend + New Places API)
+    places = 0
+    for svc in ("places-backend.googleapis.com", "places.googleapis.com"):
+        try:
+            places += get_api_usage(client, svc)
+        except Exception:
+            pass
+
+    # Geocoding API
+    geocoding = 0
+    try:
+        geocoding = get_api_usage(client, "geocoding-backend.googleapis.com")
+    except Exception:
+        pass
+
     data = {
         "maps": maps,
         "directions": directions,
+        "places": places,
+        "geocoding": geocoding,
         "month": datetime.utcnow().strftime("%Y-%m"),
         "timestamp": datetime.utcnow().isoformat() + "Z",
     }
@@ -59,7 +76,7 @@ def main():
     with open(CACHE_FILE, "w") as f:
         json.dump(data, f)
 
-    print(f"Updated: Maps={maps}, Dir={directions}")
+    print(f"Updated: Maps={maps}, Dir={directions}, Places={places}, Geo={geocoding}")
 
 if __name__ == "__main__":
     main()

@@ -50,24 +50,6 @@ scrape_configs:
       - target_label: __address__
         replacement: 127.0.0.1:9115
 
-  # VOICEVOX PC HTTP監視
-  - job_name: 'voicevox-pc'
-    metrics_path: /probe
-    params:
-      module: [http_2xx]
-    static_configs:
-      - targets:
-          - http://100.87.205.49:50021/version
-        labels:
-          service: 'VOICEVOX PC'
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: __param_target
-      - source_labels: [__param_target]
-        target_label: instance
-      - target_label: __address__
-        replacement: 127.0.0.1:9115
-
   # VOICEVOX NAS HTTP監視
   - job_name: 'voicevox-nas'
     metrics_path: /probe
@@ -108,6 +90,20 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: 127.0.0.1:9115
+
+  # NAS Flask fetch鮮度監視
+  - job_name: 'nas-fetch-health'
+    scrape_interval: 60s
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ['100.76.6.43:3456']
+        labels:
+          host: 'nas-as5304t'
+    http_headers:
+      X-API-Key:
+        values:
+          - sstr2026_k4w4s4k1_zx4r
 
   # スイッチ SNMP監視
   - job_name: 'switch-snmp'

@@ -8,6 +8,19 @@ BD=os.path.dirname(os.path.abspath(__file__))
 # === セキュリティ設定 ===
 API_KEY="sstr2026_k4w4s4k1_zx4r"
 
+# Gemini APIキー（.env から読む）
+GEMINI_API_KEY=""
+try:
+    _envp=os.path.join(BD,".env")
+    if os.path.exists(_envp):
+        for _ln in open(_envp):
+            _ln=_ln.strip()
+            if _ln.startswith("GEMINI_API_KEY="):
+                GEMINI_API_KEY=_ln.split("=",1)[1].strip()
+                break
+except Exception:
+    pass
+
 # レート制限: IP毎に1分間のリクエスト数を制限
 _rate_limit={}
 _rate_max=120  # 1分あたり最大リクエスト数
@@ -275,6 +288,8 @@ def stats():
     u={"maps":row["maps"],"directions":row["directions"]} if row else {"maps":0,"directions":0}
     if s and isinstance(s,dict) and "directions" in s:
         r={"maps":max(s.get("maps",0),u.get("maps",0)),"directions":max(s.get("directions",0),u.get("directions",0))}
+        if "places" in s:r["places"]=s["places"]
+        if "geocoding" in s:r["geocoding"]=s["geocoding"]
         if "timestamp" in s:r["timestamp"]=s["timestamp"]
         return jsonify(r)
     return jsonify(u)
@@ -623,9 +638,66 @@ def api_version():
     # minVersion: これより古いと強制更新 / latest: 最新推奨バージョン
     return jsonify({
         "minVersion":"260414",
-        "latest":"260414",
+        "latest":"260423",
         "apkUrl":"/download/apk"
     })
+
+# =============================================
+# === AI ルート提案（Gemini Flash）===
+# =============================================
+@app.route("/api/ai/plan",methods=["POST","OPTIONS"])
+def ai_plan():
+    if request.method=="OPTIONS":return "",204
+    if not GEMINI_API_KEY:return jsonify({"error":"gemini_not_configured"}),500
+    d=request.get_json(force=True)
+    if not d:return jsonify({"error":"bad_request"}),400
+    origin=d.get("origin","")
+    budget=d.get("budget_hours",6)
+    prefs=d.get("preferences","絶景 グルメ")
+    start=d.get("start_time","09:00")
+    prompt=(
+        "あなたは日本のバイクツーリングプランナーです。以下条件で日帰りツーリングプランを作ってください。\n"
+        f"出発地：{origin}\n"
+        f"出発時刻：{start}\n"
+        f"所要時間：約{budget}時間\n"
+        f"希望：{prefs}\n\n"
+        "制約：\n"
+        "- スポットは3〜6箇所\n"
+        "- 実在する道の駅・観光地・飲食店のみ（地名だけの抽象表現NG）\n"
+        "- 総走行距離は所要時間の目安（下道50km/h, 高速80km/h想定）\n"
+        "- 最後は出発地付近に戻るか、明確なゴール地点\n\n"
+        "JSON形式で返してください（マークダウンコードブロック無し、生JSONのみ）：\n"
+        '{"summary":"プラン概要1行","stops":[{"name":"スポット名","area":"所在地(市町村)","time":"HH:MM","dur_min":滞在分,"memo":"一言説明"}]}'
+    )
+    req_body={"contents":[{"parts":[{"text":prompt}]}],"generationConfig":{"temperature":0.7,"responseMimeType":"application/json"}}
+    url=f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
+    try:
+        req=urllib.request.Request(url,data=json.dumps(req_body).encode("utf-8"),headers={"Content-Type":"application/json"})
+        resp=urllib.request.urlopen(req,timeout=30).read()
+        rd=json.loads(resp)
+        text=rd["candidates"][0]["content"]["parts"][0]["text"]
+        plan=json.loads(text)
+    except Exception as e:
+        return jsonify({"error":"ai_failed","detail":str(e)}),500
+    # スポット毎にGoogle Places APIで座標取得（ハルシネーション対策）
+    # 注: Places APIキーは既存のMaps JS APIキーを使用（クライアント側経由でもOKだが、
+    #     ここではAIが指定した名前ベースで検証せず、クライアント側でPlaces Autocompleteに通す運用とする）
+    return jsonify({"ok":True,"plan":plan})
+
+# =============================================
+# === Prometheus metrics（fetch鮮度監視用）===
+# =============================================
+@app.route("/metrics")
+def metrics():
+    files=[("weather_json",WF),("stats_cache_json",os.path.join(BD,"stats_cache.json")),("orbis_cache_json",OF)]
+    lines=[
+        "# HELP fetch_last_update_seconds Last modified time of fetch output files (unix seconds)",
+        "# TYPE fetch_last_update_seconds gauge",
+    ]
+    for label,path in files:
+        mt=os.path.getmtime(path) if os.path.exists(path) else 0
+        lines.append('fetch_last_update_seconds{file="%s"} %d'%(label,int(mt)))
+    return ("\n".join(lines)+"\n","200 OK",{"Content-Type":"text/plain; version=0.0.4"})
 
 # =============================================
 # === APKダウンロード（認証不要）===

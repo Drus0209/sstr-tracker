@@ -1,0 +1,35 @@
+#!/bin/sh
+
+SSTR_DIR=/volume1/home/Drus/sstr-api
+CRED=$SSTR_DIR/service-account-key.json
+LOG=$SSTR_DIR/logs
+
+case "$1" in
+  start)
+    sleep 30
+    # iptables fix for Tailscale + OCI
+    sh /volume1/home/Drus/sstr-api/fix_iptables.sh
+    mkdir -p $LOG
+    # SSH on port 2222 (sandbox disabled)
+    /usr/sbin/sshd -f /etc/ssh/sshd_config -o "Port 2222" -o "UsePAM no" -o "UsePrivilegeSeparation no" 2>/dev/null &
+    # VOICEVOX Docker
+    docker start voicevox 2>/dev/null &
+    # Flask API server (Drusユーザーで実行)
+    su Drus -c "cd $SSTR_DIR && GOOGLE_APPLICATION_CREDENTIALS=$CRED nohup python3 -m gunicorn -w 4 --threads 2 -b 0.0.0.0:3456 --timeout 60 --access-logfile logs/access.log server:app > $LOG/server.log 2>&1 &"
+    # API stats (3時間ごと - Drusユーザー)
+    su Drus -c "nohup sh -c 'while true; do cd $SSTR_DIR && GOOGLE_APPLICATION_CREDENTIALS=$CRED python3 fetch_stats.py >> $LOG/fetch.log 2>&1; sleep 10800; done' > /dev/null 2>&1 &"
+    # Weather (10分ごと - Drusユーザー)
+    su Drus -c "nohup sh -c 'while true; do cd $SSTR_DIR && python3 fetch_weather.py >> $LOG/weather.log 2>&1; sleep 600; done' > /dev/null 2>&1 &"
+    # Orbis (1日ごと - Drusユーザー)
+    su Drus -c "nohup sh -c 'while true; do cd $SSTR_DIR && python3 fetch_orbis.py >> $LOG/orbis.log 2>&1; sleep 86400; done' > /dev/null 2>&1 &"
+    # Watchdog (5分ごとにfetchループ生存確認・自動復旧 - Drusユーザー)
+    su Drus -c "nohup sh -c 'while true; do $SSTR_DIR/watchdog.sh; sleep 300; done' > /dev/null 2>&1 &"
+    ;;
+  stop)
+    pkill -f gunicorn
+    pkill -f "fetch_stats.py"
+    pkill -f "fetch_weather.py"
+    pkill -f "fetch_orbis.py"
+    pkill -f "watchdog.sh"
+    ;;
+esac

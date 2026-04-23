@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBwPBSu3pJ7LBsQ7WvSbTWiQsFY0R8cREY&language=ja"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBwPBSu3pJ7LBsQ7WvSbTWiQsFY0R8cREY&language=ja&libraries=places"></script>
 <script src="capacitor.js"></script>
 <style>
 :root{--bg:#06060c;--card:#111118;--bdr:#1e1e2e;--txt:#e8e8f0;--sub:#666680;--ac:#00d4ff;--grn:#00e676;--red:#ff4444;--org:#ff9100;--ylw:#ffd740;--pk:#ff6b9d;--noto:#4caf50;}
@@ -134,12 +134,11 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 </div>
 <div id="splash" style="position:fixed;inset:0;background:#06060c;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;overflow-y:auto;background-image:url(bg.jpg);background-size:cover;background-position:48% 70%;" ontouchstart="aC&&aC.resume();">
   <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.15) 50%,rgba(6,6,12,0.7) 100%);"></div>
-  <div style="position:absolute;top:20px;left:20px;z-index:2;" onclick="if(!window._atc)window._atc=0;window._atc++;clearTimeout(window._att);window._att=setTimeout(()=>{window._atc=0;},2000);if(window._atc>=5){window._atc=0;_isAdmin=!_isAdmin;localStorage.setItem('_isAdmin',_isAdmin?'1':'0');this.querySelector('.adm').textContent=_isAdmin?'🔑 ADMIN':'';_showCards();}" >
+  <div style="position:absolute;top:20px;left:20px;z-index:2;" onclick="if(!window._atc)window._atc=0;window._atc++;clearTimeout(window._att);window._att=setTimeout(()=>{window._atc=0;},2000);if(window._atc>=5){window._atc=0;_isAdmin=!_isAdmin;localStorage.setItem('_isAdmin',_isAdmin?'1':'0');_showCards();}" >
     <div style="font-family:'Outfit';font-size:10px;font-weight:700;color:#aaa;letter-spacing:4px;text-transform:uppercase;">GPS Tracker</div>
     <div style="font-family:'Outfit';font-size:36px;font-weight:900;color:#00d4ff;letter-spacing:2px;line-height:1;">2026</div>
-    <div class="adm" style="font-family:'Outfit';font-size:10px;color:var(--ylw);margin-top:4px;"></div>
   </div>
-  <div style="position:absolute;top:20px;right:20px;z-index:2;text-align:right;"><div id="apiCntSplash"></div><div id="adminExitBtn" style="display:none;"><button onclick="_isAdmin=false;localStorage.setItem('_isAdmin','0');document.querySelector('.adm').textContent='';_showCards();document.getElementById('adminExitBtn').style.display='none';" style="background:rgba(255,68,68,0.15);border:1px solid var(--red);border-radius:8px;padding:6px 12px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;">🔓 管理者解除</button></div></div>
+  <div style="position:absolute;top:20px;right:20px;z-index:2;text-align:right;"><div id="apiCntSplash"></div><div id="adminExitBtn" style="display:none;"><button onclick="_isAdmin=false;localStorage.setItem('_isAdmin','0');_showCards();document.getElementById('adminExitBtn').style.display='none';" style="background:rgba(255,68,68,0.15);border:1px solid var(--red);border-radius:8px;padding:6px 12px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;">🔓 管理者解除</button></div></div>
   <div id="cardContainer" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin-top:-170px;">
     <div style="width:100%;display:flex;flex-direction:column;gap:12px;">
       <div id="riderNameBox" style="background:rgba(20,30,50,0.85);border:2px solid var(--org);border-radius:16px;padding:18px 20px;text-align:center;">
@@ -159,7 +158,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
         <div class="sparkle"><img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:36px;" onerror="this.outerHTML='<span style=font-family:Outfit;font-size:20px;font-weight:900;color:#fff>SSTR 2026</span>'"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
           <div style="font-size:11px;color:#aaa;">Sunrise Sunset Rally　34pt目標</div>
-          <div style="font-size:10px;color:#444;font-family:'Outfit';">v.260412</div>
+          <div style="font-size:10px;color:#444;font-family:'Outfit';">v.260423</div>
         </div>
       </button>
 
@@ -512,9 +511,16 @@ var _lastRerouteTime=0;
 var _rerouteThreshold=0.5;// km
 function _distToRoute(lat,lng){
   if(_routePath.length<2)return 0;
+  // 線分までの最短距離を計算（頂点距離だけだと高速等のまばらなルートで誤判定）
   var minD=Infinity;
-  for(var i=0;i<_routePath.length;i++){
-    var d=dK(lat,_routePath[i].lat,lng,_routePath[i].lng);
+  for(var i=0;i<_routePath.length-1;i++){
+    var a=_routePath[i],b=_routePath[i+1];
+    var dy=b.lat-a.lat,dx=b.lng-a.lng;
+    var len2=dy*dy+dx*dx;
+    var t=len2>0?((lat-a.lat)*dy+(lng-a.lng)*dx)/len2:0;
+    if(t<0)t=0;else if(t>1)t=1;
+    var sLat=a.lat+t*dy,sLng=a.lng+t*dx;
+    var d=dK(lat,lng,sLat,sLng);
     if(d<minD)minD=d;
   }
   return minD;
@@ -559,6 +565,77 @@ function clearMap(){
   if(mTgt){mTgt.setMap(null);mTgt=null;}
   mStops.forEach(m=>m.setMap(null));mStops=[];
   mPolylines.forEach(p=>p.setMap(null));mPolylines=[];
+  mOrbis.forEach(m=>m.setMap(null));mOrbis=[];
+  mSSTR2026.forEach(m=>m.setMap(null));mSSTR2026=[];
+  if(typeof mVisits!=='undefined'){mVisits.forEach(m=>m.setMap(null));mVisits=[];}
+}
+// SSTR2026公式スポット全69をマップ表示（カテゴリ色分け）
+function drawSSTR2026Markers(){
+  if(!map||!_sstr2026Spots)return;
+  mSSTR2026.forEach(m=>m.setMap(null));mSSTR2026=[];
+  if(!_sstr2026Show)return;
+  var cols={shitei:'#2196f3',fukko:'#ff9100',kyoryoku:'#4caf50'};
+  var emojis={shitei:'🗾',fukko:'🌸',kyoryoku:'🤝'};
+  _sstr2026Spots.forEach(function(s){
+    if(typeof s.lat!=='number'||typeof s.lng!=='number')return;
+    var col=cols[s.category]||'#666';
+    var em=emojis[s.category]||'📍';
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">'
+      +'<circle cx="15" cy="15" r="12" fill="'+col+'" stroke="#fff" stroke-width="2"/>'
+      +'<text x="15" y="20" text-anchor="middle" font-size="14">'+em+'</text>'
+      +'</svg>';
+    var mk=new google.maps.Marker({
+      position:{lat:s.lat,lng:s.lng},map:map,zIndex:70,
+      icon:{url:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg),
+        scaledSize:new google.maps.Size(30,30),anchor:new google.maps.Point(15,15)},
+      title:em+' '+s.name+' ('+s.pref+' '+s.pt+'pt)'
+    });
+    mk.addListener('click',function(){_showSSTR2026Detail(s);});
+    mSSTR2026.push(mk);
+  });
+}
+function _showSSTR2026Detail(s){
+  var ex=document.getElementById('sstr2026Detail');if(ex)ex.remove();
+  var catName={shitei:'🗾 指定道の駅(3pt)',fukko:'🌸 指定能登復興応援(3pt)',kyoryoku:'🤝 協力道の駅(2pt)'};
+  var div=document.createElement('div');div.id='sstr2026Detail';
+  div.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10002;background:#111118;border:2px solid var(--ac);border-radius:16px;padding:20px;min-width:300px;max-width:90vw;';
+  div.innerHTML='<div style="font-size:11px;color:var(--sub);margin-bottom:4px;">'+(catName[s.category]||'')+'</div>'
+    +'<div style="font-size:16px;font-weight:900;color:#fff;margin-bottom:8px;">'+s.name+'</div>'
+    +'<div style="font-size:11px;color:var(--sub);margin-bottom:8px;">📍 '+s.pref+' '+s.city+'</div>'
+    +'<div style="font-size:12px;color:var(--txt);margin-bottom:12px;">'+(s.memo||'')+'</div>'
+    +'<div style="font-size:10px;color:#666;margin-bottom:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;">'+s.addr+'</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button onclick="window.open(\''+s.url+'\',\'_blank\')" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:10px;color:#000;font-size:12px;font-weight:800;cursor:pointer;">🔗 詳細</button>'
+    +'<button onclick="window.open(\'https://www.google.com/maps/dir/?api=1&destination='+s.lat+','+s.lng+'&travelmode=driving\',\'_blank\')" style="flex:1;background:var(--org);border:none;border-radius:8px;padding:10px;color:#000;font-size:12px;font-weight:800;cursor:pointer;">🧭 ナビ</button>'
+    +'<button onclick="document.getElementById(\'sstr2026Detail\').remove();" style="background:none;border:1px solid var(--bdr);border-radius:8px;padding:10px 14px;color:var(--txt);font-size:12px;cursor:pointer;">閉じる</button>'
+    +'</div>';
+  document.body.appendChild(div);
+}
+function toggleSSTR2026(){
+  _sstr2026Show=!_sstr2026Show;
+  localStorage.setItem('_sstr2026Show',_sstr2026Show?'1':'0');
+  drawSSTR2026Markers();
+  rnd();
+}
+// オービスを地図にプロット（全件表示・専用アイコン）
+function drawOrbisMarkers(){
+  if(!map||!ORBIS||ORBIS.length===0)return;
+  mOrbis.forEach(m=>m.setMap(null));mOrbis=[];
+  var icons={'固定':'orbis_fixed.png','半固定':'orbis_semi.png','移動':'orbis_mobile.png','固定(OSM)':'orbis_osm.png'};
+  ORBIS.forEach(function(o){
+    var iconFile=icons[o.type]||'orbis_fixed.png';
+    var mk=new google.maps.Marker({
+      position:{lat:o.lat,lng:o.lng},map:map,zIndex:50,
+      icon:{
+        url:iconFile,
+        scaledSize:new google.maps.Size(32,32),
+        anchor:new google.maps.Point(16,16)
+      },
+      title:(o.type||'オービス')+' '+(o.limit?o.limit+'km/h':'')+(o.name?' '+o.name:'')
+    });
+    mk.addListener('click',function(){if(typeof _showOrbisBanner==='function')_showOrbisBanner(o);});
+    mOrbis.push(mk);
+  });
 }
 var _turnPoints=[];// {lat,lng,dir:'右'|'左'|'鋭角右'|'鋭角左'|'Uターン',announced200:false,announced50:false}
 var _turnPointsOld=[];
@@ -757,7 +834,14 @@ function fetchGoogleRoute(stops){
 }
 
 // === MAP ===
-let map=null,mMe=null,mTgt=null,mStops=[];
+let map=null,mMe=null,mTgt=null,mStops=[],mOrbis=[],mSSTR2026=[];
+var _sstr2026Spots=null;
+var _sstr2026Show=localStorage.getItem('_sstr2026Show')==='1';
+// SSTR2026公式スポットJSONロード
+fetch('sstr2026_spots.json',{cache:'no-store'}).then(r=>r.json()).then(d=>{
+  _sstr2026Spots=d.spots||[];
+  if(_sstr2026Show)drawSSTR2026Markers();
+}).catch(()=>{});
 let nightMode=false;
 const mapStyles={
   day:[{featureType:'poi',stylers:[{visibility:'off'}]}],
@@ -792,6 +876,9 @@ function initMap(){
   new google.maps.TrafficLayer().setMap(map);
   fetchTraffic();
   fetchWeather();
+  drawOrbisMarkers();
+  drawVisitMarkers();
+  drawSSTR2026Markers();
 }
 let lastRouteNI=-1;
 function updateMap(lat,lng,stops,nI){
@@ -817,11 +904,13 @@ function updateMap(lat,lng,stops,nI){
   // Rebuild when nearest stop changes
   if(nI!==lastRouteNI){
     lastRouteNI=nI;
-    // Auto-zoom on stop change based on distance
-    const tDist=dK(lat,lng,tS.lat,tS.lng);
-    let zoom=18;
-    if(tDist>50)zoom=13;else if(tDist>30)zoom=14;else if(tDist>15)zoom=15;else if(tDist>5)zoom=16;else if(tDist>1)zoom=17;else if(tDist>0.3)zoom=18;
-    map.setZoom(zoom);
+    // Auto-zoom on stop change based on distance (ストリートモード時のみ。全体/3ストップ先表示を破壊しない)
+    if(zoomMode===0){
+      const tDist=dK(lat,lng,tS.lat,tS.lng);
+      let zoom=18;
+      if(tDist>50)zoom=13;else if(tDist>30)zoom=14;else if(tDist>15)zoom=15;else if(tDist>5)zoom=16;else if(tDist>1)zoom=17;else if(tDist>0.3)zoom=18;
+      map.setZoom(zoom);
+    }
     if(mTgt){mTgt.setMap(null);}
     mStops.forEach(m=>m.setMap(null));mStops=[];
     mPolylines.forEach(p=>{if(p.setMap)p.setMap(null);});mPolylines=[];
@@ -865,6 +954,10 @@ function updateMap(lat,lng,stops,nI){
         mStops.push(mk);
       });
     }
+    // Redraw orbis/visit/sstr2026 markers after clearMap (リルート時等)
+    if(mOrbis.length===0)drawOrbisMarkers();
+    if(typeof mVisits!=='undefined'&&mVisits.length===0)drawVisitMarkers();
+    if(_sstr2026Show&&mSSTR2026.length===0)drawSSTR2026Markers();
   }
   // Center on user only in street zoom mode (スナップ位置に合わせる)
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat,lng});
@@ -973,6 +1066,9 @@ const _zundaMap={
   'この先、白バイ注意区間です。':'shirobai_area',
   'この先、取り締まり注意区間です。':'police_area',
   'GPS情報を取得したのだ。':'gps_ok',
+  'バッテリー残り30%なのだ。充電を確認するのだ。':'battery_30',
+  'バッテリー残り20%なのだ。そろそろ危ないのだ！':'battery_20',
+  'バッテリー残り10%なのだ！ナビが切れるのだ！':'battery_10',
 };
 function _findZunda(t){
   if(_zundaMap[t])return 'voice/'+_zundaMap[t]+'.wav';
@@ -1174,7 +1270,7 @@ function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 // === 交通情報 ===
 const NAS_API='https://as5304t-c025.tail5d5c21.ts.net';
 const NAS_KEY='sstr2026_k4w4s4k1_zx4r';
-const APP_VERSION='260414';
+const APP_VERSION='260423';
 // === バージョンチェック（強制アップデート）===
 function _checkAppVersion(){
   _nf(NAS_API+'/api/version',{signal:AbortSignal.timeout(8000)})
@@ -1573,6 +1669,18 @@ function _showSettings(){
       <div style="font-size:12px;color:var(--txt);margin-bottom:4px;">BGM音量</div>
       <input type="range" min="0" max="50" value="${Math.round((appBgm?appBgm.volume:0.25)*100)}" oninput="if(appBgm)appBgm.volume=this.value/100;" style="width:100%;">
     </div>
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="font-size:12px;color:var(--txt);flex:1;">🔋 バッテリー残量アラート<div style="font-size:10px;color:#888;margin-top:2px;">30% / 20% / 10%で音声通知</div></div>
+      <button id="settingsBatteryAlertBtn" onclick="_toggleBatteryAlert()" style="background:${_batteryAlertOn()?'var(--ac)':'#333'};color:${_batteryAlertOn()?'#000':'#888'};border:none;border-radius:12px;padding:6px 14px;font-size:12px;font-weight:800;cursor:pointer;min-width:56px;">${_batteryAlertOn()?'ON':'OFF'}</button>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;color:var(--txt);margin-bottom:4px;">🏠 自宅</div>
+      <div id="homeInfo" style="font-size:11px;color:#888;margin-bottom:6px;">${_getHome()?('登録済: '+_getHome().lat.toFixed(4)+', '+_getHome().lng.toFixed(4)):'未登録'}</div>
+      <div style="display:flex;gap:6px;">
+        <button onclick="_saveHome()" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:8px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">現在地で登録</button>
+        ${_getHome()?'<button onclick="_clearHome()" style="background:none;border:1px solid var(--red);border-radius:8px;padding:8px 12px;color:var(--red);font-size:12px;cursor:pointer;">削除</button>':''}
+      </div>
+    </div>
     <div style="margin-bottom:16px;">
       <div style="font-size:12px;color:var(--org);font-weight:700;margin-bottom:4px;">👥 フレンド</div>
       <div id="friendsList" style="font-size:13px;color:var(--txt);margin-bottom:8px;">読み込み中...</div>
@@ -1590,6 +1698,8 @@ function _showSettings(){
     </div>
   `;
   document.body.appendChild(p);_navPush('settings',function(){p.remove();});
+  // フレンド読み込み（設定パネル開くたびに）
+  if(typeof _loadFriends==='function')_loadFriends();
 }
 function _deleteUser(){
   if(!confirm('ライダー名・プラン・フレンドなど全てのデータを削除します。よろしいですか？'))return;
@@ -1607,6 +1717,258 @@ var _voiceSpeed=parseFloat(localStorage.getItem('_voiceSpeed')||'1.1');
 // 全Audio要素に音程維持を自動適用（play時にフック）
 (function(){try{var _op=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){try{this.preservesPitch=true;this.mozPreservesPitch=true;this.webkitPreservesPitch=true;}catch(e){}return _op.apply(this,arguments);};}catch(e){}})();
 function _setSpeed(s){_voiceSpeed=s;localStorage.setItem('_voiceSpeed',s);}
+
+// === AI ルート提案 ===
+function _showAIPlanner(){
+  var ex=document.getElementById('aiPlanner');if(ex)ex.remove();
+  var home=_getHome();
+  var defOrigin=home?(home.lat.toFixed(4)+','+home.lng.toFixed(4)):(gLat?gLat.toFixed(4)+','+gLng.toFixed(4):'東京都新宿区');
+  var div=document.createElement('div');div.id='aiPlanner';
+  div.style.cssText='position:fixed;inset:0;z-index:10003;background:var(--bg);overflow-y:auto;padding:20px;';
+  div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
+    +'<h2 style="font-size:18px;font-weight:900;background:linear-gradient(135deg,#9c27b0,#e91e63);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">🤖 AIルート提案</h2>'
+    +'<button onclick="document.getElementById(\'aiPlanner\').remove();" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--txt);padding:6px 12px;font-size:12px;cursor:pointer;">閉じる</button>'
+    +'</div>'
+    +'<div style="margin-bottom:12px;"><div style="font-size:12px;color:var(--sub);margin-bottom:4px;">出発地</div>'
+    +'<input id="aiOrigin" type="text" value="'+defOrigin+'" placeholder="例: 東京都新宿区 or 35.69,139.70" style="background:rgba(255,255,255,0.1);border:2px solid var(--bdr);border-radius:10px;padding:10px;color:#fff;font-size:14px;width:100%;box-sizing:border-box;font-family:inherit;"></div>'
+    +'<div style="margin-bottom:12px;"><div style="font-size:12px;color:var(--sub);margin-bottom:4px;">出発時刻</div>'
+    +'<input id="aiStart" type="time" value="09:00" style="background:rgba(255,255,255,0.1);border:2px solid var(--bdr);border-radius:10px;padding:10px;color:#fff;font-size:14px;width:100%;box-sizing:border-box;font-family:inherit;"></div>'
+    +'<div style="margin-bottom:12px;"><div style="font-size:12px;color:var(--sub);margin-bottom:4px;">所要時間（時間）</div>'
+    +'<input id="aiBudget" type="number" min="1" max="12" value="6" style="background:rgba(255,255,255,0.1);border:2px solid var(--bdr);border-radius:10px;padding:10px;color:#fff;font-size:14px;width:100%;box-sizing:border-box;font-family:inherit;"></div>'
+    +'<div style="margin-bottom:16px;"><div style="font-size:12px;color:var(--sub);margin-bottom:4px;">好み（スペース区切りで複数可）</div>'
+    +'<input id="aiPrefs" type="text" value="絶景 グルメ" placeholder="絶景 グルメ 温泉 道の駅 カフェ" style="background:rgba(255,255,255,0.1);border:2px solid var(--bdr);border-radius:10px;padding:10px;color:#fff;font-size:14px;width:100%;box-sizing:border-box;font-family:inherit;"></div>'
+    +'<button onclick="_generateAIPlan()" id="aiGenBtn" style="display:block;width:100%;background:linear-gradient(135deg,#9c27b0,#e91e63);border:none;border-radius:12px;padding:14px;color:#fff;font-size:16px;font-weight:800;cursor:pointer;">✨ プランを生成</button>'
+    +'<div id="aiResult" style="margin-top:16px;"></div>';
+  document.body.appendChild(div);
+}
+function _generateAIPlan(){
+  var btn=document.getElementById('aiGenBtn');
+  var result=document.getElementById('aiResult');
+  var origin=(document.getElementById('aiOrigin')||{}).value||'';
+  var start=(document.getElementById('aiStart')||{}).value||'09:00';
+  var budget=parseInt((document.getElementById('aiBudget')||{}).value||'6');
+  var prefs=(document.getElementById('aiPrefs')||{}).value||'絶景';
+  if(!origin){alert('出発地を入力してください');return;}
+  btn.disabled=true;btn.textContent='🤖 AI処理中...';
+  result.innerHTML='<div style="text-align:center;padding:20px;color:var(--sub);">✨ ルート生成中...（10〜30秒）</div>';
+  _nf(NAS_API+'/api/ai/plan',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({origin:origin,start_time:start,budget_hours:budget,preferences:prefs}),
+    signal:AbortSignal.timeout(60000)})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    btn.disabled=false;btn.textContent='✨ プランを生成';
+    if(!d.ok||!d.plan){result.innerHTML='<div style="color:var(--red);padding:12px;">生成失敗: '+(d.detail||d.error||'unknown')+'</div>';return;}
+    var p=d.plan;
+    var html='<div style="background:rgba(156,39,176,0.1);border:1px solid #9c27b0;border-radius:10px;padding:12px;margin-bottom:12px;">'
+      +'<div style="font-size:13px;font-weight:700;color:#e91e63;margin-bottom:6px;">📝 '+(p.summary||'提案')+'</div>'
+      +'</div>'
+      +(p.stops||[]).map(function(s,i){
+        return '<div style="display:flex;gap:10px;padding:10px;background:var(--card);border:1px solid var(--bdr);border-radius:8px;margin-bottom:6px;">'
+          +'<div style="width:24px;text-align:center;font-weight:900;color:var(--ac);">'+(i+1)+'</div>'
+          +'<div style="flex:1;">'
+          +'<div style="font-weight:700;color:#fff;font-size:14px;">'+s.name+(s.area?' <span style="color:var(--sub);font-size:11px;">('+s.area+')</span>':'')+'</div>'
+          +'<div style="font-size:11px;color:var(--sub);margin-top:2px;">⏱ '+(s.time||'')+(s.dur_min?' ・ '+s.dur_min+'分滞在':'')+'</div>'
+          +(s.memo?'<div style="font-size:12px;color:var(--txt);margin-top:4px;">'+s.memo+'</div>':'')
+          +'</div></div>';
+      }).join('')
+      +'<div style="background:rgba(255,145,0,0.1);border:1px solid var(--org);border-radius:10px;padding:10px;margin-top:12px;font-size:11px;color:var(--txt);">'
+      +'💡 この提案は参考です。スポット名で検索し直して位置確認してください。'
+      +'</div>'
+      +'<button onclick="_applyAIPlan()" style="display:block;width:100%;background:var(--ac);border:none;border-radius:10px;padding:12px;color:#000;font-size:14px;font-weight:800;cursor:pointer;margin-top:12px;">📥 このプランを作成画面に取り込む</button>';
+    result.innerHTML=html;
+    window._lastAIPlan=p;
+  }).catch(function(e){
+    btn.disabled=false;btn.textContent='✨ プランを生成';
+    result.innerHTML='<div style="color:var(--red);padding:12px;">エラー: '+(e.message||'network')+'</div>';
+  });
+}
+function _applyAIPlan(){
+  if(!window._lastAIPlan||!window._lastAIPlan.stops){alert('プランがありません');return;}
+  var stops=window._lastAIPlan.stops;
+  document.getElementById('aiPlanner').remove();
+  // プラン作成画面のスポット欄をクリアして追加
+  var container=document.getElementById('planStops');
+  if(container){container.innerHTML='';_planStopCount=0;}
+  stops.forEach(function(s,i){
+    _addPlanStop();
+    setTimeout(function(){
+      var last=document.querySelectorAll('.planStop');var el=last[last.length-1];
+      if(el){
+        el.querySelector('.psName').value=s.name+(s.area?' '+s.area:'');
+        el.querySelector('.psTime').value=s.time||'';
+        el.querySelector('.psDur').value=s.dur_min||0;
+      }
+    },50*i);
+  });
+  alert('✅ '+stops.length+'件のスポットを追加しました。各スポットで🔍検索ボタンを押して位置を確定してください。');
+}
+
+// === 訪問履歴機能 ===
+// {name, lat, lng, visits:[ts]} の配列を localStorage で管理
+function _getVisits(){
+  try{var s=localStorage.getItem('_visits');return s?JSON.parse(s):[];}catch(e){return [];}
+}
+function _saveVisits(v){localStorage.setItem('_visits',JSON.stringify(v));}
+// 既存地点検索（50m以内なら同一地点扱い）
+function _findVisitNear(lat,lng){
+  var v=_getVisits();
+  for(var i=0;i<v.length;i++){
+    if(dK(lat,lng,v[i].lat,v[i].lng)*1000<50)return {idx:i,visit:v[i]};
+  }
+  return null;
+}
+// 現在地を訪問地点として登録
+function _registerVisit(){
+  if(!gLat||!gLng){alert('GPS情報を取得してから実行してください');return;}
+  var name=prompt('📌 この地点の名前を入力してください\n（空欄で"スポット"として登録）：','');
+  if(name===null)return;
+  name=name.trim()||'スポット '+new Date().toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  var v=_getVisits();
+  var near=_findVisitNear(gLat,gLng);
+  var now=Date.now();
+  if(near){
+    v[near.idx].visits.push(now);
+    _saveVisits(v);
+    alert('🔄 「'+v[near.idx].name+'」に再訪を記録しました（'+v[near.idx].visits.length+'回目）');
+  } else {
+    v.push({name:name,lat:gLat,lng:gLng,visits:[now]});
+    _saveVisits(v);
+    alert('📌 「'+name+'」を登録しました');
+  }
+  drawVisitMarkers();
+}
+// 訪問履歴を地図に表示
+var mVisits=[];
+function drawVisitMarkers(){
+  if(!map)return;
+  mVisits.forEach(m=>m.setMap(null));mVisits=[];
+  _getVisits().forEach(function(sp){
+    var cnt=sp.visits.length;
+    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">'
+      +'<circle cx="14" cy="14" r="11" fill="#4caf50" stroke="#fff" stroke-width="2"/>'
+      +'<text x="14" y="19" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff">'+cnt+'</text>'
+      +'</svg>';
+    var mk=new google.maps.Marker({
+      position:{lat:sp.lat,lng:sp.lng},map:map,zIndex:60,
+      icon:{url:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg),
+        scaledSize:new google.maps.Size(28,28),anchor:new google.maps.Point(14,14)},
+      title:'📌 '+sp.name+' ('+cnt+'回訪問)'
+    });
+    mk.addListener('click',function(){_showVisitDetail(sp);});
+    mVisits.push(mk);
+  });
+}
+// 訪問詳細ポップアップ
+function _showVisitDetail(sp){
+  var ex=document.getElementById('visitDetail');if(ex)ex.remove();
+  var visits=(sp.visits||[]).slice().sort().reverse();
+  var visitList=visits.slice(0,5).map(function(ts){
+    var d=new Date(ts);return '<div style="font-size:12px;color:var(--sub);padding:4px 0;">'
+      +d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '
+      +d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+'</div>';
+  }).join('');
+  var div=document.createElement('div');div.id='visitDetail';
+  div.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10002;background:#111118;border:2px solid #4caf50;border-radius:16px;padding:20px;min-width:280px;max-width:90vw;';
+  div.innerHTML='<div style="font-size:14px;font-weight:900;color:#4caf50;margin-bottom:8px;">📌 '+sp.name+'</div>'
+    +'<div style="font-size:11px;color:var(--sub);margin-bottom:12px;">訪問回数: '+visits.length+'回</div>'
+    +'<div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;margin-bottom:12px;">'
+    +'<div style="font-size:11px;color:var(--txt);margin-bottom:4px;">直近の訪問:</div>'+visitList+'</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button onclick="document.getElementById(\'visitDetail\').remove();" style="flex:1;background:none;border:1px solid var(--bdr);border-radius:8px;padding:8px;color:var(--txt);font-size:12px;cursor:pointer;">閉じる</button>'
+    +'<button onclick="_deleteVisit('+JSON.stringify(sp.name).replace(/"/g,'&quot;')+','+sp.lat+','+sp.lng+')" style="background:none;border:1px solid var(--red);border-radius:8px;padding:8px 12px;color:var(--red);font-size:12px;cursor:pointer;">削除</button>'
+    +'</div>';
+  document.body.appendChild(div);
+}
+function _deleteVisit(name,lat,lng){
+  if(!confirm('「'+name+'」の訪問履歴を削除しますか？'))return;
+  var v=_getVisits().filter(function(s){return !(s.name===name&&Math.abs(s.lat-lat)<0.00001&&Math.abs(s.lng-lng)<0.00001);});
+  _saveVisits(v);
+  var ex=document.getElementById('visitDetail');if(ex)ex.remove();
+  drawVisitMarkers();
+}
+// 接近通知：既訪問地点に500m以内に近づいたら1回だけ通知
+var _visitNotified={};
+function _checkVisitApproach(){
+  if(!gLat||!gLng)return;
+  _getVisits().forEach(function(sp,idx){
+    var d=dK(gLat,gLng,sp.lat,sp.lng);
+    var key=sp.name+'_'+sp.lat.toFixed(5);
+    if(d<0.5&&!_visitNotified[key]){
+      _visitNotified[key]=true;
+      var last=sp.visits.length>1?new Date(sp.visits[sp.visits.length-1]):null;
+      var msg=last?('前回の'+sp.name+'から'+_humanDate(last)):(sp.name+'に近づいてるのだ');
+      spk(msg,true);
+    }
+    if(d>2)_visitNotified[key]=false;// 2km離れたらリセット
+  });
+}
+function _humanDate(d){
+  var days=Math.floor((Date.now()-d.getTime())/86400000);
+  if(days===0)return '今日';
+  if(days===1)return '昨日';
+  if(days<30)return days+'日前';
+  if(days<365)return Math.floor(days/30)+'ヶ月前';
+  return Math.floor(days/365)+'年前';
+}
+
+// === 自宅登録機能 ===
+function _getHome(){
+  try{var s=localStorage.getItem('_home');return s?JSON.parse(s):null;}catch(e){return null;}
+}
+function _saveHome(){
+  if(!gLat||!gLng){alert('GPS情報を取得してから実行してください');return;}
+  var home={lat:gLat,lng:gLng,ts:Date.now()};
+  localStorage.setItem('_home',JSON.stringify(home));
+  var el=document.getElementById('homeInfo');
+  if(el)el.textContent='登録済: '+home.lat.toFixed(4)+', '+home.lng.toFixed(4);
+  alert('🏠 自宅を登録しました');
+  // 設定パネル再描画（削除ボタン表示のため）
+  var sp=document.getElementById('settingsPanel');if(sp){sp.remove();_showSettings();}
+}
+function _clearHome(){
+  if(!confirm('自宅登録を削除しますか？'))return;
+  localStorage.removeItem('_home');
+  var sp=document.getElementById('settingsPanel');if(sp){sp.remove();_showSettings();}
+}
+
+// === バッテリー残量アラート ===
+// デフォルトON。初回起動時にlocalStorageへ明示保存
+if(localStorage.getItem('_batteryAlertOn')===null)localStorage.setItem('_batteryAlertOn','1');
+function _batteryAlertOn(){return localStorage.getItem('_batteryAlertOn')!=='0';}
+function _toggleBatteryAlert(){
+  var on=!_batteryAlertOn();localStorage.setItem('_batteryAlertOn',on?'1':'0');
+  var b=document.getElementById('settingsBatteryAlertBtn');
+  if(b){b.textContent=on?'ON':'OFF';b.style.background=on?'var(--ac)':'#333';b.style.color=on?'#000':'#888';}
+}
+// 閾値ごとの発火済みフラグ（充電復帰でリセット）
+var _batFired={30:false,20:false,10:false};
+var _batLastCharging=null;
+async function _checkBattery(){
+  if(!_batteryAlertOn())return;
+  try{
+    var lvl=null,charging=null;
+    var D=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.Device;
+    if(D&&D.getBatteryInfo){
+      var info=await D.getBatteryInfo();
+      if(info&&typeof info.batteryLevel==='number')lvl=Math.round(info.batteryLevel*100);
+      if(info&&typeof info.isCharging==='boolean')charging=info.isCharging;
+    } else if(navigator.getBattery){
+      var bat=await navigator.getBattery();
+      lvl=Math.round(bat.level*100);charging=bat.charging;
+    } else return;
+    if(lvl==null)return;
+    // 充電中に切り替わったら発火済みフラグをリセット（再発火可能に）
+    if(charging&&_batLastCharging===false)_batFired={30:false,20:false,10:false};
+    _batLastCharging=charging;
+    if(charging)return;// 充電中はアラート出さない
+    // 閾値判定（上から順、最も重要な低残量を優先）
+    if(lvl<=10&&!_batFired[10]){_batFired[10]=true;spk('バッテリー残り10%なのだ！ナビが切れるのだ！',true);}
+    else if(lvl<=20&&!_batFired[20]){_batFired[20]=true;spk('バッテリー残り20%なのだ。そろそろ危ないのだ！',true);}
+    else if(lvl<=30&&!_batFired[30]){_batFired[30]=true;spk('バッテリー残り30%なのだ。充電を確認するのだ。',true);}
+  }catch(e){}
+}
+setInterval(_checkBattery,60000);
+setTimeout(_checkBattery,15000);// 起動15秒後に初回チェック
 
 // 音声認識は無効（インカム使用のため）
 
@@ -1771,6 +2133,7 @@ _nf(NAS_API+'/api/orbis',{signal:AbortSignal.timeout(10000)}).then(r=>r.json()).
     });
     console.log('[Orbis] NAS: +'+added+' (total: '+ORBIS.length+')');
   }
+  if(typeof drawOrbisMarkers==='function')drawOrbisMarkers();
 }).catch(()=>{});
 // === ターン案内（200m/50m手前）===
 var _turnAngles={'右':0,'左':180,'斜め右':-45,'斜め左':225,'鋭角右':45,'鋭角左':135,'Uターン':180};
@@ -1811,12 +2174,12 @@ function checkTurns(){
   for(var i=0;i<_turnPoints.length;i++){
     var tp=_turnPoints[i];
     var d=dK(gLat,gLng,tp.lat,tp.lng)*1000;// メートル
-    if(d<=200&&d>50&&!tp.announced200){
+    if(d<=250&&d>100&&!tp.announced200){
       tp.announced200=true;
-      _playTurnVoice(tp.dir,false);// 矢印は_spkNextで音声と同期して表示
-    } else if(d<=50&&!tp.announced50){
+      _playTurnVoice(tp.dir,false);// 「200メートル先」音声(実際は100-250m範囲)
+    } else if(d<=100&&!tp.announced50){
       tp.announced50=true;
-      _playTurnVoice(tp.dir,true);
+      _playTurnVoice(tp.dir,true);// 「まもなく」音声(100m以内)
     }
     // 通過後リセット（500m以上離れたら再利用可能に）
     if(d>500&&(tp.announced200||tp.announced50)){
@@ -2035,6 +2398,7 @@ function onGpsUpdate(p,announce_it){
   checkFuel();
   checkRest();
   _checkReroute();
+  if(typeof _checkVisitApproach==='function')_checkVisitApproach();
   // Throttle everything else to 5 seconds
   const now=Date.now();
   if(!announce_it && now-lastUpdate<5000){pendingPos=p;return;}
@@ -2247,9 +2611,9 @@ function rnd(){
     </div>`;
   } else {
     document.getElementById('hdr-area').innerHTML=`<div class="hdr">
-      <div onclick="goHome()" style="cursor:pointer;display:flex;align-items:center;gap:8px;">${cDay==='custom'?'<span style="font-size:14px;font-weight:900;color:var(--org);">'+(_customPlanName||'カスタム')+'</span>':cDay.startsWith('nippon1')?'<img src="greenlabel_logo.png" style="height:22px;opacity:0.9;" onerror="this.outerHTML=\'<span style=font-size:14px;font-weight:900;color:#4caf50>にっぽん応援</span>\'">':'<img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:22px;opacity:0.9;" onerror="this.outerHTML=\'<h1>SSTR</h1>\'">'} ${rally&&gLat&&cDay!=='custom'?'<span class="bdg '+dc+'">'+dt+'</span>':''}</div>
+      <div onclick="goHome()" style="cursor:pointer;display:flex;align-items:center;gap:8px;">${cDay==='custom'?'<span style="font-size:14px;font-weight:900;color:var(--org);">'+(_customPlanName||'カスタム')+'</span>':cDay.startsWith('nippon1')?'<img src="greenlabel_logo.png" style="height:22px;opacity:0.9;" onerror="this.outerHTML=\'<span style=font-size:14px;font-weight:900;color:#4caf50>にっぽん応援</span>\'">':'<img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:22px;opacity:0.9;" onerror="this.outerHTML=\'<h1>SSTR</h1>\'">'} ${rally&&gLat&&(cDay!=='custom'||(cS&&cS.hasGoalTime))?'<span class="bdg '+dc+'">'+dt+'</span>':''}</div>
       <div style="text-align:center;flex:1;padding:0 8px;height:70px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;">
-        ${gLat&&rally&&cDay!=='custom'&&pT(cS.time)>0?`${(()=>{const schM=pT(cS.time);const diffM=schM-nwM;const absDiff=Math.abs(diffM);const ahead=diffM>=0;const dh=Math.floor(absDiff/60).toString().padStart(2,'0');const dm=Math.floor(absDiff%60).toString().padStart(2,'0');const now=new Date();const ds=now.getSeconds().toString().padStart(2,'0');const col=ahead?'var(--ac)':'var(--red)';const lbl=ahead?'余裕':'遅れ';const sign=ahead?'+':'-';return `<div style="font-family:'Outfit';font-size:10px;color:${col};letter-spacing:1px;">${lbl}</div><div style="font-family:'Outfit';font-size:45px;font-weight:900;color:${col};line-height:1;letter-spacing:2px;">${sign}${dh}:${dm}:${ds}</div><div style="font-size:9px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()}</div>`;})()}`:(gLat?`${(()=>{
+        ${gLat&&rally&&(cDay!=='custom'||(cS&&cS.hasGoalTime))&&pT(cS.time)>0?`${(()=>{const schM=pT(cS.time);const diffM=schM-nwM;const absDiff=Math.abs(diffM);const ahead=diffM>=0;const dh=Math.floor(absDiff/60).toString().padStart(2,'0');const dm=Math.floor(absDiff%60).toString().padStart(2,'0');const now=new Date();const ds=now.getSeconds().toString().padStart(2,'0');const col=ahead?'var(--ac)':'var(--red)';const lbl=ahead?'余裕':'遅れ';const sign=ahead?'+':'-';return `<div style="font-family:'Outfit';font-size:10px;color:${col};letter-spacing:1px;">${lbl}</div><div style="font-family:'Outfit';font-size:45px;font-weight:900;color:${col};line-height:1;letter-spacing:2px;">${sign}${dh}:${dm}:${ds}</div><div style="font-size:9px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()}</div>`;})()}`:(gLat?`${(()=>{
 if(_hdrMode===0&&cDay!=='custom'){
   const now=new Date();const goal=new Date(2026,4,23,19,0,0);let remS=Math.floor((goal-now)/1000);const over=remS<0;if(over)remS=Math.abs(remS);const rd=Math.floor(remS/86400),rh=Math.floor((remS%86400)/3600),rm=Math.floor((remS%3600)/60),rs=remS%60;const col=over?'var(--red)':remS<3600?'var(--ylw)':'var(--grn)';const lbl=over?'超過':rd>0?'5/23 19:00まで':'19:00まで';const timeStr=rd>0?rd+'日'+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0'):(over?'-':'')+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0');
   return '<div style="font-family:Outfit;font-size:10px;color:'+col+';letter-spacing:1px;">'+lbl+'</div><div style="font-family:Outfit;font-size:'+(rd>0?'32':'45')+'px;font-weight:900;color:'+col+';line-height:1;letter-spacing:2px;">'+timeStr+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
@@ -2261,10 +2625,12 @@ if(_hdrMode===0&&cDay!=='custom'){
 } else {
   const _etaFS=Math.floor(eta*60);const _etaFMod=((_etaFS%(1440*60))+(1440*60))%(1440*60);const etaH=Math.floor(_etaFMod/3600),etaM2=Math.floor((_etaFMod%3600)/60),etaS2=(_etaFMod%60);
   const schM=pT(cS.time);const diffM=schM>0?eta-schM:0;
-  const etaCol=schM<=0?'var(--ac)':cDay==='custom'?'var(--grn)':!isRallyDay()?'var(--ac)':diffM>0?'var(--red)':diffM>=-5?'var(--ylw)':'var(--grn)';
+  // カスタムプラン+ゴール時刻指定時は遅延色を有効化（それ以外のカスタムは常に緑）
+  const _customHasGoal=cDay==='custom'&&cS&&cS.hasGoalTime;
+  const etaCol=schM<=0?'var(--ac)':(cDay==='custom'&&!_customHasGoal)?'var(--grn)':!isRallyDay()?'var(--ac)':diffM>0?'var(--red)':diffM>=-5?'var(--ylw)':'var(--grn)';
   const etaLbl='到着予定';
-  // 予定時刻を現在のETAに追従（カスタムプランは常に到着予想=予定扱い）
-  if(cDay==='custom'&&cS&&eta>0)cS.time=etaH.toString().padStart(2,'0')+':'+etaM2.toString().padStart(2,'0');
+  // 予定時刻を現在のETAに追従（hasGoalTime設定時は上書きしない）
+  if(cDay==='custom'&&cS&&eta>0&&!cS.hasGoalTime)cS.time=etaH.toString().padStart(2,'0')+':'+etaM2.toString().padStart(2,'0');
   return '<div style="font-family:Outfit;font-size:10px;color:'+etaCol+';letter-spacing:1px;">'+etaLbl+'</div><div style="font-family:Outfit;font-size:45px;font-weight:900;color:'+etaCol+';line-height:1;letter-spacing:2px;">'+etaH.toString().padStart(2,'0')+':'+etaM2.toString().padStart(2,'0')+':'+etaS2.toString().padStart(2,'0')+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
 }
 })()}`:'')}
@@ -2326,7 +2692,7 @@ if(_hdrMode===0&&cDay!=='custom'){
   // Current
   t+=`<div class="pnl pc${cDay==='custom'?' custom':''}"><div class="lb">▶ いま向かっている場所</div>
     <div class="nm">${cS.name}</div>${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
-    ${(()=>{const schM=pT(cS.time);const diff=gLat&&schM>0?eta-schM:0;const tc=!gLat||schM<=0?'var(--ac)':cDay==='custom'?'var(--grn)':!isRallyDay()?'var(--ac)':diff>0?'var(--red)':diff>=-5?'var(--ylw)':'var(--grn)';return `<div class="sts">
+    ${(()=>{const schM=pT(cS.time);const diff=gLat&&schM>0?eta-schM:0;const _chg=cDay==='custom'&&cS&&cS.hasGoalTime;const tc=!gLat||schM<=0?'var(--ac)':(cDay==='custom'&&!_chg)?'var(--grn)':!isRallyDay()?'var(--ac)':diff>0?'var(--red)':diff>=-5?'var(--ylw)':'var(--grn)';return `<div class="sts">
       <div class="st"><div class="v" style="color:${!gLat?'var(--ac)':dispDist>=100?'var(--red)':dispDist>=50?'var(--ylw)':'var(--ac)'}">${gLat?dispDist.toFixed(1):'--'}</div><div class="l">km</div></div>
       <div class="st"><div class="v" style="color:${tc}">${gLat?eH+':'+eM+':'+eS:cS.time}</div><div class="l">着${gLat&&Math.floor(diff)>0?'<span style="color:'+tc+'"> +'+Math.floor(diff)+'分</span>':''}</div></div>
     </div>
@@ -2347,6 +2713,8 @@ if(_hdrMode===0&&cDay!=='custom'){
       <button class="cb ${iM?'':'act'}" onclick="iM=!iM;rnd();">${iM?'🔇':'🔊'}</button>
       <label class="cb" style="border-color:var(--pk);color:var(--pk);">🎵 BGM<input type="file" accept="audio/*" onchange="lBGM(event)" style="display:none;"></label>
       <button class="cb ${sFl?'act':''}" onclick="sFl=!sFl;rnd();" style="border-color:var(--grn);color:var(--grn);">📋 全リスト</button>
+      <button class="cb" onclick="_registerVisit();" style="border-color:#4caf50;color:#4caf50;">📌 ここを登録</button>
+      <button class="cb ${_sstr2026Show?'act':''}" onclick="toggleSSTR2026();" style="border-color:#2196f3;color:${_sstr2026Show?'#000':'#2196f3'};background:${_sstr2026Show?'#2196f3':'none'};">🗾 SSTR2026</button>
       <button class="cb" onclick="_showSettings();" style="border-color:var(--ylw);color:var(--ylw);">⚙ 設定</button>
       ${cDay==='day1'?'<button class="cb" style="border-color:var(--red);color:var(--red);" onclick="emergGoal()">🚨 緊急ゴール</button>':''}
     </div>`;
@@ -2439,6 +2807,11 @@ function startPlanCreate(){
     +'<div style="font-size:12px;color:var(--sub);font-weight:700;margin-bottom:4px;">ツーリング日</div>'
     +'<input id="planDate" type="date" min="'+new Date().toISOString().split('T')[0]+'" onchange="if(this.value&&this.value<new Date().toISOString().split(\'T\')[0]){alert(\'過去の日付は選択できません\');this.value=\'\';}" style="background:rgba(255,255,255,0.1);border:2px solid var(--bdr);border-radius:12px;padding:12px 16px;color:#fff;font-size:14px;width:100%;box-sizing:border-box;font-family:inherit;">'
     +'</div>'
+    +'<div style="margin-bottom:16px;">'
+    +'<div style="font-size:12px;color:var(--sub);font-weight:700;margin-bottom:4px;">⏰ 到着予定時刻（任意）<span style="font-size:10px;color:#666;font-weight:400;">入力時のみ遅延表示</span></div>'
+    +'<input id="planGoalTime" type="time" style="background:rgba(255,255,255,0.1);border:2px solid var(--bdr);border-radius:12px;padding:12px 16px;color:#fff;font-size:14px;width:100%;box-sizing:border-box;font-family:inherit;">'
+    +'</div>'
+    +'<button onclick="_showAIPlanner()" style="display:block;width:100%;background:linear-gradient(135deg,#9c27b0,#e91e63);border:none;border-radius:12px;padding:14px;color:#fff;font-size:16px;font-weight:800;cursor:pointer;margin-bottom:8px;">🤖 AIでルート提案</button>'
     +'<button onclick="_previewPlan()" style="display:block;width:100%;background:var(--org);border:none;border-radius:12px;padding:14px;color:#000;font-size:16px;font-weight:800;cursor:pointer;margin-bottom:12px;">📋 仮登録・確認</button>'
     +(saved.length>0?'<div style="margin-top:24px;"><h2 style="font-size:16px;font-weight:900;color:var(--ac);margin-bottom:12px;">📋 保存済みプラン</h2>'
     +saved.map(function(p,i){return '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:12px 16px;margin-bottom:8px;">'
@@ -2476,13 +2849,22 @@ function _setPlanLogo(e){
   reader.readAsDataURL(file);
 }
 var _autoSearchTimers={};
+var _placesAutocomplete=null;
+var _placesSessionToken=null;
+function _getPlacesService(){
+  if(!_placesAutocomplete&&window.google&&google.maps&&google.maps.places){
+    _placesAutocomplete=new google.maps.places.AutocompleteService();
+    _placesSessionToken=new google.maps.places.AutocompleteSessionToken();
+  }
+  return _placesAutocomplete;
+}
 function _autoSearch(sid,force){
   var nameEl=document.getElementById(sid+'Name');
   var query=nameEl?nameEl.value.trim():'';
   var suggestEl=document.getElementById(sid+'Suggest');
   if(!query||(query.length<2&&!force)){if(suggestEl)suggestEl.style.display='none';return;}
   if(_autoSearchTimers[sid])clearTimeout(_autoSearchTimers[sid]);
-  function _doSearch(){
+  function _nominatimFallback(){
     fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(query)+'&countrycodes=jp&format=json&limit=5&accept-language=ja',{signal:AbortSignal.timeout(5000)})
     .then(function(r){return r.json();})
     .then(function(results){
@@ -2492,7 +2874,7 @@ function _autoSearch(sid,force){
         suggestEl.innerHTML=results.map(function(r){
           var name=r.display_name.split(',')[0];
           var addr=r.display_name;
-          return '<div onclick="_selectPlaceDirect(\''+sid+'\','+r.lat+','+r.lon+',\''+name.replace(/'/g,"\\'")+'\',\''+addr.replace(/'/g,"\\'")+'\',this)" style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.1);cursor:pointer;font-size:13px;color:var(--txt);" ontouchstart="this.style.background=\'rgba(0,212,255,0.15)\'" ontouchend="this.style.background=\'\'">'
+          return '<div onclick="_selectPlaceDirect(\''+sid+'\','+r.lat+','+r.lon+',\''+name.replace(/'/g,"\\'")+'\',\''+addr.replace(/'/g,"\\'")+'\',this)" style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.1);cursor:pointer;font-size:13px;color:var(--txt);">'
             +'<div style="font-weight:700;">'+name+'</div>'
             +'<div style="font-size:11px;color:var(--sub);">'+addr+'</div>'
             +'</div>';
@@ -2505,7 +2887,53 @@ function _autoSearch(sid,force){
       if(suggestEl){suggestEl.style.display='block';suggestEl.innerHTML='<div style="padding:10px 12px;font-size:13px;color:var(--red);">検索エラー</div>';}
     });
   }
-  if(force){_doSearch();}else{_autoSearchTimers[sid]=setTimeout(_doSearch,300);}
+  function _doSearch(){
+    var svc=_getPlacesService();
+    if(!svc){_nominatimFallback();return;}
+    svc.getPlacePredictions({
+      input:query,language:'ja',
+      componentRestrictions:{country:'jp'},
+      sessionToken:_placesSessionToken
+    },function(preds,status){
+      if(!suggestEl)return;
+      if(status!==google.maps.places.PlacesServiceStatus.OK||!preds||preds.length===0){
+        // Placesで見つからない or エラー → Nominatimフォールバック
+        _nominatimFallback();return;
+      }
+      suggestEl.style.display='block';
+      suggestEl.innerHTML=preds.slice(0,5).map(function(p){
+        var main=(p.structured_formatting&&p.structured_formatting.main_text)||p.description;
+        var sub=(p.structured_formatting&&p.structured_formatting.secondary_text)||'';
+        return '<div onclick="_selectFromPlace(\''+sid+'\',\''+p.place_id+'\',\''+main.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.1);cursor:pointer;font-size:13px;color:var(--txt);">'
+          +'<div style="font-weight:700;">'+main+'</div>'
+          +(sub?'<div style="font-size:11px;color:var(--sub);">'+sub+'</div>':'')
+          +'</div>';
+      }).join('');
+    });
+  }
+  if(force){_doSearch();}else{_autoSearchTimers[sid]=setTimeout(_doSearch,400);}
+}
+// Places候補をタップしたときの処理（place_idから詳細取得）
+function _selectFromPlace(sid,placeId,name){
+  var suggestEl=document.getElementById(sid+'Suggest');if(suggestEl)suggestEl.style.display='none';
+  var svc=new google.maps.places.PlacesService(document.createElement('div'));
+  svc.getDetails({
+    placeId:placeId,
+    fields:['name','geometry','formatted_address'],
+    sessionToken:_placesSessionToken
+  },function(place,status){
+    if(status==='OK'&&place&&place.geometry){
+      // セッショントークンは使い切ったので次の検索用に更新
+      _placesSessionToken=new google.maps.places.AutocompleteSessionToken();
+      var lat=place.geometry.location.lat();
+      var lng=place.geometry.location.lng();
+      var displayName=place.name||name;
+      var addr=place.formatted_address||'';
+      _selectPlaceDirect(sid,lat,lng,displayName,addr);
+    } else {
+      alert('詳細取得に失敗しました: '+status);
+    }
+  });
 }
 function _selectPlace(sid,placeId,el){
   var suggestEl=document.getElementById(sid+'Suggest');
@@ -2638,6 +3066,7 @@ function _previewPlan(){
     document.getElementById('planDate').value=date;
   }
   _tempPlanName=name;_tempPlanDate=date;
+  var goalTime=(document.getElementById('planGoalTime')||{}).value||'';
   var today=new Date();today.setHours(0,0,0,0);
   var sel=new Date(date);
   if(sel<today){alert('過去の日付は選択できません');return;}
@@ -2654,6 +3083,11 @@ function _previewPlan(){
     }
   });
   if(stops.length<1){alert('スポットを入力してください');return;}
+  // 到着予定時刻が入力されていれば最終スポットに適用（遅延表示のトリガー）
+  if(goalTime&&stops.length>0){
+    stops[stops.length-1].time=goalTime;
+    stops[stops.length-1].hasGoalTime=true;
+  }
   _tempPlanStops=stops;
   // 確認画面を表示
   var pc=document.getElementById('planCreator');
@@ -2800,6 +3234,7 @@ var _customPlanName='';
 // === フレンド管理 ===
 function _loadFriends(){
   var fl=document.getElementById('friendsList');if(!fl)return;
+  if(!_myName){fl.innerHTML='<div style="color:var(--sub);font-size:12px;">先にライダー名を保存してください</div>';return;}
   _nf(NAS_API+'/api/friends?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
   .then(function(r){return r.json();})
   .then(function(d){
@@ -2951,7 +3386,7 @@ function startApp(mode){
   mid.innerHTML=`
     <div style="position:absolute;inset:0;background-image:url(bg2.jpg);background-size:cover;background-position:center 70%;"></div>
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.2) 100%);"></div>
-    <div style="position:absolute;top:20px;right:20px;z-index:2;font-family:'Outfit';font-size:12px;color:#fff;letter-spacing:1px;text-align:right;">v.260412</div>
+    <div style="position:absolute;top:20px;right:20px;z-index:2;font-family:'Outfit';font-size:12px;color:#fff;letter-spacing:1px;text-align:right;">v.260423</div>
     <div class="mid-content" style="position:absolute;top:40%;left:0;right:0;z-index:1;text-align:center;padding:0 24px;">
       <div style="margin-bottom:4px;">${mode==='sstr'?'<img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:60px;" onerror="this.outerHTML=\'<span style=font-size:26px;font-weight:900;color:#00d4ff>SSTR 2026</span>\'">':mode==='custom'?'<span style="font-size:26px;font-weight:900;color:var(--org);">'+title+'</span>':'<img src="greenlabel_logo.png" style="height:80px;" onerror="this.outerHTML=\'<span style=font-size:26px;font-weight:900;color:#00d4ff>'+title+'</span>\'">'}</div>
       <div style="font-size:13px;color:#ccc;margin-bottom:20px;">が選択されたのだ</div>
@@ -3103,7 +3538,6 @@ function _startSplashAudio(){
 // 要件チェック＋同意が済んでいれば即開始、まだなら待機
 if(localStorage.getItem('_reqChecked')&&localStorage.getItem('_consentAgreed')){playAppBgm();_startSplashAudio();}
 // 管理者モード: スプラッシュ初期表示
-if(_isAdmin){const a=document.querySelector('.adm');if(a)a.textContent='🔑 ADMIN';}
 // ライダー名を入力欄に復元
 var _planAnnounced=false;
 var _firstTimeFlow=false;// 初回フロー中フラグ（GPS取得→プラン選択の間）
@@ -3145,14 +3579,22 @@ function _showCards(){
       }
       vl.innerHTML+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.1);"><span style="font-weight:700;color:var(--txt);">'+indicator+' '+label+'</span><span style="text-align:right;font-size:13px;">'+value+'<br><span style="color:'+col+';font-size:11px;">'+_fmtDate(dateStr)+'</span></span></div>';
     }
-    _addRow('アプリ','v.260412','2026-04-08',null);
+    _addRow('アプリ','v.260423','2026-04-23',null);
     _addRow('オービス(組込)',ORBIS.length+'箇所','-',null);
-    _addRow('NAS API','...'+NAS_API.slice(-12),'-',null);
-    _addRow('Maps Key','...'+document.querySelector('script[src*=maps]').src.split('key=')[1].slice(-6),'-',null);
-    _addRow('OWM Key','...'+OWM_KEY.slice(-6),'-',null);
     // NASデータ非同期取得（maxAgeH: 超えたら黄色、2倍で赤）
     _nf(NAS_API+'/api/usage',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
-      _addRow('APIカウンター','Maps:'+d.maps+' Dir:'+d.directions,d.timestamp,6);// 6h超で黄色
+      // 無料枠$200内の推定コスト計算（参考値）
+      var mapsC=(d.maps||0)*0.007;// $7/1000
+      var dirC=(d.directions||0)*0.005;// $5/1000
+      var plC=(d.places||0)*0.017;// $17/1000
+      var geoC=(d.geocoding||0)*0.005;// $5/1000
+      var total=mapsC+dirC+plC+geoC;
+      var rem=200-total;
+      var val='<span style="color:var(--ac);">Maps:'+d.maps+'</span> <span style="color:var(--org);">Dir:'+d.directions+'</span>';
+      if(typeof d.places==='number')val+=' <span style="color:var(--pk);">Places:'+d.places+'</span>';
+      if(typeof d.geocoding==='number')val+=' <span style="color:var(--grn);">Geo:'+d.geocoding+'</span>';
+      val+='<br><span style="color:#888;font-size:10px;">推定 $'+total.toFixed(2)+' / $200無料枠（残 $'+rem.toFixed(2)+'）</span>';
+      _addRow('APIカウンター',val,d.timestamp,6);// 6h超で黄色
     }).catch(()=>{_addRow('APIカウンター','取得失敗','-',null);});
     _nf(NAS_API+'/api/orbis',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
       _addRow('オービス(OSM)',d.count+'台',d.updated,168);// 7日超で黄色
@@ -3161,8 +3603,9 @@ function _showCards(){
       var pts=d.points?d.points.length:(d.length||0);
       _addRow('天気データ',pts+'地点',d.updated||new Date().toISOString(),1);
     }).catch(()=>{_addRow('天気データ','取得失敗','-',null);});
-    _nf(NAS_API+'/api/locations',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
-      _addRow('ライダー位置',d.length+'人','-',null);
+    _nf(NAS_API+'/api/users',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
+      var n=(d&&d.users&&d.users.length)||0;
+      _addRow('登録ライダー',n+'人','-',null);
     }).catch(()=>{});
     _nf(NAS_API+'/api/voice/hajimemashite',{method:'HEAD',signal:AbortSignal.timeout(5000)}).then(r=>{
       _addRow('VOICEVOX',r.ok?'稼働中':'停止','-',null);

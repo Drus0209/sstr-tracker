@@ -54,7 +54,7 @@ const phrases = {
   // GPS
   'gps_ok': 'GPS情報を取得したのだ。',
   // プラン選択
-  'sstr_selected': 'SSTR2026が選択されたのだ！',
+  'sstr_selected': 'SSTRが選択されたのだ！',
   // 天気
   'rain_ahead': 'この先、雨の予報なのだ。気をつけるのだ。',
   // ゴール
@@ -84,6 +84,10 @@ const phrases = {
   'splash_welcome': 'ツーリングプランを選ぶのだ！',
   'enter_name': 'ライダー名を入力してほしいのだ！',
   'register_location': '位置情報を登録するのだ。',
+  // バッテリー
+  'battery_30': 'バッテリー残り30%なのだ。充電を確認するのだ。',
+  'battery_20': 'バッテリー残り20%なのだ。そろそろ危ないのだ！',
+  'battery_10': 'バッテリー残り10%なのだ！ナビが切れるのだ！',
 };
 
 async function generateVoice(key, text) {
