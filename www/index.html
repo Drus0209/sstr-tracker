@@ -3709,12 +3709,8 @@ function _showCards(){
       } else {
         total=(d.maps||0)+(d.directions||0)+(d.places||0)+(d.geocoding||0);
       }
-      var mapsC=(d.maps||0)*0.007+(d.directions||0)*0.005+(d.places||0)*0.017+(d.geocoding||0)*0.005;
-      var rem=200-mapsC;
-      var val='<span style="font-size:18px;font-weight:900;color:var(--ac);">'+total.toLocaleString()+'</span> <span style="font-size:11px;color:#888;">リクエスト/今月</span>'
-        +'<br><span style="color:#888;font-size:10px;">Maps系 $'+mapsC.toFixed(2)+' / $200（残 $'+rem.toFixed(2)+'）　タップで詳細</span>';
+      var val='<span style="font-size:18px;font-weight:900;color:var(--ac);">'+total.toLocaleString()+'</span> <span style="font-size:11px;color:#888;">リクエスト/今月（タップで詳細）</span>';
       _addRow('APIカウンター',val,d.timestamp,6);
-      // クリック可能にする（最後の行を取得）
       setTimeout(function(){
         var rows=vl.children;if(!rows||rows.length===0)return;
         var lastRow=rows[rows.length-1];
