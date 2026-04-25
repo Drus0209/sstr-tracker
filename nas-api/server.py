@@ -237,16 +237,18 @@ def route_search():
     o=d["origin"];dst=d["destination"]
     wp=d.get("waypoints",[])
     avoid=d.get("avoid","")  # "tolls","highways","tolls|highways"
-    cache_key_src="%s,%s_%s,%s_%s_%s" % (
+    traffic=bool(d.get("traffic",False))  # 渋滞考慮: trueなら departure_time=now で取得（キャッシュ短縮）
+    cache_key_src="%s,%s_%s,%s_%s_%s_%s" % (
         "%.5f"%o["lat"],"%.5f"%o["lng"],
         "%.5f"%dst["lat"],"%.5f"%dst["lng"],
-        json.dumps(wp,sort_keys=True),avoid)
+        json.dumps(wp,sort_keys=True),avoid,"T" if traffic else "")
     cache_key=hashlib.md5(cache_key_src.encode()).hexdigest()
     cache_fp=os.path.join(RD,cache_key+".json")
-    # キャッシュがあれば返す（24時間有効）
+    # キャッシュ有効期限: 通常24h、渋滞考慮は2分
+    cache_ttl=120 if traffic else 86400
     if os.path.exists(cache_fp):
         cached=lj(cache_fp,None)
-        if cached and time.time()-cached.get("_cachedAt",0)<86400:
+        if cached and time.time()-cached.get("_cachedAt",0)<cache_ttl:
             cached["_fromCache"]=True
             return jsonify(cached)
     # Google Directions API呼び出し
@@ -257,6 +259,9 @@ def route_search():
         "language":"ja",
         "key":GMAPS_KEY,
     }
+    if traffic:
+        params["departure_time"]="now"
+        params["traffic_model"]="best_guess"
     if wp:
         wp_str="|".join(["%.6f,%.6f"%(w["lat"],w["lng"]) for w in wp])
         params["waypoints"]="via:"+wp_str
@@ -290,6 +295,7 @@ def stats():
         r={"maps":max(s.get("maps",0),u.get("maps",0)),"directions":max(s.get("directions",0),u.get("directions",0))}
         if "places" in s:r["places"]=s["places"]
         if "geocoding" in s:r["geocoding"]=s["geocoding"]
+        if "breakdown" in s:r["breakdown"]=s["breakdown"]
         if "timestamp" in s:r["timestamp"]=s["timestamp"]
         return jsonify(r)
     return jsonify(u)

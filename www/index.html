@@ -93,6 +93,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .sparkle::after{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.3) 50%,transparent 70%);animation:sparkle 3s ease-in-out infinite;pointer-events:none;z-index:1;}
 @keyframes sparkle{0%,100%{left:-100%;}50%{left:150%;}}
 @keyframes orbisFlash{0%,100%{border-color:transparent;}50%{border-color:#ff4444;}}
+.riderLabel{margin-top:28px !important;text-shadow:0 0 3px #000, 0 0 3px #000, 0 0 3px #000, 0 0 3px #000;white-space:nowrap;}
 @keyframes zundaBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
 @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
 #riderNameInput::placeholder{color:rgba(255,255,255,0.5);}
@@ -153,19 +154,12 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
         <div style="font-size:11px;color:#aaa;margin-top:4px;">オリジナルのツーリングプランを作ろう</div>
       </button>
 
-      <button onclick="startApp('sstr')" id="cardSstr" class="sparkle" style="display:none;background:rgba(6,6,12,0.15);border:2px solid #00d4ff;border-radius:16px;padding:20px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;width:100%;backdrop-filter:blur(2px);">
-        <div style="font-size:10px;color:#00d4ff;letter-spacing:3px;font-weight:700;margin-bottom:4px;">05/23–24</div>
-        <div class="sparkle"><img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:36px;" onerror="this.outerHTML='<span style=font-family:Outfit;font-size:20px;font-weight:900;color:#fff>SSTR 2026</span>'"></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
-          <div style="font-size:11px;color:#aaa;">Sunrise Sunset Rally　34pt目標</div>
-          <div style="font-size:10px;color:#444;font-family:'Outfit';">v.260423</div>
-        </div>
+      <button onclick="startApp('sstr')" id="cardSstr" class="sparkle" style="display:none;background:rgba(6,6,12,0.15);border:2px solid #00d4ff;border-radius:16px;padding:16px;text-align:center;cursor:pointer;color:inherit;font-family:inherit;width:100%;backdrop-filter:blur(2px);">
+        <div class="sparkle"><img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:48px;" onerror="this.outerHTML='<span style=font-family:Outfit;font-size:24px;font-weight:900;color:#fff>SSTR 2026</span>'"></div>
       </button>
 
-      <button onclick="_showNipponDaySelect()" id="cardNippon1" class="sparkle" style="display:none;width:100%;background:rgba(6,6,12,0.15);border:2px solid #4caf50;border-radius:16px;padding:20px;text-align:left;cursor:pointer;color:inherit;font-family:inherit;backdrop-filter:blur(2px);">
-        <div style="font-size:10px;color:#4caf50;letter-spacing:3px;font-weight:700;margin-bottom:4px;">05/02–06</div>
-        <div class="sparkle"><img src="greenlabel_logo.png" style="height:36px;" onerror="this.outerHTML='<span style=font-family:Outfit;font-size:20px;font-weight:900;color:#fff>にっぽん応援ツーリング 2026</span>'"></div>
-        <div style="font-size:11px;color:#aaa;margin-top:4px;">R4P 16極踏破 5日間</div>
+      <button onclick="_showNipponDaySelect()" id="cardNippon1" class="sparkle" style="display:none;width:100%;background:rgba(6,6,12,0.15);border:2px solid #4caf50;border-radius:16px;padding:16px;text-align:center;cursor:pointer;color:inherit;font-family:inherit;backdrop-filter:blur(2px);">
+        <div class="sparkle"><img src="greenlabel_logo.png" style="height:48px;" onerror="this.outerHTML='<span style=font-family:Outfit;font-size:24px;font-weight:900;color:#fff>にっぽん応援ツーリング 2026</span>'"></div>
       </button>
     </div>
   </div>
@@ -348,21 +342,21 @@ const STOPS={day1:[
 {time:"17:00",name:"🏠 セブンイレブン佐倉白銀",lat:35.7116,lng:140.2489,pt:0,type:"goal",memo:"おつかれ！🏁"},
 ],nippon1_1:[
 // Day1: 大島→潮岬→竹居岬→蒲生田岬→阿南 (5/1 23:30出発〜5/2 18:30着)
-{time:"00:30",name:"🚀 東名川崎IC",lat:35.5620,lng:139.4810,pt:0,type:"move",memo:"東名→新東名 深夜割引 5/1深夜発",dur:0},
-{time:"01:30",name:"🍑 足柄SA",lat:35.3086,lng:138.9937,pt:0,type:"qk",memo:"トイレ・コーヒー",dur:10},
-{time:"03:10",name:"⛽ NEOPASA浜松",lat:34.7978,lng:137.7447,pt:0,type:"gs",memo:"給油",dur:15},
-{time:"04:25",name:"🍑 御在所SA",lat:35.0123,lng:136.4312,pt:0,type:"qk",memo:"休憩",dur:10},
-{time:"06:15",name:"⬇️ すさみ南IC",lat:33.5538,lng:135.5297,pt:0,type:"move",memo:"IC降りる→R42串本方面",dur:0},
-{time:"06:35",name:"📍 CP7 潮岬",lat:33.4376,lng:135.7543,pt:1,type:"goal",memo:"🏝️ 本州最南端チェックイン",dur:15},
-{time:"07:10",name:"🚀 南紀田辺IC",lat:33.7389,lng:135.3778,pt:0,type:"move",memo:"紀勢道→阪和道",dur:0},
-{time:"08:15",name:"⬇️ 和歌山IC",lat:34.2533,lng:135.2200,pt:0,type:"move",memo:"IC降りる",dur:0},
+{time:"00:30",name:"🚀 東名川崎IC",lat:35.5872,lng:139.5677,pt:0,type:"move",memo:"東名→新東名 深夜割引 5/1深夜発",dur:0},
+{time:"01:30",name:"🍑 足柄SA",lat:35.3134,lng:138.9671,pt:0,type:"qk",memo:"トイレ・コーヒー",dur:10},
+{time:"03:10",name:"⛽ NEOPASA浜松",lat:34.8432,lng:137.7505,pt:0,type:"gs",memo:"給油",dur:15},
+{time:"04:25",name:"🍑 御在所SA",lat:35.0187,lng:136.5914,pt:0,type:"qk",memo:"休憩",dur:10},
+{time:"06:15",name:"⬇️ すさみ南IC",lat:33.5162,lng:135.6030,pt:0,type:"move",memo:"IC降りる→R42串本方面",dur:0},
+{time:"06:35",name:"📍 CP7 潮岬",lat:33.4480,lng:135.7639,pt:1,type:"goal",memo:"🏝️ 本州最南端チェックイン",dur:15},
+{time:"07:10",name:"🚀 南紀田辺IC",lat:33.7459,lng:135.3709,pt:0,type:"move",memo:"紀勢道→阪和道",dur:0},
+{time:"08:15",name:"⬇️ 和歌山IC",lat:34.2394,lng:135.2130,pt:0,type:"move",memo:"IC降りる",dur:0},
 {time:"08:30",name:"🍴 和歌山駅エリア",lat:34.2330,lng:135.1907,pt:0,type:"qk",memo:"朝食",dur:30},
-{time:"09:15",name:"⛴️ 和歌山港",lat:34.2060,lng:135.1523,pt:0,type:"move",memo:"南海フェリー受付",dur:0},
-{time:"10:35",name:"🚢 南海フェリー出航",lat:34.2060,lng:135.1523,pt:0,type:"move",memo:"和歌山→徳島 予約No.41515987",dur:135},
-{time:"12:50",name:"⛴️ 徳島港 上陸",lat:34.0620,lng:134.5760,pt:0,type:"move",memo:"→R11で高松方面",dur:0},
+{time:"09:15",name:"⛴️ 和歌山港",lat:34.2174,lng:135.1441,pt:0,type:"move",memo:"南海フェリー受付",dur:0},
+{time:"10:35",name:"🚢 南海フェリー出航",lat:34.2174,lng:135.1441,pt:0,type:"move",memo:"和歌山→徳島 予約No.41515987",dur:135},
+{time:"12:50",name:"⛴️ 徳島港 上陸",lat:34.0565,lng:134.5842,pt:0,type:"move",memo:"→R11で高松方面",dur:0},
 {time:"15:00",name:"📍 CP9 竹居岬",lat:34.3980,lng:134.1416,pt:1,type:"goal",memo:"🏝️ 四国最北端チェックイン",dur:15},
 {time:"17:30",name:"📍 CP10 蒲生田岬",lat:33.8342,lng:134.7500,pt:1,type:"goal",memo:"🏝️ 四国最東端チェックイン",dur:15},
-{time:"18:30",name:"🏨 ルートイン阿南",lat:33.9200,lng:134.6650,pt:0,type:"goal",memo:"Agoda予約 1705017242",dur:0},
+{time:"18:30",name:"🏨 ルートイン阿南",lat:33.9222,lng:134.6662,pt:0,type:"goal",memo:"Agoda予約 1705017242",dur:0},
 ],nippon1_2:[
 // Day2: 阿南→足摺岬→佐田岬→大分 (5/3)
 {time:"07:00",name:"🏨 ルートイン阿南 出発",lat:33.9200,lng:134.6650,pt:0,type:"move",memo:"Day2",dur:0},
@@ -424,10 +418,15 @@ function pT(t){if(!t||!t.includes(':'))return 0;const[h,m]=t.split(':').map(Numb
 // Check if today is the actual rally day for the selected day
 function isRallyDay(){
   if(cDay==='custom')return true;
-  if(cDay.startsWith('nippon1_'))return true;// にっぽん応援は常にアクティブ
   var mmdd=('0'+(new Date().getMonth()+1)).slice(-2)+('0'+new Date().getDate()).slice(-2);
   if(cDay==='day1')return mmdd==='0523';
   if(cDay==='day2')return mmdd==='0524';
+  // にっぽん応援: 該当日のみアクティブ(Day1:5/1-2, Day2:5/3, Day3:5/4, Day4:5/5, Day5:5/6)
+  if(cDay==='nippon1_1')return mmdd==='0501'||mmdd==='0502';
+  if(cDay==='nippon1_2')return mmdd==='0503';
+  if(cDay==='nippon1_3')return mmdd==='0504';
+  if(cDay==='nippon1_4')return mmdd==='0505';
+  if(cDay==='nippon1_5')return mmdd==='0506';
   return false;
 }
 function fD(m){const a=Math.abs(m),h=Math.floor(a/60),n=a%60;return h>0?h+'h'+n.toString().padStart(2,'0')+'m':n+'m';}
@@ -637,7 +636,7 @@ function drawOrbisMarkers(){
     mOrbis.push(mk);
   });
 }
-var _turnPoints=[];// {lat,lng,dir:'右'|'左'|'鋭角右'|'鋭角左'|'Uターン',announced200:false,announced50:false}
+var _turnPoints=[];// {lat,lng,dir:'右'|'左'|'鋭角右'|'鋭角左'|'Uターン',announced500:false,announced200:false,announced50:false}
 var _turnPointsOld=[];
 function _resetTurnPoints(){_turnPointsOld=_turnPoints.slice();_turnPoints=[];}
 function _pushTurnPoint(lat,lng,dir){
@@ -645,13 +644,13 @@ function _pushTurnPoint(lat,lng,dir){
     if(dK(lat,lng,_turnPoints[j].lat,_turnPoints[j].lng)*1000<50)return;// 50m以内は重複スキップ
   }
   // 旧ポイントから近接マッチでアナウンス済みフラグを引き継ぐ（再アナウンス防止）
-  var a200=false,a50=false;
+  var a500=false,a200=false,a50=false;
   for(var k=0;k<_turnPointsOld.length;k++){
     if(dK(lat,lng,_turnPointsOld[k].lat,_turnPointsOld[k].lng)*1000<50){
-      a200=_turnPointsOld[k].announced200;a50=_turnPointsOld[k].announced50;break;
+      a500=_turnPointsOld[k].announced500;a200=_turnPointsOld[k].announced200;a50=_turnPointsOld[k].announced50;break;
     }
   }
-  _turnPoints.push({lat:lat,lng:lng,dir:dir,announced200:a200,announced50:a50});
+  _turnPoints.push({lat:lat,lng:lng,dir:dir,announced500:a500,announced200:a200,announced50:a50});
 }
 function _isHwyStep(html){
   // ステップのinstructionsから高速道路/有料道路を判定
@@ -1630,6 +1629,7 @@ function fetchRiderLocations(){
           _riderMarkers[l.name]=new google.maps.Marker({map:map,zIndex:90,
             icon:{path:google.maps.SymbolPath.FORWARD_CLOSED_ARROW,scale:7,
               fillColor:'#ff9100',fillOpacity:1,strokeColor:'#fff',strokeWeight:2,rotation:l.heading||0},
+            label:{text:l.name,color:'#ff9100',fontSize:'12px',fontWeight:'bold',className:'riderLabel'},
             title:l.name});
         }
         _riderMarkers[l.name].setPosition({lat:l.lat,lng:l.lng});
@@ -1717,6 +1717,68 @@ var _voiceSpeed=parseFloat(localStorage.getItem('_voiceSpeed')||'1.1');
 // 全Audio要素に音程維持を自動適用（play時にフック）
 (function(){try{var _op=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){try{this.preservesPitch=true;this.mozPreservesPitch=true;this.webkitPreservesPitch=true;}catch(e){}return _op.apply(this,arguments);};}catch(e){}})();
 function _setSpeed(s){_voiceSpeed=s;localStorage.setItem('_voiceSpeed',s);}
+
+// === API使用量詳細モーダル ===
+function _showApiDetail(){
+  var ex=document.getElementById('apiDetailModal');if(ex)ex.remove();
+  var d=window._lastApiUsage||{};
+  var div=document.createElement('div');div.id='apiDetailModal';
+  div.style.cssText='position:fixed;inset:0;z-index:10003;background:var(--bg);overflow-y:auto;padding:20px;';
+  // 単価マップ
+  var prices={'Maps JS':7,'Directions':5,'Places':17,'Geocoding':5,'Routes':5};
+  var rows='';
+  var total=0,mapsCost=0;
+  if(d.breakdown){
+    var entries=Object.entries(d.breakdown).sort(function(a,b){return b[1]-a[1];});
+    // 全件で総計＆Maps系コスト計算
+    entries.forEach(function(e){
+      total+=e[1];
+      var price=prices[e[0]];
+      if(price)mapsCost+=e[1]*price/1000;
+    });
+    // TOP10のみ表示、11位以降は「その他」
+    var top10=entries.slice(0,10);
+    var others=entries.slice(10);
+    top10.forEach(function(e){
+      var label=e[0],n=e[1];
+      var price=prices[label];
+      var cost=price?(n*price/1000):0;
+      var costStr=price?'<span style="color:#888;">$'+cost.toFixed(2)+' ($'+price+'/1000)</span>':'<span style="color:#666;">無料/別枠</span>';
+      rows+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.08);">'
+        +'<div style="font-weight:700;color:var(--txt);">'+label+'</div>'
+        +'<div style="text-align:right;"><div style="font-size:16px;font-weight:900;color:var(--ac);">'+n.toLocaleString()+'</div><div style="font-size:10px;">'+costStr+'</div></div>'
+        +'</div>';
+    });
+    if(others.length>0){
+      var otherSum=others.reduce(function(s,e){return s+e[1];},0);
+      var otherList=others.map(function(e){return e[0]+':'+e[1];}).join(' / ');
+      rows+='<div style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.08);">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+        +'<div style="font-weight:700;color:var(--sub);">その他 ('+others.length+'サービス)</div>'
+        +'<div style="font-size:14px;color:var(--sub);">'+otherSum.toLocaleString()+'</div>'
+        +'</div>'
+        +'<div style="font-size:10px;color:#666;margin-top:4px;">'+otherList+'</div>'
+        +'</div>';
+    }
+  }
+  div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+    +'<h2 style="font-size:18px;font-weight:900;color:var(--ac);">📊 API使用量詳細</h2>'
+    +'<button onclick="document.getElementById(\'apiDetailModal\').remove();" style="background:none;border:1px solid var(--bdr);border-radius:8px;color:var(--txt);padding:6px 12px;font-size:12px;cursor:pointer;">閉じる</button>'
+    +'</div>'
+    +'<div style="background:rgba(0,212,255,0.05);border:1px solid var(--ac);border-radius:10px;padding:14px;margin-bottom:12px;">'
+    +'<div style="font-size:11px;color:var(--sub);">今月の総リクエスト数</div>'
+    +'<div style="font-size:32px;font-weight:900;color:var(--ac);">'+total.toLocaleString()+'</div>'
+    +'<div style="font-size:11px;color:#888;">毎月1日にリセットされます</div>'
+    +'</div>'
+    +'<div style="background:var(--card);border:1px solid var(--bdr);border-radius:10px;overflow:hidden;margin-bottom:12px;">'+rows+'</div>'
+    +'<div style="background:rgba(255,145,0,0.05);border:1px solid var(--org);border-radius:10px;padding:12px;margin-bottom:12px;">'
+    +'<div style="font-size:11px;color:var(--sub);margin-bottom:4px;">💰 Google Maps Platform 推定コスト</div>'
+    +'<div style="font-size:20px;font-weight:900;color:var(--org);">$'+mapsCost.toFixed(2)+' / $200</div>'
+    +'<div style="font-size:11px;color:#888;">無料枠残: $'+(200-mapsCost).toFixed(2)+'（'+(100-mapsCost/2).toFixed(1)+'%）</div>'
+    +'</div>'
+    +'<div style="font-size:10px;color:#666;line-height:1.6;">※ Maps系API以外（Cloud Functions, Monitoring等）は別の無料枠で運用<br>※ 単価は2026年4月時点の参考値、実際の請求は Cloud Console で確認</div>';
+  document.body.appendChild(div);
+}
 
 // === AI ルート提案 ===
 function _showAIPlanner(){
@@ -1976,6 +2038,8 @@ setTimeout(_checkBattery,15000);// 起動15秒後に初回チェック
 var _lastDistAnnounce=0;// 前回の定期案内時刻
 var _lastDistKm=999;// 前回の10km刻み通過距離
 var _announced2km=false;// 2km接近案内済みフラグ
+var _announced500mArrive=false;// 500m接近案内済み「まもなく到着なのだ」
+var _announcedArrived=false;// 到着案内済み「到着したのだ」
 function checkDistAnnounce(){
   if(!gLat||iM||lastNI<0)return;
   var st=STOPS[cDay];
@@ -2014,6 +2078,22 @@ function checkDistAnnounce(){
     return;
   }
   if(d>=3)_announced2km=false;// リセット
+
+  // 4. 500m接近案内「まもなく到着なのだ」
+  if(d<0.5&&d>=0.1&&!_announced500mArrive){
+    _announced500mArrive=true;
+    spk('まもなく到着なのだ。',true);
+    return;
+  }
+  if(d>=1)_announced500mArrive=false;
+
+  // 5. 到着案内「到着したのだ」（100m以内）
+  if(d<0.1&&!_announcedArrived){
+    _announcedArrived=true;
+    spk('到着したのだ。',true);
+    return;
+  }
+  if(d>=0.5)_announcedArrived=false;
 }
 
 // 雨雲レーダー
@@ -2174,16 +2254,19 @@ function checkTurns(){
   for(var i=0;i<_turnPoints.length;i++){
     var tp=_turnPoints[i];
     var d=dK(gLat,gLng,tp.lat,tp.lng)*1000;// メートル
-    if(d<=250&&d>100&&!tp.announced200){
+    if(d<=550&&d>250&&!tp.announced500){
+      tp.announced500=true;
+      spk('500メートル先、'+tp.dir+'なのだ。');
+    } else if(d<=250&&d>100&&!tp.announced200){
       tp.announced200=true;
       _playTurnVoice(tp.dir,false);// 「200メートル先」音声(実際は100-250m範囲)
     } else if(d<=100&&!tp.announced50){
       tp.announced50=true;
       _playTurnVoice(tp.dir,true);// 「まもなく」音声(100m以内)
     }
-    // 通過後リセット（500m以上離れたら再利用可能に）
-    if(d>500&&(tp.announced200||tp.announced50)){
-      tp.announced200=false;tp.announced50=false;
+    // 通過後リセット（800m以上離れたら再利用可能に）
+    if(d>800&&(tp.announced500||tp.announced200||tp.announced50)){
+      tp.announced500=false;tp.announced200=false;tp.announced50=false;
     }
   }
 }
@@ -2193,12 +2276,17 @@ function checkOrbis(){
     const o=ORBIS[i];
     const d=dK(gLat,gLng,o.lat,o.lng);
     const st=_orbisState[i]||'none';
+    // ルート上のオービスのみ警告（ルート未設定なら全件対象）
+    if(_routePath&&_routePath.length>=2){
+      var distFromRoute=_distToRoute(o.lat,o.lng);
+      if(distFromRoute>0.3)continue;// ルートから300m以上離れてるオービスは無視
+    }
     var isFixed=o.type==='固定'||o.type==='半固定'||o.type==='固定(OSM)';
-    if(isFixed&&d<1&&d>=0.3&&st==='none'){
-      // オービス: 1km手前 第1警告
+    if(isFixed&&d<0.5&&d>=0.3&&st==='none'){
+      // オービス: 500m手前 第1警告
       _orbisState[i]='far';
       aC.resume();tn(900,.15,'square',0);tn(900,.15,'square',.18);tn(900,.15,'square',.36);
-      spk('この先1キロ、'+o.type+'オービスなのだ。制限速度'+o.limit+'キロなのだ。',true);
+      spk('この先500メートル、'+o.type+'オービスなのだ。制限速度'+o.limit+'キロなのだ。',true);
       _showOrbisBanner(o);
       _orbisFlash(false);
     } else if(isFixed&&d<0.3&&(st==='far'||st==='near')){
@@ -2356,7 +2444,9 @@ let gHeading=null;
 let hMode=true;
 let roadDist=null,lastRoadDistCI=-1;
 
-var roadDur=null;// 所要時間（秒）
+var roadDur=null;// 所要時間（秒・通常）
+var roadDurTraffic=null;// 所要時間（秒・渋滞考慮）
+var _trafficCheckedAt=0;
 function fetchRoadDist(lat,lng,stop){
   try{
     _nasRoute({lat:lat,lng:lng},{lat:stop.lat,lng:stop.lng},[],stop.noHwy?'tolls|highways':'',function(d){
@@ -2366,6 +2456,29 @@ function fetchRoadDist(lat,lng,stop){
       }
     });
   }catch(e){}
+}
+// 渋滞考慮の所要時間取得（残5km以下で2分間隔）
+function fetchTrafficDur(lat,lng,stop){
+  if(!roadDist||roadDist>5)return;// 5km以内のみ
+  var now=Date.now();if(now-_trafficCheckedAt<120000)return;// 2分間隔
+  _trafficCheckedAt=now;
+  try{
+    _nf(NAS_API+'/api/route',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({origin:{lat:lat,lng:lng},destination:{lat:stop.lat,lng:stop.lng},avoid:stop.noHwy?'tolls|highways':'',traffic:true}),
+      signal:AbortSignal.timeout(10000)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d&&d.routes&&d.routes[0]&&d.routes[0].legs[0]){
+        var leg=d.routes[0].legs[0];
+        if(leg.duration_in_traffic)roadDurTraffic=leg.duration_in_traffic.value;
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+// 渋滞判定: 渋滞考慮所要時間 / 通常所要時間 > 1.3 なら渋滞
+function isInTraffic(){
+  if(!roadDur||!roadDurTraffic)return false;
+  return roadDurTraffic/roadDur>1.3;
 }
 
 // Fast: just move the marker without rebuilding everything
@@ -2614,10 +2727,10 @@ function rnd(){
       <div onclick="goHome()" style="cursor:pointer;display:flex;align-items:center;gap:8px;">${cDay==='custom'?'<span style="font-size:14px;font-weight:900;color:var(--org);">'+(_customPlanName||'カスタム')+'</span>':cDay.startsWith('nippon1')?'<img src="greenlabel_logo.png" style="height:22px;opacity:0.9;" onerror="this.outerHTML=\'<span style=font-size:14px;font-weight:900;color:#4caf50>にっぽん応援</span>\'">':'<img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:22px;opacity:0.9;" onerror="this.outerHTML=\'<h1>SSTR</h1>\'">'} ${rally&&gLat&&(cDay!=='custom'||(cS&&cS.hasGoalTime))?'<span class="bdg '+dc+'">'+dt+'</span>':''}</div>
       <div style="text-align:center;flex:1;padding:0 8px;height:70px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;">
         ${gLat&&rally&&(cDay!=='custom'||(cS&&cS.hasGoalTime))&&pT(cS.time)>0?`${(()=>{const schM=pT(cS.time);const diffM=schM-nwM;const absDiff=Math.abs(diffM);const ahead=diffM>=0;const dh=Math.floor(absDiff/60).toString().padStart(2,'0');const dm=Math.floor(absDiff%60).toString().padStart(2,'0');const now=new Date();const ds=now.getSeconds().toString().padStart(2,'0');const col=ahead?'var(--ac)':'var(--red)';const lbl=ahead?'余裕':'遅れ';const sign=ahead?'+':'-';return `<div style="font-family:'Outfit';font-size:10px;color:${col};letter-spacing:1px;">${lbl}</div><div style="font-family:'Outfit';font-size:45px;font-weight:900;color:${col};line-height:1;letter-spacing:2px;">${sign}${dh}:${dm}:${ds}</div><div style="font-size:9px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">${cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()}</div>`;})()}`:(gLat?`${(()=>{
-if(_hdrMode===0&&cDay!=='custom'){
+if(_hdrMode===0&&(cDay==='day1'||cDay==='day2')){
   const now=new Date();const goal=new Date(2026,4,23,19,0,0);let remS=Math.floor((goal-now)/1000);const over=remS<0;if(over)remS=Math.abs(remS);const rd=Math.floor(remS/86400),rh=Math.floor((remS%86400)/3600),rm=Math.floor((remS%3600)/60),rs=remS%60;const col=over?'var(--red)':remS<3600?'var(--ylw)':'var(--grn)';const lbl=over?'超過':rd>0?'5/23 19:00まで':'19:00まで';const timeStr=rd>0?rd+'日'+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0'):(over?'-':'')+rh.toString().padStart(2,'0')+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0');
   return '<div style="font-family:Outfit;font-size:10px;color:'+col+';letter-spacing:1px;">'+lbl+'</div><div style="font-family:Outfit;font-size:'+(rd>0?'32':'45')+'px;font-weight:900;color:'+col+';line-height:1;letter-spacing:2px;">'+timeStr+'</div><div style="font-size:9px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">'+cS.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim()+'</div>';
-} else if(_hdrMode===1||(_hdrMode===0&&cDay==='custom')){
+} else if(_hdrMode===1||(_hdrMode===0&&cDay!=='day1'&&cDay!=='day2')){
   const distM=Math.round(dispDist*1000);
   const distStr=distM>=1000?(dispDist.toFixed(1)+'km'):(distM+'m');
   const distCol=dispDist>=100?'var(--red)':dispDist>=50?'var(--ylw)':'var(--ac)';
@@ -2673,9 +2786,10 @@ if(_hdrMode===0&&cDay!=='custom'){
       <div style="display:flex;gap:4px;">
         <button onclick="iM=!iM;rnd();event.stopPropagation();" style="${_bs}color:${iM?'var(--txt)':'var(--ac)'};">${iM?'🔇':'🔊'}</button>
         <button onclick="toggleNight();event.stopPropagation();" style="${_bs}color:${nightMode?'var(--ylw)':'var(--txt)'};">${nightMode?'🌙':'☀️'}</button>
-        ${cDay!=='custom'?_db('day1','23')+_db('day2','24'):''}
+        ${(cDay==='day1'||cDay==='day2')?_db('day1','23')+_db('day2','24'):''}
         ${_zb(0,'🔍')}${_zb(1,'📍')}${_zb(2,'🗺️')}
         <button onclick="toggleRain();event.stopPropagation();" style="${_bs}background:${_rainOn?'var(--ac)':'none'};border-color:${_rainOn?'var(--ac)':'var(--bdr)'};color:${_rainOn?'#000':'var(--txt)'};">☔</button>
+        <button onclick="toggleSSTR2026();event.stopPropagation();" style="${_bs}background:${_sstr2026Show?'#2196f3':'none'};border-color:#2196f3;color:${_sstr2026Show?'#fff':'#2196f3'};">🗾</button>
         ${cDay==='day1'?'<button onclick="emergGoal();event.stopPropagation();" style="'+_bs+'color:var(--red);border-color:var(--red);">🚨</button>':''}
       </div>`;
     if(map)google.maps.event.trigger(map,'resize');
@@ -2714,7 +2828,6 @@ if(_hdrMode===0&&cDay!=='custom'){
       <label class="cb" style="border-color:var(--pk);color:var(--pk);">🎵 BGM<input type="file" accept="audio/*" onchange="lBGM(event)" style="display:none;"></label>
       <button class="cb ${sFl?'act':''}" onclick="sFl=!sFl;rnd();" style="border-color:var(--grn);color:var(--grn);">📋 全リスト</button>
       <button class="cb" onclick="_registerVisit();" style="border-color:#4caf50;color:#4caf50;">📌 ここを登録</button>
-      <button class="cb ${_sstr2026Show?'act':''}" onclick="toggleSSTR2026();" style="border-color:#2196f3;color:${_sstr2026Show?'#000':'#2196f3'};background:${_sstr2026Show?'#2196f3':'none'};">🗾 SSTR2026</button>
       <button class="cb" onclick="_showSettings();" style="border-color:var(--ylw);color:var(--ylw);">⚙ 設定</button>
       ${cDay==='day1'?'<button class="cb" style="border-color:var(--red);color:var(--red);" onclick="emergGoal()">🚨 緊急ゴール</button>':''}
     </div>`;
@@ -2731,7 +2844,7 @@ if(_hdrMode===0&&cDay!=='custom'){
     </div>`;}
     b+=`
     <div id="bi" style="display:${bgm?'block':'none'};text-align:center;font-size:11px;color:var(--pk);padding:2px;"></div>
-    ${cDay!=='custom'?'<div class="dtabs"><div class="dtab '+(cDay==='day1'?'act':'')+'" onclick="cDay=\'day1\';rnd();">Day1 (5/23)</div><div class="dtab '+(cDay==='day2'?'act':'')+'" onclick="cDay=\'day2\';rnd();">Day2 (5/24)</div></div>':''}`;
+    ${(cDay==='day1'||cDay==='day2')?'<div class="dtabs"><div class="dtab '+(cDay==='day1'?'act':'')+'" onclick="cDay=\'day1\';rnd();">Day1 (5/23)</div><div class="dtab '+(cDay==='day2'?'act':'')+'" onclick="cDay=\'day2\';rnd();">Day2 (5/24)</div></div>':''}`;
     b+=`<div class="fl ${sFl?'show':''}"><div class="fh">📋 全ストップ</div>`;
     st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';b+=`<div class="fi ${c}"><div class="dot ${tc[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}${cDay.startsWith('nippon1_')?'':'<span class="tm">'+s.time+'</span>'}</div>`;});
     b+=`</div>`;
@@ -3433,6 +3546,12 @@ function startApp(mode){
       _setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
       a.onended=_done;a.onerror=function(){spk(title+'が選択されたのだ。',true,cb);};
       a.play().catch(function(){a.onerror();});
+    } else if(mode==='nippon1'||mode==='nippon2'){
+      // にっぽん応援: ローカルWAV
+      var a=new Audio(new URL('voice/nippon1_selected.wav',window.location.href).href);
+      _setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
+      a.onended=_done;a.onerror=function(){spk(title+'が選択されたのだ。',true,cb);};
+      a.play().catch(function(){a.onerror();});
     } else if(mode==='custom'){
       // カスタム: NAS WAV（保存時に事前生成済み）
       var a=new Audio(_nasAudio('/api/voice/'+encodeURIComponent('selected_'+title)));
@@ -3583,18 +3702,25 @@ function _showCards(){
     _addRow('オービス(組込)',ORBIS.length+'箇所','-',null);
     // NASデータ非同期取得（maxAgeH: 超えたら黄色、2倍で赤）
     _nf(NAS_API+'/api/usage',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
-      // 無料枠$200内の推定コスト計算（参考値）
-      var mapsC=(d.maps||0)*0.007;// $7/1000
-      var dirC=(d.directions||0)*0.005;// $5/1000
-      var plC=(d.places||0)*0.017;// $17/1000
-      var geoC=(d.geocoding||0)*0.005;// $5/1000
-      var total=mapsC+dirC+plC+geoC;
-      var rem=200-total;
-      var val='<span style="color:var(--ac);">Maps:'+d.maps+'</span> <span style="color:var(--org);">Dir:'+d.directions+'</span>';
-      if(typeof d.places==='number')val+=' <span style="color:var(--pk);">Places:'+d.places+'</span>';
-      if(typeof d.geocoding==='number')val+=' <span style="color:var(--grn);">Geo:'+d.geocoding+'</span>';
-      val+='<br><span style="color:#888;font-size:10px;">推定 $'+total.toFixed(2)+' / $200無料枠（残 $'+rem.toFixed(2)+'）</span>';
-      _addRow('APIカウンター',val,d.timestamp,6);// 6h超で黄色
+      window._lastApiUsage=d;
+      var total=0;
+      if(d.breakdown&&typeof d.breakdown==='object'){
+        Object.values(d.breakdown).forEach(function(v){total+=v;});
+      } else {
+        total=(d.maps||0)+(d.directions||0)+(d.places||0)+(d.geocoding||0);
+      }
+      var mapsC=(d.maps||0)*0.007+(d.directions||0)*0.005+(d.places||0)*0.017+(d.geocoding||0)*0.005;
+      var rem=200-mapsC;
+      var val='<span style="font-size:18px;font-weight:900;color:var(--ac);">'+total.toLocaleString()+'</span> <span style="font-size:11px;color:#888;">リクエスト/今月</span>'
+        +'<br><span style="color:#888;font-size:10px;">Maps系 $'+mapsC.toFixed(2)+' / $200（残 $'+rem.toFixed(2)+'）　タップで詳細</span>';
+      _addRow('APIカウンター',val,d.timestamp,6);
+      // クリック可能にする（最後の行を取得）
+      setTimeout(function(){
+        var rows=vl.children;if(!rows||rows.length===0)return;
+        var lastRow=rows[rows.length-1];
+        lastRow.style.cursor='pointer';
+        lastRow.onclick=function(){_showApiDetail();};
+      },50);
     }).catch(()=>{_addRow('APIカウンター','取得失敗','-',null);});
     _nf(NAS_API+'/api/orbis',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{
       _addRow('オービス(OSM)',d.count+'台',d.updated,168);// 7日超で黄色
