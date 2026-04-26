@@ -1428,6 +1428,10 @@ function _checkAppVersion(){
           +'<button onclick="localStorage.setItem(\'_dismissedUpdate\',\''+d.latest+'\');document.getElementById(\'updateNotice\').remove();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
           +'</div>';
         document.body.appendChild(notice);
+        // おかえり等の通常音声を抑制
+        window._updateNoticeShown=true;
+        sessionStorage.setItem('_saidOkaeri','1');// おかえりスキップ用
+        _stopAllAudio();
         // ずんだもん通知
         setTimeout(function(){if(typeof spk==='function')spk('アップデートがあるのだ！',true);},500);
       }
