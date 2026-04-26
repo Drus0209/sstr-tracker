@@ -1390,27 +1390,42 @@ function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 // === 交通情報 ===
 const NAS_API='https://as5304t-c025.tail5d5c21.ts.net';
 const NAS_KEY='sstr2026_k4w4s4k1_zx4r';
-const APP_VERSION='260423';
-// === バージョンチェック（強制アップデート）===
+const APP_VERSION='260426';
+// === バージョンチェック（強制アップデート＋通知バナー）===
 function _checkAppVersion(){
   _nf(NAS_API+'/api/version',{signal:AbortSignal.timeout(8000)})
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d||!d.minVersion)return;
+      var isAndroid=(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform()==='android');
+      var apkUrl=d.apkUrl||(NAS_API+'/download/apk');
+      // 強制アップデート（minVersion未満）
       if(APP_VERSION<d.minVersion){
-        var isAndroid=(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform()==='android');
-        var apkUrl=d.apkUrl||(NAS_API+'/download/apk');
         var btn=isAndroid
           ?'<a href="'+apkUrl+'" style="display:inline-block;padding:14px 28px;background:#ff9100;color:#000;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;">APKをダウンロード</a>'
           :'<button onclick="location.reload(true)" style="padding:14px 28px;background:#ff9100;color:#000;border:none;border-radius:8px;font-weight:bold;font-size:16px;cursor:pointer;">再読込して更新</button>';
         var html='<div style="position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#fff;padding:20px;">'
           +'<div style="max-width:400px;text-align:center;">'
-          +'<div style="font-size:22px;font-weight:bold;margin-bottom:16px;">アップデートが必要です</div>'
+          +'<div style="font-size:22px;font-weight:bold;margin-bottom:16px;">⚠️ アップデートが必要です</div>'
           +'<div style="font-size:14px;line-height:1.6;margin-bottom:24px;opacity:0.9;">現在: v.'+APP_VERSION+'<br>最新: v.'+(d.latest||d.minVersion)+'<br><br>このバージョンはサポートされていません。更新してから利用してください。</div>'
           +btn+'</div></div>';
         var w=document.createElement('div');w.innerHTML=html;document.body.appendChild(w.firstChild);
+        return;
       }
-    }).catch(function(){});// オフライン時はスキップ
+      // 任意アップデート通知（latestが新しい場合のみ、最新版なら出さない）
+      if(d.latest&&APP_VERSION<d.latest){
+        // 既に同じlatestを「あとで」した場合はスキップ
+        if(localStorage.getItem('_dismissedUpdate')===d.latest)return;
+        var notice=document.createElement('div');notice.id='updateNotice';
+        notice.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99998;background:linear-gradient(135deg,#9c27b0,#e91e63);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,0.4);font-family:sans-serif;';
+        notice.innerHTML='<div style="font-size:12px;flex:1;line-height:1.4;"><b>🔔 新しいバージョン v.'+d.latest+' があります</b><br><span style="opacity:0.85;font-size:11px;">現在 v.'+APP_VERSION+'</span></div>'
+          +(isAndroid
+            ?'<a href="'+apkUrl+'" style="background:#fff;color:#9c27b0;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:800;white-space:nowrap;">DL</a>'
+            :'<button onclick="location.reload(true)" style="background:#fff;color:#9c27b0;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:800;cursor:pointer;">再読込</button>')
+          +'<button onclick="localStorage.setItem(\'_dismissedUpdate\',\''+d.latest+'\');document.getElementById(\'updateNotice\').remove();" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;">×</button>';
+        document.body.appendChild(notice);
+      }
+    }).catch(function(){});
 }
 setTimeout(_checkAppVersion,2000);
 // NAS API認証付きfetch
@@ -3787,7 +3802,7 @@ function startApp(mode){
   mid.innerHTML=`
     <div style="position:absolute;inset:0;background-image:url(bg2.jpg);background-size:cover;background-position:center 70%;"></div>
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.2) 100%);"></div>
-    <div style="position:absolute;top:20px;right:20px;z-index:2;font-family:'Outfit';font-size:12px;color:#fff;letter-spacing:1px;text-align:right;">v.260423</div>
+    <div style="position:absolute;top:20px;right:20px;z-index:2;font-family:'Outfit';font-size:12px;color:#fff;letter-spacing:1px;text-align:right;">v.260426</div>
     <div class="mid-content" style="position:absolute;top:40%;left:0;right:0;z-index:1;text-align:center;padding:0 24px;">
       <div style="margin-bottom:4px;">${mode==='sstr'?'<img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:60px;" onerror="this.outerHTML=\'<span style=font-size:26px;font-weight:900;color:#00d4ff>SSTR 2026</span>\'">':mode==='custom'?'<span style="font-size:26px;font-weight:900;color:var(--org);">'+title+'</span>':'<img src="greenlabel_logo.png" style="height:80px;" onerror="this.outerHTML=\'<span style=font-size:26px;font-weight:900;color:#00d4ff>'+title+'</span>\'">'}</div>
       <div style="font-size:13px;color:#ccc;margin-bottom:20px;">が選択されたのだ</div>
@@ -3986,7 +4001,7 @@ function _showCards(){
       }
       vl.innerHTML+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.1);"><span style="font-weight:700;color:var(--txt);">'+indicator+' '+label+'</span><span style="text-align:right;font-size:13px;">'+value+'<br><span style="color:'+col+';font-size:11px;">'+_fmtDate(dateStr)+'</span></span></div>';
     }
-    _addRow('アプリ','v.260423','2026-04-23',null);
+    _addRow('アプリ','v.260426','2026-04-26',null);
     _addRow('オービス(組込)',ORBIS.length+'箇所','-',null);
     // NASデータ非同期取得（maxAgeH: 超えたら黄色、2倍で赤）
     _nf(NAS_API+'/api/usage',{signal:AbortSignal.timeout(5000)}).then(r=>r.json()).then(d=>{

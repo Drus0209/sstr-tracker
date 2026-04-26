@@ -644,7 +644,7 @@ def api_version():
     # minVersion: これより古いと強制更新 / latest: 最新推奨バージョン
     return jsonify({
         "minVersion":"260414",
-        "latest":"260423",
+        "latest":"260426",
         "apkUrl":"/download/apk"
     })
 
