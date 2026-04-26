@@ -401,6 +401,36 @@ def generate_voice():
             log_event("voice_generate",(time.time()-t0)*1000,"error",{"key":key,"err":last_err[:200],"len":len(text),"host":name})
     return jsonify({"error":last_err or "all hosts failed"}),500
 
+@app.route("/api/voice/prefetch",methods=["POST","OPTIONS"])
+def prefetch_voices():
+    """複数音声を一括生成。既存キャッシュは即返却。
+    body: {items:[{text,key},{text,key},...]}
+    返却: {ok:true, results:[{key,cached:bool,url}]}
+    """
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json(force=True)
+    if not d or "items" not in d:return jsonify({"error":"items required"}),400
+    results=[]
+    for it in d["items"]:
+        text=it.get("text","");key=safe_name(it.get("key","custom"))
+        if not text:continue
+        fp=os.path.join(VD,key+".wav")
+        if os.path.exists(fp):
+            results.append({"key":key,"cached":True,"size":os.path.getsize(fp)})
+            continue
+        # 新規生成
+        for name,host,tmo in VOICEVOX_HOSTS:
+            try:
+                wav=_call_voicevox(host,text,3,tmo)
+                with open(fp,"wb") as f:f.write(wav)
+                results.append({"key":key,"cached":False,"size":len(wav),"host":name})
+                break
+            except Exception:
+                continue
+        else:
+            results.append({"key":key,"error":"failed"})
+    return jsonify({"ok":True,"results":results})
+
 @app.route("/api/voice_stats")
 def voice_stats():
     """直近N日のAPIイベントを集計。クエリ ?days=1 (デフォルト1)"""
@@ -686,7 +716,7 @@ def api_version():
     # minVersion: これより古いと強制更新 / latest: 最新推奨バージョン
     return jsonify({
         "minVersion":"260414",
-        "latest":"260426",
+        "latest":"260427",
         "apkUrl":"/download/apk"
     })
 

@@ -822,6 +822,93 @@ function _nasDrawRoute(d,noHwy){
     });
   });
 }
+// === 分岐車線案内：解析・事前生成・ローカル保存 ===
+// step.maneuver や html_instructions から分岐情報を抽出
+function _extractLaneHints(routeData){
+  var hints=[];
+  try{
+    var legs=(routeData.routes&&routeData.routes[0]&&routeData.routes[0].legs)||[];
+    legs.forEach(function(leg,li){
+      (leg.steps||[]).forEach(function(step,si){
+        var mn=step.maneuver||'';
+        var html=step.html_instructions||'';
+        var plain=html.replace(/<[^>]*>/g,'');
+        // 高速分岐・出口・合流系
+        if(/ramp|fork|merge|uturn/.test(mn)||/JCT|ジャンクション|分岐|方面/.test(plain)){
+          // 「○○方面」抽出
+          var dirMatch=plain.match(/([^、。\s]+)方面/);
+          var direction=dirMatch?dirMatch[1]:'';
+          // 左右抽出
+          var leftRight=mn.indexOf('right')>=0?'右':mn.indexOf('left')>=0?'左':'';
+          var text='';
+          if(direction&&leftRight)text='まもなく'+direction+'方面、'+leftRight+'方向なのだ';
+          else if(direction)text='まもなく'+direction+'方面なのだ';
+          else if(leftRight)text='まもなく'+leftRight+'分岐なのだ';
+          if(text){
+            var loc=step.start_location||{};
+            hints.push({lat:loc.lat,lng:loc.lng,text:text,key:'lane_'+_hashStr(text)});
+          }
+        }
+      });
+    });
+  }catch(e){}
+  return hints;
+}
+function _hashStr(s){var h=0;for(var i=0;i<s.length;i++){h=((h<<5)-h+s.charCodeAt(i))|0;}return Math.abs(h).toString(36);}
+
+// 事前音声生成→ローカル保存
+var _laneHints=[];// アクティブな分岐ヒント
+var _laneVoiceCache={};// {key: localUri}
+function _prefetchLaneVoices(routeData){
+  var hints=_extractLaneHints(routeData);
+  _laneHints=hints;
+  if(hints.length===0)return;
+  // NAS にバッチ生成リクエスト
+  _nf(NAS_API+'/api/voice/prefetch',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({items:hints.map(function(h){return{text:h.text,key:h.key};})}),
+    signal:AbortSignal.timeout(30000)})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(!d.ok)return;
+    // 各WAVを端末ローカルにDL（Capacitor Filesystem）
+    var FS=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.Filesystem;
+    if(!FS||!FS.writeFile){
+      // PWAなど: NAS URL を直接使用
+      hints.forEach(function(h){_laneVoiceCache[h.key]=_nasAudio('/api/voice/'+h.key);});
+      return;
+    }
+    hints.forEach(function(h){
+      _nf(_nasAudio('/api/voice/'+h.key)).then(function(r){return r.blob();}).then(function(blob){
+        var reader=new FileReader();
+        reader.onload=function(){
+          var b64=reader.result.split(',')[1];
+          FS.writeFile({path:'lane/'+h.key+'.wav',data:b64,directory:'CACHE',recursive:true})
+            .then(function(res){_laneVoiceCache[h.key]=res.uri;}).catch(function(){_laneVoiceCache[h.key]=_nasAudio('/api/voice/'+h.key);});
+        };reader.readAsDataURL(blob);
+      }).catch(function(){_laneVoiceCache[h.key]=_nasAudio('/api/voice/'+h.key);});
+    });
+  }).catch(function(){});
+}
+
+// 走行中に分岐手前で発火
+var _laneAnnounced={};
+function _checkLaneHints(){
+  if(!gLat||_laneHints.length===0)return;
+  for(var i=0;i<_laneHints.length;i++){
+    var h=_laneHints[i];
+    if(!h.lat||_laneAnnounced[h.key])continue;
+    var d=dK(gLat,gLng,h.lat,h.lng)*1000;// メートル
+    if(d<700&&d>300){
+      _laneAnnounced[h.key]=true;
+      var url=_laneVoiceCache[h.key]||_nasAudio('/api/voice/'+h.key);
+      var a=new Audio(url);_setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
+      a.onerror=function(){spk(h.text,true);};
+      a.play().catch(function(){spk(h.text,true);});
+    }
+    if(d>2000&&_laneAnnounced[h.key])delete _laneAnnounced[h.key];
+  }
+}
+
 // 高精度パス取得: stepsの各polylineを連結（overview_polylineより3〜5倍密度）
 function _routePathFromDirections(d){
   var path=[];
@@ -1050,6 +1137,8 @@ function updateMap(lat,lng,stops,nI){
         _nasDrawRoute(d,_routeNoHwy);
         // リルート用にパス保存（stepsから高精度取得）
         _routePath=_routePathFromDirections(d);
+        // 分岐車線案内を事前生成＆ローカル保存
+        if(typeof _prefetchLaneVoices==='function')_prefetchLaneVoices(d);
       } else{
         var ds=new google.maps.DirectionsService();
         ds.route({origin:{lat,lng},destination:{lat:tS.lat,lng:tS.lng},
@@ -2991,6 +3080,7 @@ function onGpsUpdate(p,announce_it){
   checkRest();
   _checkReroute();
   if(typeof _checkVisitApproach==='function')_checkVisitApproach();
+  if(typeof _checkLaneHints==='function')_checkLaneHints();
   if(typeof _trackStats==='function')_trackStats(gLat,gLng);
   // Throttle everything else to 5 seconds
   const now=Date.now();
