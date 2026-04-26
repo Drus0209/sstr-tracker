@@ -1429,16 +1429,20 @@ function _checkAppVersion(){
           +'<button onclick="document.getElementById(\'updateNotice\').remove();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
           +'</div>';
         document.body.appendChild(notice);
-        // 既存音声を一旦停止し、アップデート→おかえりの順で再生
+        // 既存音声をすべて停止してアップデート→おかえりの順に統一
         window._updateNoticeShown=true;
         sessionStorage.setItem('_saidOkaeri','1');// 通常のおかえりフローはスキップ
         _stopAllAudio();
+        // キューを完全に空にしてから順番に投入
+        _spkQ.length=0;_spkBusy=false;_spkCallback=null;
         setTimeout(function(){
           if(typeof spk!=='function')return;
+          // 1. アップデート通知
           spk('アップデートがあるのだ！',true,function(){
-            if(_myName)spk(_myName+'さん、おかえりなのだ！',true);
+            // 2. 完了後におかえり
+            if(_myName)setTimeout(function(){spk(_myName+'さん、おかえりなのだ！',true);},300);
           });
-        },500);
+        },800);
       }
     }).catch(function(){});
 }
