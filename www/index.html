@@ -1210,6 +1210,7 @@ function _findZunda(t){
   if(t.match(/ツーリングプランを選ぶ/))return 'voice/splash_welcome.wav';
   if(t.match(/ライダー名を入力/))return 'voice/enter_name.wav';
   if(t.match(/位置情報を登録/))return 'voice/register_location.wav';
+  if(t.match(/アップデートがあるのだ/))return 'voice/update_available.wav';
   if(t.match(/GPS情報を取得するのだ/))return 'voice/gps_getting.wav';
   if(t.match(/GPS情報を取得したのだ/))return 'voice/gps_ok.wav';
   if(t.match(/まもなくゴール/))return 'voice/goal_near.wav';
@@ -1429,20 +1430,19 @@ function _checkAppVersion(){
           +'<button onclick="document.getElementById(\'updateNotice\').remove();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
           +'</div>';
         document.body.appendChild(notice);
-        // 既存音声をすべて停止してアップデート→おかえりの順に統一
+        // 既存音声をすべて停止
         window._updateNoticeShown=true;
         sessionStorage.setItem('_saidOkaeri','1');// 通常のおかえりフローはスキップ
         _stopAllAudio();
-        // キューを完全に空にしてから順番に投入
         _spkQ.length=0;_spkBusy=false;_spkCallback=null;
+        // アップデート再生終了をonended/コールバックで確認 → おかえり再生
+        // spk()のonDoneは「キューが空になった瞬間」=再生終了時に発火
         setTimeout(function(){
           if(typeof spk!=='function')return;
-          // 1. アップデート通知
           spk('アップデートがあるのだ！',true,function(){
-            // 2. 完了後におかえり
-            if(_myName)setTimeout(function(){spk(_myName+'さん、おかえりなのだ！',true);},300);
+            if(_myName)spk(_myName+'さん、おかえりなのだ！',true);
           });
-        },800);
+        },300);
       }
     }).catch(function(){});
 }
