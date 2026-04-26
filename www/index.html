@@ -1457,13 +1457,14 @@ function _checkUpdatePrerequisites(apkUrl){
         if(lvl!==null&&lvl<20&&!charging)issues.push('バッテリー残量が少ないです('+lvl+'%)・充電してから再度お試しください');
       }).catch(function(){});
     }
-    // 4. APK URL到達確認(HEAD)・サイズ取得
-    var headCheck=fetch(apkUrl,{method:'HEAD',signal:AbortSignal.timeout(8000)}).then(function(r){
-      if(!r.ok)issues.push('APKサーバー応答エラー(HTTP '+r.status+')');
+    // 4. APK URL到達確認(HEAD)・サイズ取得（HEADは認証ヘッダ付きで叩く・失敗は警告のみ）
+    var headCheck=_nf(apkUrl,{method:'HEAD',signal:AbortSignal.timeout(8000)}).then(function(r){
+      if(!r.ok&&r.status>=500)issues.push('APKサーバー応答エラー(HTTP '+r.status+')');
       var len=r.headers.get('Content-Length');
       if(len)apkSize=parseInt(len);
     }).catch(function(e){
-      issues.push('APKサーバーに接続できません('+(e.name==='TimeoutError'?'タイムアウト':'通信エラー')+')');
+      // HEAD失敗してもネット接続OKなら続行可能（一部環境でHEADブロック）
+      if(navigator.onLine===false)issues.push('APKサーバーに接続できません('+(e.name==='TimeoutError'?'タイムアウト':'通信エラー')+')');
     });
     Promise.all([storageCheck,batteryCheck,headCheck]).then(function(results){
       var freeMB=results[0];
@@ -1539,7 +1540,8 @@ function _checkAppVersion(){
     .then(function(d){
       if(!d||!d.minVersion){_finish();return;}
       var isAndroid=(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform()==='android');
-      var apkUrl=d.apkUrl||(NAS_API+'/download/apk');
+      var apkUrl=d.apkUrl||'/download/apk';
+      if(apkUrl.indexOf('http')!==0)apkUrl=NAS_API+apkUrl;// 相対→絶対
       // 強制アップデート（minVersion未満）→ おかえり不要
       if(APP_VERSION<d.minVersion){
         sessionStorage.setItem('_saidOkaeri','1');
