@@ -1396,40 +1396,82 @@ function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 const NAS_API='https://as5304t-c025.tail5d5c21.ts.net';
 const NAS_KEY='sstr2026_k4w4s4k1_zx4r';
 const APP_VERSION='260426';
-// === アップデートDL処理（プログレス表示＋音声案内）===
+// === アップデート前提チェック ===
+function _checkUpdatePrerequisites(apkUrl){
+  return new Promise(function(resolve){
+    var issues=[];
+    // 1. ネットワーク
+    if(!navigator.onLine)issues.push('ネット未接続です');
+    // 2. ストレージ容量(StorageManager APIが使える環境のみ)
+    var storageCheck=Promise.resolve();
+    if(navigator.storage&&navigator.storage.estimate){
+      storageCheck=navigator.storage.estimate().then(function(s){
+        var freeMB=(s.quota-s.usage)/1024/1024;
+        if(freeMB<100)issues.push('ストレージ空き容量が少ないです('+freeMB.toFixed(0)+'MB)');
+      }).catch(function(){});
+    }
+    // 3. APK URL到達確認(HEAD)
+    var headCheck=fetch(apkUrl,{method:'HEAD',signal:AbortSignal.timeout(8000)}).then(function(r){
+      if(!r.ok)issues.push('APKサーバー応答エラー(HTTP '+r.status+')');
+      var len=r.headers.get('Content-Length');
+      if(len)resolve.size=parseInt(len);
+    }).catch(function(e){
+      issues.push('APKサーバーに接続できません('+(e.name==='TimeoutError'?'タイムアウト':'通信エラー')+')');
+    });
+    Promise.all([storageCheck,headCheck]).then(function(){resolve({ok:issues.length===0,issues:issues});});
+  });
+}
+
+// === アップデートDL処理（事前チェック→プログレス→音声案内）===
 function _doUpdateDownload(apkUrl){
   // 既存モーダル削除
   var n=document.getElementById('updateNotice');if(n)n.remove();
-  // 「UPDATE中」オーバーレイ表示
+  // 事前チェック中オーバーレイ
   var ov=document.createElement('div');ov.id='updateProgress';
   ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;color:#fff;padding:20px;';
-  ov.innerHTML='<div style="font-size:48px;margin-bottom:16px;">⬇️</div>'
-    +'<div id="updMsg" style="font-size:20px;font-weight:900;margin-bottom:8px;color:#9c27b0;">アップデート中なのだ</div>'
-    +'<div style="font-size:13px;opacity:0.8;margin-bottom:24px;">通知バーからインストールしてください</div>'
-    +'<div style="width:80%;max-width:300px;height:8px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;margin-bottom:8px;">'
-    +'<div id="updBar" style="width:30%;height:100%;background:linear-gradient(90deg,#9c27b0,#e91e63);border-radius:4px;animation:updPulse 2s ease-in-out infinite;"></div>'
-    +'</div>'
-    +'<style>@keyframes updPulse{0%{margin-left:0;width:30%;}50%{margin-left:35%;width:30%;}100%{margin-left:70%;width:30%;}}</style>';
+  ov.innerHTML='<div style="font-size:48px;margin-bottom:16px;">🔍</div>'
+    +'<div id="updMsg" style="font-size:18px;font-weight:900;margin-bottom:8px;color:var(--ac);">アップデート可能か確認中…</div>';
   document.body.appendChild(ov);
-  // 音声「アップデート中なのだ」
-  if(typeof spk==='function'){_stopAllAudio();spk('アップデート中なのだ。',true);}
-  // ブラウザでAPK URLを開く（システムDLマネージャー）
-  try{window.open(apkUrl,'_system');}catch(e){window.location.href=apkUrl;}
-  // アプリ復帰イベント = ダウンロード/インストール画面から戻ってきた時
-  var _resumed=false;
-  function _onResume(){
-    if(_resumed)return;_resumed=true;
-    var msg=document.getElementById('updMsg');if(msg){msg.textContent='もう一度起動してほしいのだ';msg.style.color='#4caf50';}
-    var bar=document.getElementById('updBar');if(bar){bar.style.width='100%';bar.style.animation='none';bar.style.background='#4caf50';}
-    if(typeof spk==='function')spk('もう一度起動してほしいのだ。',true);
-  }
-  try{
-    var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App;
-    if(A&&A.addListener){A.addListener('resume',_onResume);}
-    else document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')_onResume();});
-  }catch(e){
-    document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')_onResume();});
-  }
+  if(typeof spk==='function'){_stopAllAudio();spk('アップデート可能か確認中なのだ。',true);}
+  _checkUpdatePrerequisites(apkUrl).then(function(check){
+    if(!check.ok){
+      // 問題あり
+      ov.innerHTML='<div style="font-size:48px;margin-bottom:16px;">⚠️</div>'
+        +'<div style="font-size:18px;font-weight:900;color:var(--red);margin-bottom:12px;">アップデートできません</div>'
+        +'<div style="background:rgba(255,68,68,0.1);border:1px solid var(--red);border-radius:10px;padding:14px;max-width:340px;width:100%;margin-bottom:18px;">'
+        +check.issues.map(function(i){return '<div style="font-size:14px;color:#fff;margin:4px 0;">・'+i+'</div>';}).join('')
+        +'</div>'
+        +'<div style="font-size:13px;opacity:0.85;margin-bottom:18px;text-align:center;">アップデートするには問題を解決する必要があるのだ</div>'
+        +'<button onclick="document.getElementById(\'updateProgress\').remove();window._updateLaterChain&&window._updateLaterChain();" style="background:#fff;color:#000;border:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;">閉じる</button>';
+      if(typeof spk==='function')spk('アップデートできないのだ。'+check.issues[0]+'。アップデートするには問題を解決する必要があるのだ。',true);
+      return;
+    }
+    // 問題なし → ダウンロード開始
+    ov.innerHTML='<div style="font-size:48px;margin-bottom:16px;">⬇️</div>'
+      +'<div id="updMsg" style="font-size:20px;font-weight:900;margin-bottom:8px;color:#9c27b0;">アップデート中なのだ</div>'
+      +'<div style="font-size:13px;opacity:0.8;margin-bottom:24px;">通知バーからインストールしてください</div>'
+      +'<div style="width:80%;max-width:300px;height:8px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;margin-bottom:8px;">'
+      +'<div id="updBar" style="width:30%;height:100%;background:linear-gradient(90deg,#9c27b0,#e91e63);border-radius:4px;animation:updPulse 2s ease-in-out infinite;"></div>'
+      +'</div>'
+      +'<style>@keyframes updPulse{0%{margin-left:0;width:30%;}50%{margin-left:35%;width:30%;}100%{margin-left:70%;width:30%;}}</style>';
+    if(typeof spk==='function')spk('アップデート中なのだ。',true);
+    try{window.open(apkUrl,'_system');}catch(e){window.location.href=apkUrl;}
+    // 復帰検知
+    var _resumed=false;
+    function _onResume(){
+      if(_resumed)return;_resumed=true;
+      var msg=document.getElementById('updMsg');if(msg){msg.textContent='もう一度起動してほしいのだ';msg.style.color='#4caf50';}
+      var bar=document.getElementById('updBar');if(bar){bar.style.width='100%';bar.style.animation='none';bar.style.background='#4caf50';}
+      if(typeof spk==='function')spk('もう一度起動してほしいのだ。',true);
+    }
+    try{
+      var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App;
+      if(A&&A.addListener)A.addListener('resume',_onResume);
+      else document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')_onResume();});
+    }catch(e){
+      document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')_onResume();});
+    }
+  });
 }
 // === バージョンチェック（強制アップデート＋通知バナー）===
 // バージョンチェック完了を約束するPromise（おかえり等の音声フローはこれを待つ）
