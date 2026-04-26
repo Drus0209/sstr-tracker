@@ -1500,32 +1500,35 @@ function _doUpdateDownload(apkUrl){
       if(typeof spk==='function')spk('アップデートできないのだ。'+check.issues[0]+'。アップデートするには問題を解決する必要があるのだ。',true);
       return;
     }
-    // 問題なし → ダウンロード開始
+    // 問題なし → アプリ内ダウンロード開始
     var sizeMB=check.apkSize?(check.apkSize/1024/1024).toFixed(1):null;
     ov.innerHTML='<div style="font-size:48px;margin-bottom:16px;">⬇️</div>'
       +'<div id="updMsg" style="font-size:20px;font-weight:900;margin-bottom:8px;color:#9c27b0;">アップデート中なのだ</div>'
-      +(sizeMB?'<div style="font-size:13px;opacity:0.9;margin-bottom:6px;">📦 '+sizeMB+' MB ダウンロード中</div>':'')
-      +'<div style="font-size:13px;opacity:0.8;margin-bottom:24px;">通知バーからインストールしてください</div>'
-      +'<div style="width:80%;max-width:300px;height:8px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;margin-bottom:8px;">'
-      +'<div id="updBar" style="width:30%;height:100%;background:linear-gradient(90deg,#9c27b0,#e91e63);border-radius:4px;animation:updPulse 2s ease-in-out infinite;"></div>'
-      +'</div>'
-      +'<style>@keyframes updPulse{0%{margin-left:0;width:30%;}50%{margin-left:35%;width:30%;}100%{margin-left:70%;width:30%;}}</style>';
+      +(sizeMB?'<div style="font-size:13px;opacity:0.9;margin-bottom:6px;">📦 '+sizeMB+' MB</div>':'')
+      +'<div id="updPctTxt" style="font-size:13px;opacity:0.8;margin-bottom:14px;">準備中...</div>'
+      +'<div style="width:80%;max-width:300px;height:10px;background:rgba(255,255,255,0.15);border-radius:5px;overflow:hidden;margin-bottom:8px;">'
+      +'<div id="updBar" style="width:0%;height:100%;background:linear-gradient(90deg,#9c27b0,#e91e63);border-radius:5px;transition:width 0.3s;"></div>'
+      +'</div>';
     if(typeof spk==='function')spk('アップデート中なのだ。',true);
-    try{window.open(apkUrl,'_system');}catch(e){window.location.href=apkUrl;}
-    // 復帰検知
-    var _resumed=false;
-    function _onResume(){
-      if(_resumed)return;_resumed=true;
-      var msg=document.getElementById('updMsg');if(msg){msg.textContent='もう一度起動してほしいのだ';msg.style.color='#4caf50';}
-      var bar=document.getElementById('updBar');if(bar){bar.style.width='100%';bar.style.animation='none';bar.style.background='#4caf50';}
-      if(typeof spk==='function')spk('もう一度起動してほしいのだ。',true);
-    }
-    try{
-      var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App;
-      if(A&&A.addListener)A.addListener('resume',_onResume);
-      else document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')_onResume();});
-    }catch(e){
-      document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')_onResume();});
+    var Installer=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.ApkInstaller;
+    if(Installer&&Installer.downloadAndInstall){
+      // ネイティブプラグイン経由でDL→インストール画面起動
+      Installer.addListener('progress',function(ev){
+        var bar=document.getElementById('updBar');if(bar)bar.style.width=(ev.progress||0)+'%';
+        var txt=document.getElementById('updPctTxt');if(txt)txt.textContent=(ev.progress||0)+'%';
+      });
+      Installer.downloadAndInstall({url:apkUrl}).then(function(){
+        var msg=document.getElementById('updMsg');if(msg){msg.textContent='インストールしてほしいのだ';msg.style.color='#4caf50';}
+        var bar=document.getElementById('updBar');if(bar){bar.style.width='100%';bar.style.background='#4caf50';}
+        var txt=document.getElementById('updPctTxt');if(txt)txt.textContent='ダウンロード完了';
+        if(typeof spk==='function')spk('ダウンロード完了。インストールしてほしいのだ。',true);
+      }).catch(function(err){
+        var msg=document.getElementById('updMsg');if(msg){msg.textContent='ダウンロード失敗';msg.style.color='var(--red)';}
+        var txt=document.getElementById('updPctTxt');if(txt)txt.textContent=err.message||err;
+      });
+    } else {
+      // フォールバック: 旧式ブラウザDL
+      try{window.open(apkUrl,'_system');}catch(e){window.location.href=apkUrl;}
     }
   });
 }
