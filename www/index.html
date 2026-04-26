@@ -1135,6 +1135,12 @@ function _stopAllAudio(){
   _audioGen++;
   _spkQ.length=0;_spkBusy=false;_spkCallback=null;
   if(_currentAudio){try{_currentAudio.pause();_currentAudio.src='';}catch(e){}_currentAudio=null;}
+  // スプラッシュ系の独立Audio要素も止める
+  if(window._splashAudio){try{window._splashAudio.pause();window._splashAudio.src='';}catch(e){}window._splashAudio=null;}
+  if(window._hajimeAudio){try{window._hajimeAudio.pause();window._hajimeAudio.src='';}catch(e){}window._hajimeAudio=null;}
+  // 「req_ok_tap」「req_check」等の起動時音声も止める
+  if(window._rca){try{window._rca.pause();window._rca.src='';}catch(e){}window._rca=null;}
+  if(window._rtap){try{window._rtap.pause();window._rtap.src='';}catch(e){}window._rtap=null;}
   _zundaMouthStop();_zundaHide();
   var _tts=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.TextToSpeech;
   if(_tts)_tts.stop().catch(function(){});
@@ -4157,6 +4163,7 @@ function _startSplashAudio(){
       // 初回: 初めまして → 名前入力を促す
       _zundaShow('初めましてなのだ！');
       var _hajimeAudio=new Audio(_nasAudio('/api/voice/hajimemashite'));
+      window._hajimeAudio=_hajimeAudio;// _stopAllAudioで止められるように
       _hajimeAudio.volume=1.0;_hajimeAudio.playbackRate=_voiceSpeed;
       _zundaMouthStart();
       _hajimeAudio.onended=function(){
