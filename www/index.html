@@ -1430,6 +1430,17 @@ function _checkAppVersion(){
         sessionStorage.setItem('_updateShown',d.latest);
         var notice=document.createElement('div');notice.id='updateNotice';
         notice.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-family:sans-serif;padding:20px;';
+        // 「あとで」が押された時のチェーン（ボタンonclickから直接呼ばれる）
+        window._updateLaterChain=function(){
+          var n=document.getElementById('updateNotice');if(n)n.remove();
+          if(_myName){
+            spk(_myName+'さん、おかえりなのだ！',true,function(){
+              if(typeof _playPlanSelect==='function')_playPlanSelect();
+            });
+          } else if(typeof _playPlanSelect==='function'){
+            _playPlanSelect();
+          }
+        };
         notice.innerHTML='<div style="background:linear-gradient(135deg,#9c27b0,#e91e63);color:#fff;border-radius:16px;padding:24px;max-width:340px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.6);text-align:center;">'
           +'<div style="font-size:36px;margin-bottom:8px;">🔔</div>'
           +'<div style="font-size:18px;font-weight:900;margin-bottom:6px;">新しいバージョンがあります</div>'
@@ -1437,7 +1448,7 @@ function _checkAppVersion(){
           +(isAndroid
             ?'<a href="'+apkUrl+'" style="display:block;background:#fff;color:#9c27b0;padding:12px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:900;margin-bottom:8px;">📥 ダウンロード</a>'
             :'<button onclick="location.reload(true)" style="display:block;width:100%;background:#fff;color:#9c27b0;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;">再読込して更新</button>')
-          +'<button onclick="document.getElementById(\'updateNotice\').remove();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
+          +'<button onclick="window._updateLaterChain&&window._updateLaterChain();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
           +'</div>';
         document.body.appendChild(notice);
         // 既存音声をすべて停止
@@ -1445,18 +1456,8 @@ function _checkAppVersion(){
         sessionStorage.setItem('_saidOkaeri','1');// 通常のおかえりフローはスキップ
         _stopAllAudio();
         _spkQ.length=0;_spkBusy=false;_spkCallback=null;
-        // アップデート → おかえり → プラン選択 を完全コールバック連鎖
-        if(typeof spk==='function'){
-          spk('アップデートがあるのだ！',true,function(){
-            if(_myName){
-              spk(_myName+'さん、おかえりなのだ！',true,function(){
-                if(typeof _playPlanSelect==='function')_playPlanSelect();
-              });
-            } else if(typeof _playPlanSelect==='function'){
-              _playPlanSelect();
-            }
-          });
-        }
+        // 「アップデートがあるのだ」再生のみ → ユーザーがボタン押すまで待機（音声側からは何もしない）
+        if(typeof spk==='function')spk('アップデートがあるのだ！',true);
       }
       _finish();
     }).catch(function(){_finish();});
