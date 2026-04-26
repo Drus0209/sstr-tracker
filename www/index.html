@@ -3670,13 +3670,67 @@ function _addFriend(){
   var input=document.getElementById('addFriendName');
   var name=input?input.value.trim():'';
   if(!name){alert('フレンド名を入力してください');return;}
+  if(name===_myName){alert('自分自身はフレンドにできません');return;}
   _nf(NAS_API+'/api/friends/add',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
     body:JSON.stringify({name:_myName,friend:name}),signal:AbortSignal.timeout(5000)})
   .then(function(r){return r.json();})
   .then(function(d){
-    if(d.ok){input.value='';_loadFriends();spk(name+'さんをフレンドに追加したのだ！',true);}
-  }).catch(function(){alert('追加に失敗しました');});
+    if(d.ok){
+      input.value='';_loadFriends();
+      if(d.already_friend){spk(name+'さんは既にフレンドなのだ。',true);}
+      else if(d.pending){alert('🔔 '+name+'さんに申請を送りました。相手が承認するとフレンドになります。');spk(name+'さんに申請を送ったのだ！',true);}
+    }
+  }).catch(function(){alert('申請に失敗しました');});
 }
+// 自分宛の保留中申請をチェック
+var _lastPendingCheck=0;
+function _checkFriendRequests(){
+  if(!_myName)return;
+  _nf(NAS_API+'/api/friends/pending?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(!d.pending||d.pending.length===0)return;
+    // 既に表示中のものは除外（dismiss localStorage）
+    var dismissed=JSON.parse(localStorage.getItem('_dismissedFriendReqs')||'[]');
+    var pending=d.pending.filter(function(p){return dismissed.indexOf(p.from)<0;});
+    if(pending.length===0)return;
+    _showFriendRequestModal(pending[0]);
+  }).catch(function(){});
+}
+function _showFriendRequestModal(req){
+  var ex=document.getElementById('friendReqModal');if(ex)ex.remove();
+  var div=document.createElement('div');div.id='friendReqModal';
+  div.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10005;background:#111118;border:2px solid var(--org);border-radius:16px;padding:24px;min-width:300px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
+  div.innerHTML='<div style="font-size:13px;color:var(--sub);margin-bottom:6px;">🔔 フレンド申請</div>'
+    +'<div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:4px;">🏍 '+req.from+' さん</div>'
+    +'<div style="font-size:13px;color:var(--txt);margin-bottom:18px;">からフレンド申請が届いています</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button onclick="_respondFriend(\''+req.from+'\',true)" style="flex:1;background:var(--grn);border:none;border-radius:10px;padding:14px;color:#fff;font-size:15px;font-weight:900;cursor:pointer;">✅ 承認</button>'
+    +'<button onclick="_respondFriend(\''+req.from+'\',false)" style="flex:1;background:rgba(255,68,68,0.15);border:1px solid var(--red);border-radius:10px;padding:14px;color:var(--red);font-size:15px;font-weight:700;cursor:pointer;">✗ 拒否</button>'
+    +'</div>'
+    +'<button onclick="_dismissFriendReq(\''+req.from+'\')" style="display:block;width:100%;margin-top:10px;background:none;border:none;color:#888;font-size:11px;cursor:pointer;">あとで判断</button>';
+  document.body.appendChild(div);
+  spk(req.from+'さんからフレンド申請が来ているのだ！',true);
+}
+function _respondFriend(fromName,accept){
+  _nf(NAS_API+'/api/friends/respond',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
+    body:JSON.stringify({name:_myName,from:fromName,accept:accept}),signal:AbortSignal.timeout(5000)})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    var m=document.getElementById('friendReqModal');if(m)m.remove();
+    if(d.ok&&d.accepted){spk(fromName+'さんとフレンドになったのだ！',true);if(typeof _loadFriends==='function')_loadFriends();}
+    else if(d.ok){spk(fromName+'さんの申請を断ったのだ。',true);}
+  }).catch(function(){alert('応答に失敗しました');});
+}
+function _dismissFriendReq(fromName){
+  var arr=JSON.parse(localStorage.getItem('_dismissedFriendReqs')||'[]');
+  if(arr.indexOf(fromName)<0)arr.push(fromName);
+  localStorage.setItem('_dismissedFriendReqs',JSON.stringify(arr));
+  var m=document.getElementById('friendReqModal');if(m)m.remove();
+}
+// 起動時＆60秒間隔で申請チェック
+setTimeout(_checkFriendRequests,3000);
+setInterval(_checkFriendRequests,60000);
 function _removeFriend(friend){
   if(!confirm(friend+'さんをフレンドから削除しますか？'))return;
   _nf(NAS_API+'/api/friends/remove',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},

@@ -77,6 +77,10 @@ def init_db():
             user_name TEXT, friend_name TEXT,
             PRIMARY KEY(user_name, friend_name)
         );
+        CREATE TABLE IF NOT EXISTS friend_requests (
+            from_name TEXT, to_name TEXT, ts REAL,
+            PRIMARY KEY(from_name, to_name)
+        );
         CREATE TABLE IF NOT EXISTS shared_plans (
             name TEXT PRIMARY KEY, plan TEXT, updated REAL
         );
@@ -566,18 +570,56 @@ def get_friends():
     friends=lj(FF,{})
     return jsonify({"friends":friends.get(name,[])})
 
+RQ=os.path.join(BD,"friend_requests.json")  # { to_name: [{from, ts}, ...] }
+
 @app.route("/api/friends/add",methods=["POST","OPTIONS"])
 def add_friend():
+    """フレンド申請を送る（相手の承認待ち状態にする）"""
     if request.method=="OPTIONS":return "",204
     d=request.get_json()
     if not d or "name" not in d or "friend" not in d:return jsonify({"error":"bad"}),400
+    fr=d["name"];to=d["friend"]
+    if fr==to:return jsonify({"error":"self"}),400
+    # 既にフレンドなら何もしない
     friends=lj(FF,{})
-    if d["name"] not in friends:friends[d["name"]]=[]
-    if d["friend"] not in friends[d["name"]]:friends[d["name"]].append(d["friend"])
-    if d["friend"] not in friends:friends[d["friend"]]=[]
-    if d["name"] not in friends[d["friend"]]:friends[d["friend"]].append(d["name"])
-    sj(FF,friends)
-    return jsonify({"ok":True})
+    if to in friends.get(fr,[]):return jsonify({"ok":True,"already_friend":True})
+    # 申請保存
+    reqs=lj(RQ,{})
+    if to not in reqs:reqs[to]=[]
+    # 既存申請があれば上書き（タイムスタンプ更新）
+    reqs[to]=[r for r in reqs[to] if r.get("from")!=fr]
+    reqs[to].append({"from":fr,"ts":time.time()})
+    sj(RQ,reqs)
+    return jsonify({"ok":True,"pending":True})
+
+@app.route("/api/friends/pending",methods=["GET"])
+def pending_friends():
+    """自分宛の保留中申請を取得"""
+    name=request.args.get("name")
+    if not name:return jsonify({"error":"name required"}),400
+    reqs=lj(RQ,{})
+    return jsonify({"pending":reqs.get(name,[])})
+
+@app.route("/api/friends/respond",methods=["POST","OPTIONS"])
+def respond_friend():
+    """申請に応答（accept/reject）"""
+    if request.method=="OPTIONS":return "",204
+    d=request.get_json()
+    if not d or "name" not in d or "from" not in d or "accept" not in d:return jsonify({"error":"bad"}),400
+    me=d["name"];fr=d["from"];accept=bool(d["accept"])
+    reqs=lj(RQ,{})
+    if me not in reqs:return jsonify({"error":"no_request"}),404
+    reqs[me]=[r for r in reqs[me] if r.get("from")!=fr]
+    if not reqs[me]:del reqs[me]
+    sj(RQ,reqs)
+    if accept:
+        friends=lj(FF,{})
+        if me not in friends:friends[me]=[]
+        if fr not in friends[me]:friends[me].append(fr)
+        if fr not in friends:friends[fr]=[]
+        if me not in friends[fr]:friends[fr].append(me)
+        sj(FF,friends)
+    return jsonify({"ok":True,"accepted":accept})
 
 @app.route("/api/friends/remove",methods=["POST","OPTIONS"])
 def remove_friend():
