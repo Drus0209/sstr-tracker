@@ -1428,6 +1428,8 @@ function _checkAppVersion(){
           +'<button onclick="localStorage.setItem(\'_dismissedUpdate\',\''+d.latest+'\');document.getElementById(\'updateNotice\').remove();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
           +'</div>';
         document.body.appendChild(notice);
+        // ずんだもん通知
+        setTimeout(function(){if(typeof spk==='function')spk('アップデートがあるのだ！',true);},500);
       }
     }).catch(function(){});
 }
