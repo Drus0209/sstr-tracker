@@ -1368,7 +1368,8 @@ function _findZunda(t){
   if(t.match(/給油を考える/))return 'voice/fuel_100.wav';
   if(t.match(/2時間走ってる/))return 'voice/rest_2h.wav';
   if(t.match(/チェックインも忘れず/))return 'voice/checkin.wav';
-  if(t.match(/まもなく.*なのだ/))return 'voice/approaching.wav';
+  // 「まもなく.*なのだ」は到着案内マッチだが、方面案内・分岐は別音声(NAS生成)に通す
+  if(!t.match(/方面|分岐|JCT|車線/)&&t.match(/まもなく.*なのだ/))return 'voice/approaching.wav';
   if(t.match(/ルートから外れた/))return 'voice/reroute.wav';
   if(t.match(/速度注意/))return 'voice/orbis_speed.wav';
   if(t.match(/次の曲/))return 'voice/bgm_next.wav';
