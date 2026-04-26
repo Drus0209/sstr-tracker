@@ -890,6 +890,53 @@ function _prefetchLaneVoices(routeData){
   }).catch(function(){});
 }
 
+// === 分岐レーン表示UI（自前SVG） ===
+// 方向(left/right)・車線数から SVG 生成
+function _laneIndicator(direction,laneCount,destText){
+  laneCount=laneCount||4;
+  // 強調レーンの位置（right なら右2レーン、left なら左2レーン）
+  var hi={};
+  if(direction==='right'){hi[laneCount-1]=true;hi[laneCount-2]=true;}
+  else if(direction==='left'){hi[0]=true;hi[1]=true;}
+  else{for(var k=0;k<laneCount;k++)hi[k]=true;}
+  var w=320,h=140,laneW=Math.floor((w-32)/laneCount);
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">';
+  // 背景
+  svg+='<rect x="0" y="0" width="'+w+'" height="'+h+'" rx="14" fill="rgba(20,30,50,0.94)" stroke="#00d4ff" stroke-width="2"/>';
+  // 行先テキスト
+  if(destText){svg+='<text x="'+(w/2)+'" y="28" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="bold" fill="#fff">'+destText+'方面</text>';}
+  // レーン描画
+  var startX=16;
+  for(var i=0;i<laneCount;i++){
+    var x=startX+i*laneW;
+    var fill=hi[i]?'#00d4ff':'rgba(255,255,255,0.1)';
+    var stroke=hi[i]?'#00d4ff':'#444';
+    svg+='<rect x="'+x+'" y="48" width="'+(laneW-4)+'" height="80" rx="6" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.5"/>';
+    // 矢印
+    var cx=x+(laneW-4)/2,arrowFill=hi[i]?'#000':'#888';
+    if(hi[i]&&direction==='right'&&i===laneCount-1){
+      // 右端は右折矢印
+      svg+='<path d="M '+(cx-6)+' 100 L '+(cx-6)+' 80 L '+(cx+6)+' 80 L '+(cx+6)+' 70 L '+(cx+16)+' 90 L '+(cx+6)+' 110 L '+(cx+6)+' 100 Z" fill="'+arrowFill+'"/>';
+    } else if(hi[i]&&direction==='left'&&i===0){
+      svg+='<path d="M '+(cx+6)+' 100 L '+(cx+6)+' 80 L '+(cx-6)+' 80 L '+(cx-6)+' 70 L '+(cx-16)+' 90 L '+(cx-6)+' 110 L '+(cx-6)+' 100 Z" fill="'+arrowFill+'"/>';
+    } else {
+      // 直進矢印
+      svg+='<path d="M '+(cx-7)+' 100 L '+(cx-7)+' 80 L '+(cx-12)+' 80 L '+cx+' 65 L '+(cx+12)+' 80 L '+(cx+7)+' 80 L '+(cx+7)+' 100 Z" fill="'+arrowFill+'"/>';
+    }
+  }
+  svg+='</svg>';
+  return svg;
+}
+function _showLanePanel(direction,laneCount,destText){
+  var ex=document.getElementById('lanePanel');if(ex)ex.remove();
+  var wrap=document.createElement('div');wrap.id='lanePanel';
+  wrap.style.cssText='position:fixed;top:120px;left:50%;transform:translateX(-50%);z-index:1000;animation:laneIn 0.3s ease-out;';
+  wrap.innerHTML='<style>@keyframes laneIn{from{opacity:0;transform:translateX(-50%) translateY(-20px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}</style>'
+    +_laneIndicator(direction,laneCount,destText);
+  document.body.appendChild(wrap);
+  setTimeout(function(){if(wrap.parentNode){wrap.style.transition='opacity 0.4s';wrap.style.opacity='0';setTimeout(function(){wrap.remove();},400);}},10000);
+}
+
 // 走行中に分岐手前で発火
 var _laneAnnounced={};
 function _checkLaneHints(){
@@ -900,6 +947,12 @@ function _checkLaneHints(){
     var d=dK(gLat,gLng,h.lat,h.lng)*1000;// メートル
     if(d<700&&d>300){
       _laneAnnounced[h.key]=true;
+      // 視覚レーン表示
+      var dir=h.text.indexOf('右')>=0?'right':h.text.indexOf('左')>=0?'left':'';
+      var destMatch=h.text.match(/まもなく([^方]+?)方面/);
+      var dest=destMatch?destMatch[1]:'';
+      _showLanePanel(dir,4,dest);
+      // 音声再生（事前生成済み or NAS）
       var url=_laneVoiceCache[h.key]||_nasAudio('/api/voice/'+h.key);
       var a=new Audio(url);_setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
       a.onerror=function(){spk(h.text,true);};
