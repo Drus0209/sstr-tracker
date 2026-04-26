@@ -930,7 +930,7 @@ function _laneIndicator(direction,laneCount,destText){
 function _showLanePanel(direction,laneCount,destText){
   var ex=document.getElementById('lanePanel');if(ex)ex.remove();
   var wrap=document.createElement('div');wrap.id='lanePanel';
-  wrap.style.cssText='position:fixed;top:120px;left:50%;transform:translateX(-50%);z-index:1000;animation:laneIn 0.3s ease-out;';
+  wrap.style.cssText='position:fixed;top:120px;left:50%;transform:translateX(-50%);z-index:10010;animation:laneIn 0.3s ease-out;';
   wrap.innerHTML='<style>@keyframes laneIn{from{opacity:0;transform:translateX(-50%) translateY(-20px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}</style>'
     +_laneIndicator(direction,laneCount,destText);
   document.body.appendChild(wrap);
