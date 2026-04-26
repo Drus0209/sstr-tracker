@@ -1354,15 +1354,19 @@ function ann(stops,ni,df){
     else if(df<0)m='予定より'+Math.abs(df)+'分早いのだ。';
     else{m='予定より'+df+'分遅れているのだ。';if(df>=10&&df<30)m+='ペースを上げるのだ！';if(df>=30)m+='巻いていくのだ！';}
   }
-  // スケジュール情報を先に読む、距離は2秒後にroadDistを使って読む
-  setTimeout(()=>spk(m),1000);
-  if(tI<stops.length){
-    setTimeout(()=>{
-      const nd=roadDist!==null?roadDist:dK(gLat,gLng,s.lat,s.lng);
-      const nm=s.name.replace(/[^\w\s\u3000-\u9FFF\u30A0-\u30FF\u3040-\u309F]/g,'').trim();
-      if(nd<1){var m=Math.round(nd*1000/100)*100;spk('次の目的地は約'+m+'メートル先なのだ。');}
-      else{spk('次の目的地は約'+nd.toFixed(1)+'キロ先なのだ。');}
-    },3500);
+  // スケジュール情報→距離 の順でコールバック連鎖
+  if(m){
+    spk(m,false,function(){
+      if(tI<stops.length){
+        const nd=roadDist!==null?roadDist:dK(gLat,gLng,s.lat,s.lng);
+        if(nd<1){var dm=Math.round(nd*1000/100)*100;spk('次の目的地は約'+dm+'メートル先なのだ。');}
+        else{spk('次の目的地は約'+nd.toFixed(1)+'キロ先なのだ。');}
+      }
+    });
+  } else if(tI<stops.length){
+    const nd=roadDist!==null?roadDist:dK(gLat,gLng,s.lat,s.lng);
+    if(nd<1){var dm=Math.round(nd*1000/100)*100;spk('次の目的地は約'+dm+'メートル先なのだ。');}
+    else{spk('次の目的地は約'+nd.toFixed(1)+'キロ先なのだ。');}
   }
 }
 let appBgm=null,_bgmFading=false;
@@ -4015,13 +4019,12 @@ function _startSplashAudio(){
       _zundaMouthStart();
       _hajimeAudio.onended=function(){
         _zundaMouthStop();
-        setTimeout(function(){
-          _zundaShow('ライダー名を入力してほしいのだ！');
-          window._splashAudio=new Audio(new URL('voice/enter_name.wav',window.location.href).href);
-          window._splashAudio.volume=1.0;window._splashAudio.playbackRate=_voiceSpeed;
-          window._splashAudio.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,2000);};
-          window._splashAudio.play().catch(function(){});
-        },500);
+        // 「初めまして」再生終了 → 即「ライダー名入力」再生
+        _zundaShow('ライダー名を入力してほしいのだ！');
+        window._splashAudio=new Audio(new URL('voice/enter_name.wav',window.location.href).href);
+        window._splashAudio.volume=1.0;window._splashAudio.playbackRate=_voiceSpeed;
+        window._splashAudio.onended=function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,2000);};
+        window._splashAudio.play().catch(function(){});
       };
       _hajimeAudio.onerror=function(){
         _zundaMouthStop();
