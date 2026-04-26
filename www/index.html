@@ -1435,14 +1435,12 @@ function _checkAppVersion(){
         sessionStorage.setItem('_saidOkaeri','1');// 通常のおかえりフローはスキップ
         _stopAllAudio();
         _spkQ.length=0;_spkBusy=false;_spkCallback=null;
-        // アップデート再生終了をonended/コールバックで確認 → おかえり再生
-        // spk()のonDoneは「キューが空になった瞬間」=再生終了時に発火
-        setTimeout(function(){
-          if(typeof spk!=='function')return;
+        // アップデート再生終了をコールバックで確認 → おかえり再生（連鎖）
+        if(typeof spk==='function'){
           spk('アップデートがあるのだ！',true,function(){
             if(_myName)spk(_myName+'さん、おかえりなのだ！',true);
           });
-        },300);
+        }
       }
     }).catch(function(){});
 }
