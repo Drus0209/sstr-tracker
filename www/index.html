@@ -1397,15 +1397,21 @@ const NAS_API='https://as5304t-c025.tail5d5c21.ts.net';
 const NAS_KEY='sstr2026_k4w4s4k1_zx4r';
 const APP_VERSION='260426';
 // === バージョンチェック（強制アップデート＋通知バナー）===
+// バージョンチェック完了を約束するPromise（おかえり等の音声フローはこれを待つ）
+window._versionCheckDone=false;
+window._versionCheckPromise=new Promise(function(resolve){window._versionResolve=resolve;});
 function _checkAppVersion(){
+  function _finish(){window._versionCheckDone=true;if(window._versionResolve){window._versionResolve();window._versionResolve=null;}}
   _nf(NAS_API+'/api/version',{signal:AbortSignal.timeout(8000)})
     .then(function(r){return r.json();})
     .then(function(d){
-      if(!d||!d.minVersion)return;
+      if(!d||!d.minVersion){_finish();return;}
       var isAndroid=(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform()==='android');
       var apkUrl=d.apkUrl||(NAS_API+'/download/apk');
-      // 強制アップデート（minVersion未満）
+      // 強制アップデート（minVersion未満）→ おかえり不要
       if(APP_VERSION<d.minVersion){
+        sessionStorage.setItem('_saidOkaeri','1');
+        _finish();
         var btn=isAndroid
           ?'<a href="'+apkUrl+'" style="display:inline-block;padding:14px 28px;background:#ff9100;color:#000;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;">APKをダウンロード</a>'
           :'<button onclick="location.reload(true)" style="padding:14px 28px;background:#ff9100;color:#000;border:none;border-radius:8px;font-weight:bold;font-size:16px;cursor:pointer;">再読込して更新</button>';
@@ -1439,16 +1445,23 @@ function _checkAppVersion(){
         sessionStorage.setItem('_saidOkaeri','1');// 通常のおかえりフローはスキップ
         _stopAllAudio();
         _spkQ.length=0;_spkBusy=false;_spkCallback=null;
-        // アップデート再生終了をコールバックで確認 → おかえり再生（連鎖）
+        // アップデート → おかえり → プラン選択 を完全コールバック連鎖
         if(typeof spk==='function'){
           spk('アップデートがあるのだ！',true,function(){
-            if(_myName)spk(_myName+'さん、おかえりなのだ！',true);
+            if(_myName){
+              spk(_myName+'さん、おかえりなのだ！',true,function(){
+                if(typeof _playPlanSelect==='function')_playPlanSelect();
+              });
+            } else if(typeof _playPlanSelect==='function'){
+              _playPlanSelect();
+            }
           });
         }
       }
-    }).catch(function(){});
+      _finish();
+    }).catch(function(){_finish();});
 }
-setTimeout(_checkAppVersion,2000);
+_checkAppVersion();// 即実行（おかえり等は_versionCheckPromiseを待つ）
 // NAS API認証付きfetch
 function _nf(url,opts){
   opts=opts||{};
@@ -3991,26 +4004,30 @@ function _startSplashAudio(){
         _planWav.onerror=function(){if(_currentAudio!==_planWav)return;_psFallback();};
         _planWav.play().catch(function(){if(_currentAudio!==_planWav)return;_psFallback();});
       }
-      if(!sessionStorage.getItem('_saidOkaeri')){
-        // アプリ起動1回目: おかえり → プラン選択
-        sessionStorage.setItem('_saidOkaeri','1');
-        _zundaShow(_myName+'さん、おかえりなのだ！');
-        var _welcomeWav=new Audio(_nasAudio('/api/voice/welcome_'+encodeURIComponent(_myName)));
-        _setCurrentAudio(_welcomeWav);// _stopAllAudioで止められるよう登録
-        _welcomeWav.volume=1.0;_welcomeWav.playbackRate=_voiceSpeed;
-        _welcomeWav.onended=function(){if(_currentAudio===_welcomeWav){_currentAudio=null;_playPlanSelect();}};
-        _welcomeWav.onerror=function(){
-          if(_currentAudio!==_welcomeWav)return;// 既にstopされた
-          spk(_myName+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});
-        };
-        _welcomeWav.play().catch(function(){
-          if(_currentAudio!==_welcomeWav)return;
-          spk(_myName+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});
-        });
-      } else {
-        // 戻ってきた時: プラン選択のみ
-        _playPlanSelect();
-      }
+      // バージョンチェック完了を待ってから「おかえり」判定（更新通知が先に流れる）
+      (window._versionCheckPromise||Promise.resolve()).then(function(){
+        if(!sessionStorage.getItem('_saidOkaeri')){
+          // アプリ起動1回目: おかえり → プラン選択
+          sessionStorage.setItem('_saidOkaeri','1');
+          _zundaShow(_myName+'さん、おかえりなのだ！');
+          var _welcomeWav=new Audio(_nasAudio('/api/voice/welcome_'+encodeURIComponent(_myName)));
+          _setCurrentAudio(_welcomeWav);
+          _welcomeWav.volume=1.0;_welcomeWav.playbackRate=_voiceSpeed;
+          _welcomeWav.onended=function(){if(_currentAudio===_welcomeWav){_currentAudio=null;_playPlanSelect();}};
+          _welcomeWav.onerror=function(){
+            if(_currentAudio!==_welcomeWav)return;
+            spk(_myName+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});
+          };
+          _welcomeWav.play().catch(function(){
+            if(_currentAudio!==_welcomeWav)return;
+            spk(_myName+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});
+          });
+        } else if(!window._updateNoticeShown){
+          // 戻ってきた時: プラン選択のみ
+          _playPlanSelect();
+        }
+        // 更新通知時は通知側のコールバック連鎖が プラン選択 まで担う
+      });
     } else {
       // 初回: 初めまして → 名前入力を促す
       _zundaShow('初めましてなのだ！');
