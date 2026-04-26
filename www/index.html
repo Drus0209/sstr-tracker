@@ -1414,7 +1414,15 @@ function _testUpdateError(){
     +'<div style="font-size:13px;opacity:0.85;margin-bottom:18px;text-align:center;">アップデートするには問題を解決する必要があるのだ</div>'
     +'<button onclick="document.getElementById(\'updateProgress\').remove();" style="background:#fff;color:#000;border:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;">閉じる</button>';
   document.body.appendChild(ov);
-  if(typeof spk==='function'){_stopAllAudio();spk('アップデートできないのだ。'+sampleIssues[0]+'。アップデートするには問題を解決する必要があるのだ。',true);}
+  // 音声: AudioContext起こす→アップデートできない→解決必要
+  try{if(aC&&aC.resume)aC.resume();}catch(e){}
+  if(typeof spk==='function'){
+    _stopAllAudio();
+    _spkQ.length=0;_spkBusy=false;_spkCallback=null;
+    spk('アップデートできないのだ。',true,function(){
+      spk('アップデートするには問題を解決する必要があるのだ。',true);
+    });
+  }
 }
 
 // === アップデート前提チェック ===
