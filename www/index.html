@@ -1542,6 +1542,8 @@ function _checkAppVersion(){
       var isAndroid=(window.Capacitor&&Capacitor.getPlatform&&Capacitor.getPlatform()==='android');
       var apkUrl=d.apkUrl||'/download/apk';
       if(apkUrl.indexOf('http')!==0)apkUrl=NAS_API+apkUrl;// 相対→絶対
+      // バージョン付きファイル名で重複DLダイアログ回避
+      apkUrl+=(apkUrl.indexOf('?')>=0?'&':'?')+'v='+(d.latest||APP_VERSION);
       // 強制アップデート（minVersion未満）→ おかえり不要
       if(APP_VERSION<d.minVersion){
         sessionStorage.setItem('_saidOkaeri','1');

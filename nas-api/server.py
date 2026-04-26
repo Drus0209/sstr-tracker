@@ -686,7 +686,7 @@ def api_version():
     # minVersion: これより古いと強制更新 / latest: 最新推奨バージョン
     return jsonify({
         "minVersion":"260414",
-        "latest":"260426",
+        "latest":"260427",
         "apkUrl":"/download/apk"
     })
 
@@ -753,7 +753,11 @@ def metrics():
 @app.route("/download/apk")
 def download_apk():
     fp=os.path.join(BD,"sstr-tracker.apk")
-    if os.path.exists(fp):return send_file(fp,as_attachment=True,download_name="sstr-tracker.apk")
+    if os.path.exists(fp):
+        # バージョン付きファイル名で配信（DL履歴の重複ダイアログ回避）
+        ver=request.args.get("v","")
+        fn="sstr-tracker"+("_v"+ver if ver else "")+".apk"
+        return send_file(fp,as_attachment=True,download_name=fn)
     return jsonify({"error":"not found"}),404
 
 # =============================================
