@@ -2612,8 +2612,42 @@ function moveMarker(lat,lng){
   }
 }
 
+var _gpsBuf=[];// 直近数点の{lat,lng,t,acc,speed}を保持
+var _gpsLastT=0;
 function onGpsUpdate(p,announce_it){
-  gLat=p.coords.latitude;gLng=p.coords.longitude;gSpeed=p.coords.speed||0;
+  var rawLat=p.coords.latitude,rawLng=p.coords.longitude;
+  var rawSpeed=p.coords.speed||0;
+  var acc=p.coords.accuracy||999;
+  var t=p.timestamp||Date.now();
+  // === GPSフィルタ ===
+  // 1. 精度が著しく悪い点(100m超)は完全に捨てる（屋内・電波弱）
+  if(acc>100&&_gpsBuf.length>0)return;
+  // 2. ジャンプ検知: 前回位置からの移動速度が異常（500km/h超=140m/s）→GPS誤差
+  if(_gpsBuf.length>0){
+    var prev=_gpsBuf[_gpsBuf.length-1];
+    var dt=Math.max(0.5,(t-prev.t)/1000);
+    var jumpD=dK(rawLat,rawLng,prev.lat,prev.lng);
+    var implSpd=jumpD*1000/dt;// m/s
+    if(implSpd>140&&acc>20)return;// 異常ジャンプ＆精度悪い→捨てる
+  }
+  // 3. 停止中(rawSpeed<1m/s)の小さなジッタを無視（円内ランダム動き抑制）
+  if(rawSpeed<1&&_gpsBuf.length>0){
+    var last=_gpsBuf[_gpsBuf.length-1];
+    var jitter=dK(rawLat,rawLng,last.lat,last.lng)*1000;// メートル
+    if(jitter<acc){// 精度範囲内のブレ → 前回位置維持
+      rawLat=last.lat;rawLng=last.lng;
+    }
+  }
+  // 4. 加重移動平均(直近3点、accuracyで重み付け)
+  _gpsBuf.push({lat:rawLat,lng:rawLng,t:t,acc:acc,speed:rawSpeed});
+  if(_gpsBuf.length>3)_gpsBuf.shift();
+  var sumW=0,sLat=0,sLng=0;
+  for(var i=0;i<_gpsBuf.length;i++){
+    var w=1/Math.max(5,_gpsBuf[i].acc);// accuracy小さいほど信頼度高
+    sumW+=w;sLat+=_gpsBuf[i].lat*w;sLng+=_gpsBuf[i].lng*w;
+  }
+  gLat=sLat/sumW;gLng=sLng/sumW;
+  gSpeed=rawSpeed;
   // Store heading (null when stationary)
   if(p.coords.heading!==null && !isNaN(p.coords.heading) && p.coords.speed>3){
     gHeading=p.coords.heading;
