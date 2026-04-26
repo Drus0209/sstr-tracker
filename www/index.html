@@ -1546,6 +1546,13 @@ function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 const NAS_API='https://as5304t-c025.tail5d5c21.ts.net';
 const NAS_KEY='sstr2026_k4w4s4k1_zx4r';
 const APP_VERSION='260427';
+// === レーン表示テスト用 ===
+function _testLanePanel(){
+  // 4車線・右2車線・神戸方面の例
+  _showLanePanel('right',4,'神戸');
+  if(typeof spk==='function')spk('まもなく神戸方面、右方向なのだ',true);
+}
+
 // === エラー画面テスト用（admin/手動トリガー）===
 function _testUpdateError(){
   var ov=document.createElement('div');ov.id='updateProgress';
@@ -4367,6 +4374,7 @@ function _showCards(){
     ap.innerHTML='<div style="font-size:16px;font-weight:900;color:var(--ylw);margin-bottom:14px;">🔑 システム情報</div>'
       +'<div id="adminVersionList" style="font-size:15px;color:var(--txt);"></div>'
       +'<button onclick="_testUpdateError()" style="display:block;width:100%;margin-top:14px;background:rgba(255,68,68,0.15);border:1px solid var(--red);border-radius:8px;color:var(--red);padding:10px;font-size:13px;font-weight:700;cursor:pointer;">⚠️ アップデートエラー画面テスト</button>'
+      +'<button onclick="_testLanePanel()" style="display:block;width:100%;margin-top:8px;background:rgba(0,212,255,0.1);border:1px solid var(--ac);border-radius:8px;color:var(--ac);padding:10px;font-size:13px;font-weight:700;cursor:pointer;">🛣 レーン表示テスト</button>'
 ;
     var cardArea=document.getElementById('riderNameBox');
     if(cardArea&&cardArea.parentElement)cardArea.parentElement.appendChild(ap);
