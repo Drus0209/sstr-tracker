@@ -1446,7 +1446,7 @@ function _checkAppVersion(){
           +'<div style="font-size:18px;font-weight:900;margin-bottom:6px;">新しいバージョンがあります</div>'
           +'<div style="font-size:14px;opacity:0.9;margin-bottom:18px;line-height:1.5;">現在: v.'+APP_VERSION+'<br>最新: <b>v.'+d.latest+'</b></div>'
           +(isAndroid
-            ?'<a href="'+apkUrl+'" style="display:block;background:#fff;color:#9c27b0;padding:12px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:900;margin-bottom:8px;">📥 ダウンロード</a>'
+            ?'<button onclick="window.open(\''+apkUrl+'\',\'_system\');setTimeout(function(){var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App;if(A&&A.exitApp)A.exitApp();},1500);" style="display:block;width:100%;background:#fff;color:#9c27b0;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;">📥 ダウンロード</button>'
             :'<button onclick="location.reload(true)" style="display:block;width:100%;background:#fff;color:#9c27b0;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;">再読込して更新</button>')
           +'<button onclick="window._updateLaterChain&&window._updateLaterChain();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
           +'</div>';
