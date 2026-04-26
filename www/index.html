@@ -1414,8 +1414,9 @@ function _checkAppVersion(){
       }
       // 任意アップデート通知（latestが新しい場合のみ、最新版なら出さない）
       if(d.latest&&APP_VERSION<d.latest){
-        // 既に同じlatestを「あとで」した場合はスキップ
-        if(localStorage.getItem('_dismissedUpdate')===d.latest)return;
+        // 既に表示済み(セッション中)ならスキップ
+        if(sessionStorage.getItem('_updateShown')===d.latest)return;
+        sessionStorage.setItem('_updateShown',d.latest);
         var notice=document.createElement('div');notice.id='updateNotice';
         notice.style.cssText='position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-family:sans-serif;padding:20px;';
         notice.innerHTML='<div style="background:linear-gradient(135deg,#9c27b0,#e91e63);color:#fff;border-radius:16px;padding:24px;max-width:340px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.6);text-align:center;">'
@@ -1425,7 +1426,7 @@ function _checkAppVersion(){
           +(isAndroid
             ?'<a href="'+apkUrl+'" style="display:block;background:#fff;color:#9c27b0;padding:12px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:900;margin-bottom:8px;">📥 ダウンロード</a>'
             :'<button onclick="location.reload(true)" style="display:block;width:100%;background:#fff;color:#9c27b0;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;">再読込して更新</button>')
-          +'<button onclick="localStorage.setItem(\'_dismissedUpdate\',\''+d.latest+'\');document.getElementById(\'updateNotice\').remove();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
+          +'<button onclick="document.getElementById(\'updateNotice\').remove();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
           +'</div>';
         document.body.appendChild(notice);
         // 既存音声を一旦停止し、アップデート→おかえりの順で再生
