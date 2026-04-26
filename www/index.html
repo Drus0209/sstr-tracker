@@ -1557,12 +1557,16 @@ function playEngineSound(onDone){
 }
 function _onNameOk(){
   var inp=document.getElementById('riderNameInput');
+  // ひらがな以外を除去・空白圧縮
+  inp.value=inp.value.replace(/[^\u3040-\u309F\u30FC]/g,'');
   var v=inp.value.trim();
   if(!v){
     inp.blur();
     setTimeout(function(){
-      var v2=inp.value.trim();
+      var v2=inp.value.replace(/[^\u3040-\u309F\u30FC]/g,'').trim();
+      inp.value=v2;
       if(v2)_onNameOk2(v2);
+      else alert('ひらがなで名前を入力してください');
     },300);
     return;
   }
@@ -1842,7 +1846,7 @@ function _showSettings(){
       </div>
     </div>
     <div style="display:flex;gap:8px;">
-      <button onclick="var n=document.getElementById('settingsName').value.trim();if(n){_myName=n;localStorage.setItem('_riderName',n);_genWelcomeVoice(n);}document.getElementById('settingsPanel').remove();rnd();" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:10px;color:#000;font-size:14px;font-weight:800;cursor:pointer;">保存</button>
+      <button onclick="var el=document.getElementById('settingsName');var n=el.value.replace(/[^\u3040-\u309F\u30FC]/g,'').trim();if(!n){alert('ひらがなで名前を入力してください');return;}el.value=n;_myName=n;localStorage.setItem('_riderName',n);_genWelcomeVoice(n);document.getElementById('settingsPanel').remove();rnd();" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:10px;color:#000;font-size:14px;font-weight:800;cursor:pointer;">保存</button>
       <button onclick="document.getElementById('settingsPanel').remove();" style="flex:1;background:none;border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--txt);font-size:14px;cursor:pointer;">閉じる</button>
     </div>
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);">
@@ -3475,13 +3479,11 @@ var _tempPlanStops=null,_tempPlanName='',_tempPlanDate='',_tempSegNoHwy=[];
 function _previewPlan(){
   var name=document.getElementById('planName').value.trim();
   var date=document.getElementById('planDate').value;
-  if(!name){alert('プラン名を入力してください');return;}
   if(!date){
     var now=new Date();
     date=now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2)+'-'+('0'+now.getDate()).slice(-2);
     document.getElementById('planDate').value=date;
   }
-  _tempPlanName=name;_tempPlanDate=date;
   var goalTime=(document.getElementById('planGoalTime')||{}).value||'';
   var today=new Date();today.setHours(0,0,0,0);
   var sel=new Date(date);
@@ -3499,6 +3501,12 @@ function _previewPlan(){
     }
   });
   if(stops.length<1){alert('スポットを入力してください');return;}
+  // ツーリング名が空なら最終スポット名を採用
+  if(!name){
+    name=stops[stops.length-1].name||'ツーリング';
+    document.getElementById('planName').value=name;
+  }
+  _tempPlanName=name;_tempPlanDate=date;
   // 到着予定時刻が入力されていれば最終スポットに適用（遅延表示のトリガー）
   if(goalTime&&stops.length>0){
     stops[stops.length-1].time=goalTime;
