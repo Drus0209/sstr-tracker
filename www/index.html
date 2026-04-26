@@ -1396,6 +1396,26 @@ function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 const NAS_API='https://as5304t-c025.tail5d5c21.ts.net';
 const NAS_KEY='sstr2026_k4w4s4k1_zx4r';
 const APP_VERSION='260426';
+// === アップデートDL処理 ===
+function _doUpdateDownload(apkUrl){
+  // 1. ブラウザでAPK URLを開く（複数手段でフォールバック）
+  try{
+    var Browser=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.Browser;
+    if(Browser&&Browser.open){Browser.open({url:apkUrl}).catch(function(){});}
+    else window.open(apkUrl,'_system');
+  }catch(e){window.location.href=apkUrl;}
+  // 2. アプリ終了（複数手段でフォールバック）
+  setTimeout(function(){
+    try{
+      var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App;
+      if(A&&A.exitApp){A.exitApp();return;}
+    }catch(e){}
+    try{if(navigator.app&&navigator.app.exitApp){navigator.app.exitApp();return;}}catch(e){}
+    // 最終フォールバック: モーダルだけ閉じてユーザーに案内
+    var n=document.getElementById('updateNotice');if(n)n.remove();
+    alert('ダウンロード完了後、通知バーからAPKをタップしてインストールしてください');
+  },2000);
+}
 // === バージョンチェック（強制アップデート＋通知バナー）===
 // バージョンチェック完了を約束するPromise（おかえり等の音声フローはこれを待つ）
 window._versionCheckDone=false;
@@ -1446,7 +1466,7 @@ function _checkAppVersion(){
           +'<div style="font-size:18px;font-weight:900;margin-bottom:6px;">新しいバージョンがあります</div>'
           +'<div style="font-size:14px;opacity:0.9;margin-bottom:18px;line-height:1.5;">現在: v.'+APP_VERSION+'<br>最新: <b>v.'+d.latest+'</b></div>'
           +(isAndroid
-            ?'<button onclick="window.open(\''+apkUrl+'\',\'_system\');setTimeout(function(){var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App;if(A&&A.exitApp)A.exitApp();},1500);" style="display:block;width:100%;background:#fff;color:#9c27b0;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;">📥 ダウンロード</button>'
+            ?'<button onclick="_doUpdateDownload(\''+apkUrl+'\')" style="display:block;width:100%;background:#fff;color:#9c27b0;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;">📥 ダウンロード</button>'
             :'<button onclick="location.reload(true)" style="display:block;width:100%;background:#fff;color:#9c27b0;border:none;padding:12px;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;margin-bottom:8px;">再読込して更新</button>')
           +'<button onclick="window._updateLaterChain&&window._updateLaterChain();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
           +'</div>';
