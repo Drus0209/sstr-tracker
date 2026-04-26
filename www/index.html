@@ -742,6 +742,49 @@ function _nasDrawRoute(d,noHwy){
     });
   });
 }
+// 高精度パス取得: stepsの各polylineを連結（overview_polylineより3〜5倍密度）
+function _routePathFromDirections(d){
+  var path=[];
+  try{
+    var legs=(d.routes&&d.routes[0]&&d.routes[0].legs)||[];
+    legs.forEach(function(leg){
+      (leg.steps||[]).forEach(function(step){
+        var enc=step.polyline&&step.polyline.points;
+        if(!enc)return;
+        var seg=_decodePoly(enc);
+        // 連続セグメント間の重複点を除去
+        if(path.length>0&&seg.length>0){
+          var lastP=path[path.length-1],firstP=seg[0];
+          if(Math.abs(lastP.lat-firstP.lat)<1e-6&&Math.abs(lastP.lng-firstP.lng)<1e-6)seg=seg.slice(1);
+        }
+        path=path.concat(seg);
+      });
+    });
+  }catch(e){}
+  // フォールバック: stepsから取得失敗ならoverview使用
+  if(path.length===0&&d.routes&&d.routes[0]&&d.routes[0].overview_polyline){
+    try{path=_decodePoly(d.routes[0].overview_polyline.points);}catch(e){}
+  }
+  return path;
+}
+// Google JS API レスポンス用の同等関数
+function _routePathFromJsApi(r){
+  var path=[];
+  try{
+    var legs=r.routes[0].legs;
+    legs.forEach(function(leg){
+      (leg.steps||[]).forEach(function(step){
+        if(step.path){
+          step.path.forEach(function(p){path.push({lat:p.lat(),lng:p.lng()});});
+        }
+      });
+    });
+  }catch(e){}
+  if(path.length===0){
+    try{path=r.routes[0].overview_path.map(function(p){return{lat:p.lat(),lng:p.lng()};});}catch(e){}
+  }
+  return path;
+}
 // Google encoded polylineデコーダ
 function _decodePoly(enc){
   var pts=[],i=0,lat=0,lng=0;
@@ -925,8 +968,8 @@ function updateMap(lat,lng,stops,nI){
     _nasRoute({lat:lat,lng:lng},{lat:tS.lat,lng:tS.lng},[],_rtAvoid,function(d){
       if(d){
         _nasDrawRoute(d,_routeNoHwy);
-        // リルート用にパス保存
-        try{_routePath=_decodePoly(d.routes[0].overview_polyline.points);}catch(e){_routePath=[];}
+        // リルート用にパス保存（stepsから高精度取得）
+        _routePath=_routePathFromDirections(d);
       } else{
         var ds=new google.maps.DirectionsService();
         ds.route({origin:{lat,lng},destination:{lat:tS.lat,lng:tS.lng},
@@ -934,7 +977,7 @@ function updateMap(lat,lng,stops,nI){
           avoidHighways:!!_routeNoHwy,avoidTolls:!!_routeNoHwy},(r,s)=>{
           if(s==='OK'){
             _drawRoute(r,_routeNoHwy);
-            try{_routePath=r.routes[0].overview_path.map(function(p){return{lat:p.lat(),lng:p.lng()};});}catch(e){_routePath=[];}
+            _routePath=_routePathFromJsApi(r);
           }
         });
       }
