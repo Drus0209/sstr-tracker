@@ -1396,6 +1396,27 @@ function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 const NAS_API='https://as5304t-c025.tail5d5c21.ts.net';
 const NAS_KEY='sstr2026_k4w4s4k1_zx4r';
 const APP_VERSION='260426';
+// === エラー画面テスト用（admin/手動トリガー）===
+function _testUpdateError(){
+  var ov=document.createElement('div');ov.id='updateProgress';
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:sans-serif;color:#fff;padding:20px;';
+  var sampleIssues=[
+    'ネット未接続です',
+    'ストレージ空き容量が不足しています(50MB必要:100MB)',
+    'バッテリー残量が少ないです(15%)・充電してから再度お試しください',
+    'APKサーバーに接続できません(タイムアウト)'
+  ];
+  ov.innerHTML='<div style="font-size:48px;margin-bottom:16px;">⚠️</div>'
+    +'<div style="font-size:18px;font-weight:900;color:var(--red);margin-bottom:12px;">アップデートできません</div>'
+    +'<div style="background:rgba(255,68,68,0.1);border:1px solid var(--red);border-radius:10px;padding:14px;max-width:340px;width:100%;margin-bottom:18px;">'
+    +sampleIssues.map(function(i){return '<div style="font-size:14px;color:#fff;margin:4px 0;">・'+i+'</div>';}).join('')
+    +'</div>'
+    +'<div style="font-size:13px;opacity:0.85;margin-bottom:18px;text-align:center;">アップデートするには問題を解決する必要があるのだ</div>'
+    +'<button onclick="document.getElementById(\'updateProgress\').remove();" style="background:#fff;color:#000;border:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;">閉じる</button>';
+  document.body.appendChild(ov);
+  if(typeof spk==='function'){_stopAllAudio();spk('アップデートできないのだ。'+sampleIssues[0]+'。アップデートするには問題を解決する必要があるのだ。',true);}
+}
+
 // === アップデート前提チェック ===
 function _checkUpdatePrerequisites(apkUrl){
   return new Promise(function(resolve){
@@ -4178,6 +4199,7 @@ function _showCards(){
     ap.style.cssText='width:100%;background:rgba(20,30,50,0.9);border:2px solid var(--ylw);border-radius:16px;padding:18px;margin-top:12px;';
     ap.innerHTML='<div style="font-size:16px;font-weight:900;color:var(--ylw);margin-bottom:14px;">🔑 システム情報</div>'
       +'<div id="adminVersionList" style="font-size:15px;color:var(--txt);"></div>'
+      +'<button onclick="_testUpdateError()" style="display:block;width:100%;margin-top:14px;background:rgba(255,68,68,0.15);border:1px solid var(--red);border-radius:8px;color:var(--red);padding:10px;font-size:13px;font-weight:700;cursor:pointer;">⚠️ アップデートエラー画面テスト</button>'
 ;
     var cardArea=document.getElementById('riderNameBox');
     if(cardArea&&cardArea.parentElement)cardArea.parentElement.appendChild(ap);
