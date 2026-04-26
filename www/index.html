@@ -1400,25 +1400,41 @@ const APP_VERSION='260426';
 function _checkUpdatePrerequisites(apkUrl){
   return new Promise(function(resolve){
     var issues=[];
+    var apkSize=0;// バイト
     // 1. ネットワーク
     if(!navigator.onLine)issues.push('ネット未接続です');
-    // 2. ストレージ容量(StorageManager APIが使える環境のみ)
-    var storageCheck=Promise.resolve();
+    // 2. ストレージ容量(StorageManager API)
+    var storageCheck=Promise.resolve(0);
     if(navigator.storage&&navigator.storage.estimate){
       storageCheck=navigator.storage.estimate().then(function(s){
-        var freeMB=(s.quota-s.usage)/1024/1024;
-        if(freeMB<100)issues.push('ストレージ空き容量が少ないです('+freeMB.toFixed(0)+'MB)');
+        return (s.quota-s.usage)/1024/1024;// MB
+      }).catch(function(){return 0;});
+    }
+    // 3. バッテリー残量(Capacitor Device)
+    var batteryCheck=Promise.resolve();
+    var D=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.Device;
+    if(D&&D.getBatteryInfo){
+      batteryCheck=D.getBatteryInfo().then(function(info){
+        var lvl=info&&typeof info.batteryLevel==='number'?Math.round(info.batteryLevel*100):null;
+        var charging=info&&info.isCharging;
+        if(lvl!==null&&lvl<20&&!charging)issues.push('バッテリー残量が少ないです('+lvl+'%)・充電してから再度お試しください');
       }).catch(function(){});
     }
-    // 3. APK URL到達確認(HEAD)
+    // 4. APK URL到達確認(HEAD)・サイズ取得
     var headCheck=fetch(apkUrl,{method:'HEAD',signal:AbortSignal.timeout(8000)}).then(function(r){
       if(!r.ok)issues.push('APKサーバー応答エラー(HTTP '+r.status+')');
       var len=r.headers.get('Content-Length');
-      if(len)resolve.size=parseInt(len);
+      if(len)apkSize=parseInt(len);
     }).catch(function(e){
       issues.push('APKサーバーに接続できません('+(e.name==='TimeoutError'?'タイムアウト':'通信エラー')+')');
     });
-    Promise.all([storageCheck,headCheck]).then(function(){resolve({ok:issues.length===0,issues:issues});});
+    Promise.all([storageCheck,batteryCheck,headCheck]).then(function(results){
+      var freeMB=results[0];
+      // ストレージ容量チェック(APKサイズの2倍以上または100MB)
+      var needMB=apkSize?Math.max(100,(apkSize/1024/1024)*2):100;
+      if(freeMB>0&&freeMB<needMB)issues.push('ストレージ空き容量が不足しています('+freeMB.toFixed(0)+'MB必要:'+needMB.toFixed(0)+'MB)');
+      resolve({ok:issues.length===0,issues:issues,apkSize:apkSize});
+    });
   });
 }
 
@@ -1447,8 +1463,10 @@ function _doUpdateDownload(apkUrl){
       return;
     }
     // 問題なし → ダウンロード開始
+    var sizeMB=check.apkSize?(check.apkSize/1024/1024).toFixed(1):null;
     ov.innerHTML='<div style="font-size:48px;margin-bottom:16px;">⬇️</div>'
       +'<div id="updMsg" style="font-size:20px;font-weight:900;margin-bottom:8px;color:#9c27b0;">アップデート中なのだ</div>'
+      +(sizeMB?'<div style="font-size:13px;opacity:0.9;margin-bottom:6px;">📦 '+sizeMB+' MB ダウンロード中</div>':'')
       +'<div style="font-size:13px;opacity:0.8;margin-bottom:24px;">通知バーからインストールしてください</div>'
       +'<div style="width:80%;max-width:300px;height:8px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;margin-bottom:8px;">'
       +'<div id="updBar" style="width:30%;height:100%;background:linear-gradient(90deg,#9c27b0,#e91e63);border-radius:4px;animation:updPulse 2s ease-in-out infinite;"></div>'
