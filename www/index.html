@@ -1398,23 +1398,32 @@ const NAS_KEY='sstr2026_k4w4s4k1_zx4r';
 const APP_VERSION='260426';
 // === アップデートDL処理 ===
 function _doUpdateDownload(apkUrl){
-  // 1. ブラウザでAPK URLを開く（複数手段でフォールバック）
+  var debug=[];
+  // 1. URL を開く（外部ブラウザ・複数手段）
   try{
-    var Browser=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.Browser;
-    if(Browser&&Browser.open){Browser.open({url:apkUrl}).catch(function(){});}
-    else window.open(apkUrl,'_system');
-  }catch(e){window.location.href=apkUrl;}
-  // 2. アプリ終了（複数手段でフォールバック）
-  setTimeout(function(){
+    window.open(apkUrl,'_system');debug.push('window.open _system OK');
+  }catch(e){debug.push('window.open ERR:'+e.message);}
+  // 2. アプリ終了 を即時試行（setTimeoutの前後両方）
+  function _tryExit(){
+    var ok=false;
     try{
       var A=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App;
-      if(A&&A.exitApp){A.exitApp();return;}
-    }catch(e){}
-    try{if(navigator.app&&navigator.app.exitApp){navigator.app.exitApp();return;}}catch(e){}
-    // 最終フォールバック: モーダルだけ閉じてユーザーに案内
+      if(A&&typeof A.exitApp==='function'){A.exitApp();debug.push('Capacitor.App.exitApp OK');ok=true;}
+      else debug.push('Capacitor.App.exitApp NOT FOUND (App='+(A?'exists':'null')+')');
+    }catch(e){debug.push('Capacitor.App.exitApp ERR:'+e.message);}
+    if(!ok){
+      try{if(navigator.app&&navigator.app.exitApp){navigator.app.exitApp();debug.push('navigator.app.exitApp OK');ok=true;}}catch(e){}
+    }
+    return ok;
+  }
+  // すぐ試す
+  if(_tryExit())return;
+  // 1.5秒後にもう一度
+  setTimeout(function(){
+    if(_tryExit())return;
     var n=document.getElementById('updateNotice');if(n)n.remove();
-    alert('ダウンロード完了後、通知バーからAPKをタップしてインストールしてください');
-  },2000);
+    alert('exitApp使えません。デバッグ情報:\n'+debug.join('\n')+'\n\nダウンロード完了後、通知バーからAPKをタップしてインストールしてください');
+  },1500);
 }
 // === バージョンチェック（強制アップデート＋通知バナー）===
 // バージョンチェック完了を約束するPromise（おかえり等の音声フローはこれを待つ）
