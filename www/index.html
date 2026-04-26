@@ -1428,12 +1428,16 @@ function _checkAppVersion(){
           +'<button onclick="localStorage.setItem(\'_dismissedUpdate\',\''+d.latest+'\');document.getElementById(\'updateNotice\').remove();" style="display:block;width:100%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;">あとで</button>'
           +'</div>';
         document.body.appendChild(notice);
-        // おかえり等の通常音声を抑制
+        // 既存音声を一旦停止し、アップデート→おかえりの順で再生
         window._updateNoticeShown=true;
-        sessionStorage.setItem('_saidOkaeri','1');// おかえりスキップ用
+        sessionStorage.setItem('_saidOkaeri','1');// 通常のおかえりフローはスキップ
         _stopAllAudio();
-        // ずんだもん通知
-        setTimeout(function(){if(typeof spk==='function')spk('アップデートがあるのだ！',true);},500);
+        setTimeout(function(){
+          if(typeof spk!=='function')return;
+          spk('アップデートがあるのだ！',true,function(){
+            if(_myName)spk(_myName+'さん、おかえりなのだ！',true);
+          });
+        },500);
       }
     }).catch(function(){});
 }
