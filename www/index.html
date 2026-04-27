@@ -341,22 +341,31 @@ const STOPS={day1:[
 {time:"16:45",name:"⬇️ 佐倉IC",lat:35.7198,lng:140.2101,pt:0,type:"move",memo:"IC降りる",dur:0},
 {time:"17:00",name:"🏠 セブンイレブン佐倉白銀",lat:35.7116,lng:140.2489,pt:0,type:"goal",memo:"おつかれ！🏁"},
 ],nippon1_1:[
-// Day1: 大島→潮岬→竹居岬→蒲生田岬→阿南 (5/1 23:30出発〜5/2 18:30着)
-{time:"00:30",name:"🚀 東名川崎IC",lat:35.5872,lng:139.5677,pt:0,type:"move",memo:"東名→新東名 深夜割引 5/1深夜発",dur:0},
-{time:"01:30",name:"🍑 足柄SA",lat:35.3134,lng:138.9671,pt:0,type:"qk",memo:"トイレ・コーヒー",dur:10},
-{time:"03:10",name:"⛽ NEOPASA浜松",lat:34.8432,lng:137.7505,pt:0,type:"gs",memo:"給油",dur:15},
-{time:"04:25",name:"🍑 御在所SA",lat:35.0187,lng:136.5914,pt:0,type:"qk",memo:"休憩",dur:10},
-{time:"06:15",name:"⬇️ すさみ南IC",lat:33.5162,lng:135.6030,pt:0,type:"move",memo:"IC降りる→R42串本方面",dur:0},
-{time:"06:35",name:"📍 CP7 潮岬",lat:33.4480,lng:135.7639,pt:1,type:"goal",memo:"🏝️ 本州最南端チェックイン",dur:15},
-{time:"07:10",name:"🚀 南紀田辺IC",lat:33.7459,lng:135.3709,pt:0,type:"move",memo:"紀勢道→阪和道",dur:0},
-{time:"08:15",name:"⬇️ 和歌山IC",lat:34.2394,lng:135.2130,pt:0,type:"move",memo:"IC降りる",dur:0},
-{time:"08:30",name:"🍴 和歌山駅エリア",lat:34.2330,lng:135.1907,pt:0,type:"qk",memo:"朝食",dur:30},
-{time:"09:15",name:"⛴️ 和歌山港",lat:34.2174,lng:135.1441,pt:0,type:"move",memo:"南海フェリー受付",dur:0},
-{time:"10:35",name:"🚢 南海フェリー出航",lat:34.2174,lng:135.1441,pt:0,type:"move",memo:"和歌山→徳島 予約No.41515987",dur:135},
-{time:"12:50",name:"⛴️ 徳島港 上陸",lat:34.0565,lng:134.5842,pt:0,type:"move",memo:"→R11で高松方面",dur:0},
-{time:"15:00",name:"📍 CP9 竹居岬",lat:34.3980,lng:134.1416,pt:1,type:"goal",memo:"🏝️ 四国最北端チェックイン",dur:15},
-{time:"17:30",name:"📍 CP10 蒲生田岬",lat:33.8342,lng:134.7500,pt:1,type:"goal",memo:"🏝️ 四国最東端チェックイン",dur:15},
-{time:"18:30",name:"🏨 ルートイン阿南",lat:33.9222,lng:134.6662,pt:0,type:"goal",memo:"Agoda予約 1705017242",dur:0},
+// Day1: 自宅→潮岬→竹居岬→蒲生田岬→阿南 (5/1 19:00出発〜5/2 18:50着) 約860km
+// 24+時間形式: 25:10=5/2 01:10 (深夜跨ぎでpT計算整合性確保)
+{time:"19:00",name:"🏠 自宅出発（大島7-40-11）",lat:35.6923,lng:139.8436,pt:0,type:"move",memo:"5/1 金 19:00 区間1スタート",dur:0},
+{time:"20:00",name:"🍑 EXPASA海老名（下り）",lat:35.4308,lng:139.4017,pt:0,type:"qk",memo:"QK①",dur:10},
+{time:"21:10",name:"🍑 NEOPASA駿河湾沼津（下り）",lat:35.1522,lng:138.8116,pt:0,type:"qk",memo:"QK②",dur:10},
+{time:"22:05",name:"🍑 NEOPASA静岡（下り）",lat:34.9689,lng:138.2911,pt:0,type:"qk",memo:"QK③",dur:10},
+{time:"22:55",name:"🍑 掛川PA（下り）",lat:34.8393,lng:138.0358,pt:0,type:"qk",memo:"QK④",dur:10},
+{time:"23:35",name:"⛽ NEOPASA浜松（下り）",lat:34.8407,lng:137.7488,pt:0,type:"gs",memo:"QK⑤ 給油 24h営業",dur:15},
+{time:"25:10",name:"🍑 湾岸長島PA（下り）",lat:35.0360,lng:136.7310,pt:0,type:"qk",memo:"QK⑥ 店舗7-21:30 トイレのみ",dur:10},
+{time:"25:40",name:"🍑 御在所SA（下り）",lat:35.0191,lng:136.5941,pt:0,type:"qk",memo:"QK⑦",dur:10},
+{time:"26:40",name:"🍑 嬉野PA（下り）",lat:34.6127,lng:136.4617,pt:0,type:"qk",memo:"QK⑧ 区間1終 区間2スタート",dur:10},
+{time:"28:20",name:"⭐ 道の駅 熊野・花の窟",lat:33.8789,lng:136.0922,pt:1,type:"michi",memo:"三重pt 04:20 駐車場のみ",dur:10},
+{time:"29:40",name:"⭐ 道の駅 くしもと橋杭岩",lat:33.4881,lng:135.7943,pt:1,type:"michi",memo:"和歌山pt 05:40 駐車場のみ",dur:15},
+{time:"30:10",name:"📍 CP7 潮岬観光タワー（南紀熊野ジオパーク同時打刻）",lat:33.4378,lng:135.7614,pt:2,type:"goal",memo:"🏝️ 本州最南端 06:10 +和歌山pt",dur:30},
+{time:"31:35",name:"⭐ 道の駅 くちくまの",lat:33.6917,lng:135.4140,pt:1,type:"michi",memo:"和歌山pt 07:35 開店直後",dur:10},
+{time:"32:35",name:"🍑 印南SA（上り）",lat:33.8104,lng:135.2371,pt:0,type:"qk",memo:"QK⑨",dur:10},
+{time:"33:10",name:"🍑 吉備湯浅PA（上り）",lat:34.0372,lng:135.2010,pt:0,type:"qk",memo:"QK⑩ 区間2終",dur:10},
+{time:"34:00",name:"⛴️ 和歌山港",lat:34.2175,lng:135.1461,pt:0,type:"move",memo:"南海フェリー受付 35分待機",dur:0},
+{time:"34:35",name:"🚢 南海フェリー出航",lat:34.2175,lng:135.1461,pt:0,type:"move",memo:"和歌山→徳島 予約No.41515987",dur:135},
+{time:"36:50",name:"⛴️ 徳島港 上陸",lat:34.0565,lng:134.5842,pt:0,type:"move",memo:"区間3スタート →鳴門JCT→高松道",dur:0},
+{time:"37:30",name:"🍑 鳴門西PA（下り）",lat:34.1617,lng:134.4948,pt:0,type:"qk",memo:"QK⑪",dur:10},
+{time:"39:00",name:"📍 CP9 竹居岬",lat:34.3980,lng:134.1416,pt:1,type:"goal",memo:"🏝️ 四国最北端",dur:15},
+{time:"40:30",name:"🍑 上板SA（上り）",lat:34.1401,lng:134.4100,pt:0,type:"qk",memo:"QK⑫ 区間3最終QK",dur:10},
+{time:"41:50",name:"📍 CP10 蒲生田岬",lat:33.8341,lng:134.7495,pt:1,type:"goal",memo:"🏝️ 四国最東端",dur:15},
+{time:"42:50",name:"🏨 ルートイン阿南",lat:33.9222,lng:134.6662,pt:0,type:"goal",memo:"Agoda 1705017242 5/2 18:50着 860km完走",dur:0},
 ],nippon1_2:[
 // Day2: 阿南→足摺岬→佐田岬→大分 (5/3)
 {time:"07:00",name:"🏨 ルートイン阿南 出発",lat:33.9200,lng:134.6650,pt:0,type:"move",memo:"Day2",dur:0},
@@ -485,6 +494,8 @@ for(var _ni=1;_ni<=5;_ni++)if(STOPS['nippon1_'+_ni])_autoNoHwy(STOPS['nippon1_'+
 for(var _n2=1;_n2<=7;_n2++)if(STOPS['nippon2_'+_n2])_autoNoHwy(STOPS['nippon2_'+_n2]);
 
 function pT(t){if(!t||!t.includes(':'))return 0;const[h,m]=t.split(':').map(Number);return(isNaN(h)?0:h)*60+(isNaN(m)?0:m);}
+// 24+時間形式を「翌HH:MM」表示に整形（nippon1_1のような深夜跨ぎ用）
+function _fmtTime(t){if(!t||!t.includes(':'))return t||'';var p=t.split(':');var h=parseInt(p[0],10);if(isNaN(h)||h<24)return t;return '翌'+('0'+(h-24)).slice(-2)+':'+p[1];}
 // Check if today is the actual rally day for the selected day
 function isRallyDay(){
   if(cDay==='custom')return true;
@@ -572,7 +583,7 @@ function showRouteOnly(stops){
     const mk=new google.maps.Marker({position:{lat:s.lat,lng:s.lng},map:map,
       icon:{path:google.maps.SymbolPath.CIRCLE,scale:5,fillColor:c,fillOpacity:1,strokeColor:'#fff',strokeWeight:1},
       title:s.name});
-    mk.addListener('click',()=>{new google.maps.InfoWindow({content:s.name+'<br>'+s.time}).open(map,mk);});
+    mk.addListener('click',()=>{new google.maps.InfoWindow({content:s.name+'<br>'+_fmtTime(s.time)}).open(map,mk);});
     mStops.push(mk);
     bounds.extend({lat:s.lat,lng:s.lng});
   });
@@ -3412,7 +3423,12 @@ function testJump(){
 function rnd(){
   const st=STOPS[cDay],nw=new Date();
   const nH=nw.getHours().toString().padStart(2,'0'),nM=nw.getMinutes().toString().padStart(2,'0');
-  const nwM=nw.getHours()*60+nw.getMinutes();
+  let nwM=nw.getHours()*60+nw.getMinutes();
+  // 深夜跨ぎプラン対応: stopsに24+時間が含まれ、現在が早朝（最大時間mod1440より前）なら+1440補正
+  if(st&&st.some&&st.some(function(s){var p=s.time&&s.time.split(':');return p&&parseInt(p[0],10)>=24;})){
+    var _firstStopM=pT(st[0].time);
+    if(_firstStopM>=18*60&&nwM<12*60)nwM+=1440;// 18:00以降開始かつ現在12:00前→翌日とみなす
+  }
   const ni=fN(st),nI=gLat?ni.i:0,nD=gLat?ni.d:0;
   const pl=pT(st[nI].time),df=gLat&&isRallyDay()?(nwM-pl):0;
   const rally=isRallyDay();
@@ -3427,6 +3443,8 @@ function rnd(){
   // 到着予定 = 現在時刻 + 実所要時間（Directions API）
   var eta;
   var nowMin=nw.getHours()*60+nw.getMinutes()+nw.getSeconds()/60;
+  // 深夜跨ぎ補正（nwMと同じロジック）
+  if(nwM>=1440&&nowMin<1440)nowMin+=1440;
   if(gLat&&roadDur!==null){
     eta=nowMin+roadDur/60;
   } else if(cP>0){
@@ -3538,7 +3556,7 @@ if(_hdrMode===0&&(cDay==='day1'||cDay==='day2')){
     <div class="nm">${cS.name}</div>${cS.memo?'<div class="mm">'+cS.memo+'</div>':''}
     ${(()=>{const schM=pT(cS.time);const diff=gLat&&schM>0?eta-schM:0;const _chg=cDay==='custom'&&cS&&cS.hasGoalTime;const tc=!gLat||schM<=0?'var(--ac)':(cDay==='custom'&&!_chg)?'var(--grn)':!isRallyDay()?'var(--ac)':diff>0?'var(--red)':diff>=-5?'var(--ylw)':'var(--grn)';return `<div class="sts">
       <div class="st"><div class="v" style="color:${!gLat?'var(--ac)':dispDist>=100?'var(--red)':dispDist>=50?'var(--ylw)':'var(--ac)'}">${gLat?dispDist.toFixed(1):'--'}</div><div class="l">km</div></div>
-      <div class="st"><div class="v" style="color:${tc}">${gLat?eH+':'+eM+':'+eS:cS.time}</div><div class="l">着${gLat&&Math.floor(diff)>0?'<span style="color:'+tc+'"> +'+Math.floor(diff)+'分</span>':''}</div></div>
+      <div class="st"><div class="v" style="color:${tc}">${gLat?eH+':'+eM+':'+eS:_fmtTime(cS.time)}</div><div class="l">着${gLat&&Math.floor(diff)>0?'<span style="color:'+tc+'"> +'+Math.floor(diff)+'分</span>':''}</div></div>
     </div>
     ${cDur&&cDay!=='custom'?`<div class="sts" style="margin-top:6px;">
       <div class="st"><div class="v">${cDur}分</div><div class="l">滞在</div></div>
