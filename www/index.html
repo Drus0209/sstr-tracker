@@ -2750,6 +2750,73 @@ function toggleRain(){
   rnd();
 }
 
+// ガソリンスタンド表示（Google Places nearbySearch）
+var _gasOn=false;
+var _gasMarkers=[];
+var _gasLastFetchPos=null;// 最終フェッチ位置 {lat,lng}
+var _gasFetchTimer=null;
+var _gasIdleListener=null;
+function toggleGas(){
+  if(!map)return;
+  _gasOn=!_gasOn;
+  if(_gasOn){
+    fetchGasStations();
+    // 地図移動が止まったら再取得（前回位置から1km以上移動時のみ）
+    if(!_gasIdleListener){
+      _gasIdleListener=map.addListener('idle',function(){
+        if(_gasFetchTimer)clearTimeout(_gasFetchTimer);
+        _gasFetchTimer=setTimeout(fetchGasStations,500);
+      });
+    }
+  } else {
+    _gasMarkers.forEach(function(m){m.setMap(null);});_gasMarkers=[];
+    if(_gasIdleListener){google.maps.event.removeListener(_gasIdleListener);_gasIdleListener=null;}
+    if(_gasFetchTimer){clearTimeout(_gasFetchTimer);_gasFetchTimer=null;}
+    _gasLastFetchPos=null;
+  }
+  rnd();
+}
+function fetchGasStations(){
+  if(!_gasOn||!map||!google.maps.places)return;
+  var c=map.getCenter();if(!c)return;
+  var lat=c.lat(),lng=c.lng();
+  // 前回フェッチ位置から1km未満なら再取得しない
+  if(_gasLastFetchPos&&dK(lat,lng,_gasLastFetchPos.lat,_gasLastFetchPos.lng)<1)return;
+  _gasLastFetchPos={lat:lat,lng:lng};
+  var svc=new google.maps.places.PlacesService(map);
+  svc.nearbySearch({
+    location:{lat:lat,lng:lng},
+    radius:2000,
+    type:'gas_station'
+  },function(results,status){
+    if(status!==google.maps.places.PlacesServiceStatus.OK||!results)return;
+    // 既存マーカー削除→再描画
+    _gasMarkers.forEach(function(m){m.setMap(null);});_gasMarkers=[];
+    results.forEach(function(p){
+      if(!p.geometry||!p.geometry.location)return;
+      var mk=new google.maps.Marker({
+        position:p.geometry.location,map:map,zIndex:40,
+        label:{text:'⛽',fontSize:'20px'},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:0,fillOpacity:0,strokeOpacity:0},
+        title:p.name||'ガソリンスタンド'
+      });
+      mk.addListener('click',function(){
+        var open=p.opening_hours&&p.opening_hours.open_now;
+        var openTxt=open===true?'<span style="color:#4caf50;">営業中</span>':open===false?'<span style="color:var(--red);">営業時間外</span>':'';
+        var rating=p.rating?'★'+p.rating.toFixed(1)+'('+(p.user_ratings_total||0)+')':'';
+        new google.maps.InfoWindow({
+          content:'<div style="font-family:sans-serif;color:#000;min-width:180px;">'
+            +'<div style="font-weight:700;font-size:14px;margin-bottom:4px;">⛽ '+(p.name||'ガソリンスタンド')+'</div>'
+            +(p.vicinity?'<div style="font-size:12px;color:#555;margin-bottom:4px;">'+p.vicinity+'</div>':'')
+            +'<div style="font-size:12px;">'+openTxt+(rating?' '+rating:'')+'</div>'
+            +'</div>'
+        }).open(map,mk);
+      });
+      _gasMarkers.push(mk);
+    });
+  });
+}
+
 // オービス・取締ポイント
 const ORBIS=[
   // === 高速道路 ===
@@ -3451,6 +3518,7 @@ if(_hdrMode===0&&(cDay==='day1'||cDay==='day2')){
         ${(cDay==='day1'||cDay==='day2')?_db('day1','23')+_db('day2','24'):''}
         ${_zb(0,'🔍')}${_zb(1,'📍')}${_zb(2,'🗺️')}
         <button onclick="toggleRain();event.stopPropagation();" style="${_bs}background:${_rainOn?'var(--ac)':'none'};border-color:${_rainOn?'var(--ac)':'var(--bdr)'};color:${_rainOn?'#000':'var(--txt)'};">☔</button>
+        <button onclick="toggleGas();event.stopPropagation();" style="${_bs}background:${_gasOn?'var(--ylw)':'none'};border-color:${_gasOn?'var(--ylw)':'var(--bdr)'};color:${_gasOn?'#000':'var(--txt)'};">⛽</button>
         <button onclick="toggleSSTR2026();event.stopPropagation();" style="${_bs}background:${_sstr2026Show?'#2196f3':'none'};border-color:#2196f3;color:${_sstr2026Show?'#fff':'#2196f3'};">🗾</button>
         ${cDay==='day1'?'<button onclick="emergGoal();event.stopPropagation();" style="'+_bs+'color:var(--red);border-color:var(--red);">🚨</button>':''}
       </div>`;
