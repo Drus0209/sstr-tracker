@@ -1411,7 +1411,9 @@ function _zundaMouthStop(){
 }
 var _spkCallback=null;// spk完了コールバック
 function _spkNext(){
-  if(_spkQ.length===0){_spkBusy=false;_spkRestore();_zundaMouthStop();_zundaHide();if(_spkCallback){var cb=_spkCallback;_spkCallback=null;cb();}return;}
+  if(_spkQ.length===0){_spkBusy=false;_spkRestore();_zundaMouthStop();
+    setTimeout(function(){if(_spkQ.length===0&&!_spkBusy)_zundaHide();},1500);
+    if(_spkCallback){var cb=_spkCallback;_spkCallback=null;cb();}return;}
   _spkBusy=true;var t=_spkQ.shift();
   // ターン案内テキストなら音声再生タイミングで矢印表示
   var _tm=t.match(/^(?:まもなく|200メートル先、)(右|左|斜め右|斜め左|鋭角右|鋭角左|Uターン)なのだ/);
@@ -1425,13 +1427,13 @@ function _spkNext(){
     var a=new Audio(localUrl);
     _setCurrentAudio(a);
     a.volume=1.0;a.playbackRate=_voiceSpeed;
-    a.onended=function(){if(_currentAudio!==a)return;_currentAudio=null;_zundaMouthStop();_zundaHide();setTimeout(_spkNext,800);};
+    a.onended=function(){if(_currentAudio!==a)return;_currentAudio=null;_zundaMouthStop();setTimeout(_spkNext,800);};
     a.onerror=function(){
       if(_currentAudio!==a)return;// 二重発火防止
       // ローカル失敗→NASから再生
       var a2=new Audio(nasUrl);
       _setCurrentAudio(a2);a2.volume=1.0;a2.playbackRate=_voiceSpeed;
-      a2.onended=function(){if(_currentAudio!==a2)return;_currentAudio=null;_zundaMouthStop();_zundaHide();setTimeout(_spkNext,800);};
+      a2.onended=function(){if(_currentAudio!==a2)return;_currentAudio=null;_zundaMouthStop();setTimeout(_spkNext,800);};
       a2.onerror=function(){if(_currentAudio!==a2)return;_currentAudio=null;_spkFallback(t);};
       a2.play().catch(function(){if(_currentAudio!==a2)return;_currentAudio=null;_spkFallback(t);});
     };
@@ -1456,7 +1458,7 @@ function _spkFallback(t){
         var savedKey=d.key||key;// サーバー正規化後のキーを使う
         var a=new Audio(_nasAudio('/api/voice/'+savedKey));
         _setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
-        a.onended=function(){if(_currentAudio!==a)return;_currentAudio=null;_zundaMouthStop();_zundaHide();setTimeout(_spkNext,800);};
+        a.onended=function(){if(_currentAudio!==a)return;_currentAudio=null;_zundaMouthStop();setTimeout(_spkNext,800);};
         a.onerror=function(){if(_currentAudio!==a)return;_currentAudio=null;_spkTts(t);};
         a.play().catch(function(){if(_currentAudio!==a)return;try{a.pause();a.src='';}catch(e){}_currentAudio=null;_spkTts(t);});
       } else if(attempt<3){
