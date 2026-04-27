@@ -2154,14 +2154,6 @@ function _showSettings(){
       <button id="settingsBatteryAlertBtn" onclick="_toggleBatteryAlert()" style="background:${_batteryAlertOn()?'var(--ac)':'#333'};color:${_batteryAlertOn()?'#000':'#888'};border:none;border-radius:12px;padding:6px 14px;font-size:12px;font-weight:800;cursor:pointer;min-width:56px;">${_batteryAlertOn()?'ON':'OFF'}</button>
     </div>
     <div style="margin-bottom:16px;">
-      <div style="font-size:12px;color:var(--txt);margin-bottom:4px;">🏠 自宅</div>
-      <div id="homeInfo" style="font-size:11px;color:#888;margin-bottom:6px;">${_getHome()?('登録済: '+_getHome().lat.toFixed(4)+', '+_getHome().lng.toFixed(4)):'未登録'}</div>
-      <div style="display:flex;gap:6px;">
-        <button onclick="_saveHome()" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:8px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">現在地で登録</button>
-        ${_getHome()?'<button onclick="_clearHome()" style="background:none;border:1px solid var(--red);border-radius:8px;padding:8px 12px;color:var(--red);font-size:12px;cursor:pointer;">削除</button>':''}
-      </div>
-    </div>
-    <div style="margin-bottom:16px;">
       <div style="font-size:12px;color:var(--org);font-weight:700;margin-bottom:4px;">👥 フレンド</div>
       <div id="friendsList" style="font-size:13px;color:var(--txt);margin-bottom:8px;">読み込み中...</div>
       <div style="display:flex;gap:6px;">
@@ -2532,15 +2524,21 @@ function _showAccount(){
     +'</div>'
     +'<div style="background:var(--card);border:1px solid var(--bdr);border-radius:10px;padding:16px;margin-bottom:14px;">'
     +'<div style="font-size:14px;color:var(--sub);margin-bottom:8px;">🏠 自宅</div>'
-    +'<div style="font-size:15px;color:var(--txt);">'+(home?home.lat.toFixed(4)+', '+home.lng.toFixed(4):'<span style="color:#666;">未登録</span>')+'</div>'
+    +'<div id="accHomeInfo" style="font-size:15px;color:var(--txt);margin-bottom:10px;">'+(home?home.lat.toFixed(4)+', '+home.lng.toFixed(4):'<span style="color:#666;">未登録</span>')+'</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button onclick="_saveHomeAcc()" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:10px;color:#000;font-size:13px;font-weight:700;cursor:pointer;">📍 現在地で登録</button>'
+    +(home?'<button onclick="_clearHomeAcc()" style="background:none;border:1px solid var(--red);border-radius:8px;padding:10px 14px;color:var(--red);font-size:13px;cursor:pointer;">削除</button>':'')
+    +'</div>'
     +'</div>'
     +(lastGoal?'<div style="background:rgba(76,175,80,0.05);border:1px solid #4caf50;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:14px;color:var(--txt);">🏁 最終完走: '+fmt(lastGoal)+'</div>':'')
-    +'<div style="display:flex;gap:10px;">'
-    +'<button onclick="document.getElementById(\'accountModal\').remove();_showSettings();" style="flex:1;background:var(--ylw);border:none;border-radius:10px;padding:14px;color:#000;font-size:15px;font-weight:800;cursor:pointer;">⚙ 設定</button>'
-    +'<button onclick="_exportAccount()" style="flex:1;background:var(--ac);border:none;border-radius:10px;padding:14px;color:#000;font-size:15px;font-weight:800;cursor:pointer;">📤 エクスポート</button>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    +'<button onclick="document.getElementById(\'accountModal\').remove();_showSettings();" style="flex:1;min-width:120px;background:var(--ylw);border:none;border-radius:10px;padding:14px;color:#000;font-size:15px;font-weight:800;cursor:pointer;">⚙ 設定</button>'
+    +'<button onclick="_exportAccount()" style="flex:1;min-width:120px;background:var(--ac);border:none;border-radius:10px;padding:14px;color:#000;font-size:15px;font-weight:800;cursor:pointer;">📤 エクスポート</button>'
+    +'<button onclick="document.getElementById(\'accImportFile\').click()" style="flex:1;min-width:120px;background:var(--pk);border:none;border-radius:10px;padding:14px;color:#000;font-size:15px;font-weight:800;cursor:pointer;">📥 インポート</button>'
+    +'<input type="file" id="accImportFile" accept="application/json" style="display:none;" onchange="_importAccount(event)">'
     +'</div>';
   document.body.appendChild(div);
-  // フレンド数を非同期取得
+  // フレンド数を非同期取得（フレンド管理は設定画面）
   if(_myName){
     _nf(NAS_API+'/api/friends?name='+encodeURIComponent(_myName),{signal:AbortSignal.timeout(5000)})
     .then(function(r){return r.json();}).then(function(d){
@@ -2550,6 +2548,25 @@ function _showAccount(){
   } else {
     var el=document.getElementById('accFriendCount');if(el)el.textContent='-';
   }
+}
+function _importAccount(ev){
+  var f=ev.target.files&&ev.target.files[0];
+  if(!f)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var d=JSON.parse(e.target.result);
+      if(!confirm('インポート内容:\nライダー名: '+(d.name||'なし')+'\n累計: '+(d.stats&&d.stats.totalKm?d.stats.totalKm.toFixed(1)+'km':'なし')+'\n訪問: '+(d.visits?d.visits.length+'件':'なし')+'\nプラン: '+(d.plans?d.plans.length+'件':'なし')+'\n\n現在のローカルデータは上書きされます。続行しますか？'))return;
+      if(d.name){_myName=d.name;localStorage.setItem('_riderName',d.name);}
+      if(d.stats)localStorage.setItem('_riderStats',JSON.stringify(d.stats));
+      if(d.home)localStorage.setItem('_home',JSON.stringify(d.home));
+      if(d.visits)localStorage.setItem('_visits',JSON.stringify(d.visits));
+      if(d.plans&&d.name)localStorage.setItem('_plans_'+d.name,JSON.stringify(d.plans));
+      alert('✅ インポート完了。アプリを再起動します。');
+      location.reload();
+    }catch(err){alert('JSONの読み込みに失敗しました: '+err.message);}
+  };
+  reader.readAsText(f);
 }
 function _exportAccount(){
   var data={
@@ -2586,6 +2603,18 @@ function _clearHome(){
   if(!confirm('自宅登録を削除しますか？'))return;
   localStorage.removeItem('_home');
   var sp=document.getElementById('settingsPanel');if(sp){sp.remove();_showSettings();}
+}
+function _saveHomeAcc(){
+  if(!gLat||!gLng){alert('GPS情報を取得してから実行してください');return;}
+  var home={lat:gLat,lng:gLng,ts:Date.now()};
+  localStorage.setItem('_home',JSON.stringify(home));
+  alert('🏠 自宅を登録しました');
+  var am=document.getElementById('accountModal');if(am){am.remove();_showAccount();}
+}
+function _clearHomeAcc(){
+  if(!confirm('自宅登録を削除しますか？'))return;
+  localStorage.removeItem('_home');
+  var am=document.getElementById('accountModal');if(am){am.remove();_showAccount();}
 }
 
 // === バッテリー残量アラート ===
