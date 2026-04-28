@@ -2726,13 +2726,21 @@ function checkDistAnnounce(){
   }
   if(d>=1)_announced500mArrive=false;
 
-  // 5. 到着案内「到着したのだ」（100m以内）
-  if(d<0.1&&!_announcedArrived){
+  // 5. 到着案内
+  // IC/SA/PA: 300mで「通過しました」（高速通過用・広い座標誤差許容）
+  // 最終ゴール: 250mで「到着」（広い施設・駐車場対応）
+  // その他: 100mで「到着」
+  var _name=st[idx].name||'';
+  var _isPass=/IC|JCT|SA|PA/.test(_name);
+  var _isLast=(idx===st.length-1);
+  var _arriveTh=_isPass?0.3:_isLast?0.25:0.1;
+  var _msg=_isPass?'通過しましたのだ。':'到着したのだ。';
+  if(d<_arriveTh&&!_announcedArrived){
     _announcedArrived=true;
-    spk('到着したのだ。',true);
+    spk(_msg,true);
     return;
   }
-  if(d>=0.5)_announcedArrived=false;
+  if(d>=Math.max(0.5,_arriveTh*2))_announcedArrived=false;
 }
 
 // 雨雲レーダー
