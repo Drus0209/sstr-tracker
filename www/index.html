@@ -751,15 +751,17 @@ function _isHwyStep(html){
   h=h.replace(/\([^)]*の表示\)/g,'').replace(/\([^)]*方面[^)]*\)/g,'');
   return /自動車道|高速|有料|首都高|Toll|toll/.test(h);
 }
-function _drawRoute(result,noHwy){
-  // noHwyフラグでルート全体の色を決定
-  var col=noHwy?'#2196f3':'#FF9800';
-  var path=result.routes[0].overview_path;
-  var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
-  mPolylines.push(pl);
-  // ターン情報を抽出
+function _drawRoute(result){
+  // ステップごとに高速/一般を判定して色分け（高速=オレンジ/一般=青）
   result.routes[0].legs.forEach(leg=>{
     leg.steps.forEach(step=>{
+      var hwy=_isHwyStep(step.instructions||step.html_instructions||'');
+      var col=hwy?'#FF9800':'#2196f3';
+      var path=step.path||(step.lat_lngs);
+      if(path&&path.length>1){
+        var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
+        mPolylines.push(pl);
+      }
       if(step.maneuver){
         var dir=null;
         if(step.maneuver==='turn-right')dir='右';
@@ -1042,7 +1044,7 @@ function _fallbackRoute1to1(ds,chunk,delay){
     setTimeout(()=>{
       var _fNoHwy=a.noHwy||b.noHwy;
       ds.route(_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],_fNoHwy),(r,s)=>{
-        if(s==='OK')_drawRoute(r,_fNoHwy);
+        if(s==='OK')_drawRoute(r);// per-step色分け
       });
     },delay+k*1000);
   }
@@ -1057,10 +1059,10 @@ function fetchGoogleRoute(stops){
       var avoid=a.noHwy?'tolls|highways':'';
       setTimeout(function(){
         _nasRoute({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],avoid,function(d){
-          if(d)_nasDrawRoute(d,a.noHwy);
+          if(d)_nasDrawRoute(d);// per-step色分け
           else{
             var ds=new google.maps.DirectionsService();
-            ds.route(_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],a.noHwy),function(r,s){if(s==='OK')_drawRoute(r,a.noHwy);});
+            ds.route(_routeReq({lat:a.lat,lng:a.lng},{lat:b.lat,lng:b.lng},[],a.noHwy),function(r,s){if(s==='OK')_drawRoute(r);});
           }
         });
       },k*500);
@@ -1092,12 +1094,12 @@ function fetchGoogleRoute(stops){
       var avoid=ch.noHwy?'tolls|highways':'';
       console.log('[Route] chunk '+idx+'/'+chunks.length+': '+s[0].name+' → '+s[s.length-1].name);
       _nasRoute(origin,dest,wp,avoid,function(d){
-        if(d)_nasDrawRoute(d,ch.noHwy);
+        if(d)_nasDrawRoute(d);// per-step色分け
         else{
           var ds=new google.maps.DirectionsService();
           var gWp=s.slice(1,-1).map(p=>({location:{lat:p.lat,lng:p.lng},stopover:true}));
           ds.route(_routeReq(origin,dest,gWp,ch.noHwy),function(r,st){
-            if(st==='OK')_drawRoute(r,ch.noHwy);
+            if(st==='OK')_drawRoute(r);
             else _fallbackRoute1to1(ds,s,0);
           });
         }
