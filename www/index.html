@@ -857,7 +857,8 @@ function _extractLaneHints(routeData){
           else if(leftRight)text='まもなく'+leftRight+'分岐なのだ';
           if(text){
             var loc=step.start_location||{};
-            hints.push({lat:loc.lat,lng:loc.lng,text:text,key:'lane_'+_hashStr(text)});
+            var dirCode=leftRight==='右'?'right':leftRight==='左'?'left':'';
+            hints.push({lat:loc.lat,lng:loc.lng,text:text,dir:dirCode,destName:direction||'',key:'lane_'+_hashStr(text)});
           }
         }
       });
@@ -958,10 +959,9 @@ function _checkLaneHints(){
     var d=dK(gLat,gLng,h.lat,h.lng)*1000;// メートル
     if(d<700&&d>300){
       _laneAnnounced[h.key]=true;
-      // 視覚レーン表示
-      var dir=h.text.indexOf('右')>=0?'right':h.text.indexOf('左')>=0?'left':'';
-      var destMatch=h.text.match(/まもなく([^方]+?)方面/);
-      var dest=destMatch?destMatch[1]:'';
+      // 視覚レーン表示（hint生成時のdirを使う：地名に右/左が含まれる誤判定回避）
+      var dir=h.dir||'';
+      var dest=h.destName||'';
       _showLanePanel(dir,4,dest);
       // 音声再生（事前生成済み or NAS）
       var url=_laneVoiceCache[h.key]||_nasAudio('/api/voice/'+h.key);
