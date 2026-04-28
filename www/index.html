@@ -1324,9 +1324,9 @@ function updateMap(lat,lng,stops,nI){
   }
   // Center on user only in street zoom mode (スナップ位置に合わせる)
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat,lng});
-  // 近接のみヘディングアップ、エリア/全体は北固定
-  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);}
-  else map.setHeading(0);
+  // 近接のみヘディングアップ＋3D傾斜、エリア/全体は北固定＋平面
+  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(45);}
+  else {map.setHeading(0);map.setTilt(0);}
 }
 
 let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
@@ -1335,11 +1335,12 @@ function applyZoomMode(){
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
-    // 最大ズーム・現在地中心・ヘディングアップ
+    // 最大ズーム・現在地中心・ヘディングアップ・3D傾斜
     map.setZoom(19);map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
+    map.setTilt(45);
   } else if(zoomMode===1){
-    map.setHeading(0);// エリアは北固定
+    map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     // 3ストップ先まで収まるようfitBounds
     const bounds=new google.maps.LatLngBounds();
     bounds.extend({lat:gLat,lng:gLng});
@@ -1347,7 +1348,7 @@ function applyZoomMode(){
     map.fitBounds(bounds,{top:60,bottom:120,left:40,right:40});
   } else {
     // 全体ルート
-    map.setHeading(0);// 全体は北固定
+    map.setHeading(0);map.setTilt(0);// 全体は北固定・平面
     const bounds=new google.maps.LatLngBounds();
     bounds.extend({lat:gLat,lng:gLng});
     st.forEach(s=>bounds.extend({lat:s.lat,lng:s.lng}));
