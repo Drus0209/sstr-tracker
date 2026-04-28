@@ -727,12 +727,18 @@ function drawOrbisMarkers(){
     mOrbis.push(mk);
   });
 }
-var _turnPoints=[];// {lat,lng,dir:'右'|'左'|'鋭角右'|'鋭角左'|'Uターン',announced500:false,announced200:false,announced50:false}
+var _turnPoints=[];// {lat,lng,dir,prefix:''|'信号機を'|'交差点を',announced...}
 var _turnPointsOld=[];
-function _resetTurnPoints(){_turnPointsOld=_turnPoints.slice();_turnPoints=[];}
-function _pushTurnPoint(lat,lng,dir){
+var _straightSegments=[];// 長距離直進区間 {lat,lng,distKm,announced}
+var _signalPoints=[];// OSM信号機座標 [{lat,lng}]
+function _resetTurnPoints(){_turnPointsOld=_turnPoints.slice();_turnPoints=[];_straightSegments=[];_signalPoints=[];_signalsFetched=false;}
+function _pushTurnPoint(lat,lng,dir,prefix){
   for(var j=0;j<_turnPoints.length;j++){
-    if(dK(lat,lng,_turnPoints[j].lat,_turnPoints[j].lng)*1000<50)return;// 50m以内は重複スキップ
+    if(dK(lat,lng,_turnPoints[j].lat,_turnPoints[j].lng)*1000<50){
+      // 既存ポイントのprefixが空で新しい方が信号機なら上書き
+      if(!_turnPoints[j].prefix&&prefix)_turnPoints[j].prefix=prefix;
+      return;
+    }
   }
   // 旧ポイントから近接マッチでアナウンス済みフラグを引き継ぐ（再アナウンス防止）
   var a500=false,a200=false,a50=false;
@@ -741,7 +747,7 @@ function _pushTurnPoint(lat,lng,dir){
       a500=_turnPointsOld[k].announced500;a200=_turnPointsOld[k].announced200;a50=_turnPointsOld[k].announced50;break;
     }
   }
-  _turnPoints.push({lat:lat,lng:lng,dir:dir,announced500:a500,announced200:a200,announced50:a50});
+  _turnPoints.push({lat:lat,lng:lng,dir:dir,prefix:prefix||'',announced500:a500,announced200:a200,announced50:a50});
 }
 function _isHwyStep(html){
   // ステップのinstructionsから高速道路/有料道路を判定
@@ -751,11 +757,82 @@ function _isHwyStep(html){
   h=h.replace(/\([^)]*の表示\)/g,'').replace(/\([^)]*方面[^)]*\)/g,'');
   return /自動車道|高速|有料|首都高|Toll|toll/.test(h);
 }
+// === 直進区間抽出（連続するノンターンstepの距離合算）===
+// 2km以上の直進区間を見つけて「○km直進なのだ」案内候補に追加
+function _extractStraightsFromGoogle(result){
+  var legs=(result.routes&&result.routes[0]&&result.routes[0].legs)||[];
+  legs.forEach(function(leg){
+    var acc=0,start=null;
+    (leg.steps||[]).forEach(function(step){
+      var dist=(step.distance&&step.distance.value)||0;
+      var hasTurn=step.maneuver&&/turn|fork|ramp|uturn|merge/.test(step.maneuver);
+      if(!start&&step.start_location)start={lat:step.start_location.lat(),lng:step.start_location.lng()};
+      acc+=dist;
+      if(hasTurn){
+        if(acc>=2000&&start)_straightSegments.push({lat:start.lat,lng:start.lng,distKm:acc/1000,announced:false});
+        acc=0;start=step.end_location?{lat:step.end_location.lat(),lng:step.end_location.lng()}:null;
+      }
+    });
+    if(acc>=2000&&start)_straightSegments.push({lat:start.lat,lng:start.lng,distKm:acc/1000,announced:false});
+  });
+}
+function _extractStraightsFromNas(d){
+  var legs=(d.routes&&d.routes[0]&&d.routes[0].legs)||[];
+  legs.forEach(function(leg){
+    var acc=0,start=null;
+    (leg.steps||[]).forEach(function(step){
+      var dist=(step.distance&&step.distance.value)||0;
+      var mn=step.maneuver||'';
+      var hasTurn=/turn|fork|ramp|uturn|merge/.test(mn);
+      if(!start&&step.start_location)start={lat:step.start_location.lat,lng:step.start_location.lng};
+      acc+=dist;
+      if(hasTurn){
+        if(acc>=2000&&start)_straightSegments.push({lat:start.lat,lng:start.lng,distKm:acc/1000,announced:false});
+        acc=0;start=step.end_location?{lat:step.end_location.lat,lng:step.end_location.lng}:null;
+      }
+    });
+    if(acc>=2000&&start)_straightSegments.push({lat:start.lat,lng:start.lng,distKm:acc/1000,announced:false});
+  });
+}
+// === OSM Overpass で信号機座標取得（ルート周辺200m以内をフィルタ）===
+var _signalsFetched=false;
+function _fetchSignalsForRoute(){
+  if(_signalsFetched||!_routePath||_routePath.length<2)return;
+  _signalsFetched=true;
+  // ルートのbbox計算（少し広げて）
+  var minLat=90,maxLat=-90,minLng=180,maxLng=-180;
+  _routePath.forEach(function(p){
+    if(p.lat<minLat)minLat=p.lat;if(p.lat>maxLat)maxLat=p.lat;
+    if(p.lng<minLng)minLng=p.lng;if(p.lng>maxLng)maxLng=p.lng;
+  });
+  // bboxが大きすぎる場合（広域ルート）はスキップ
+  if((maxLat-minLat)>2||(maxLng-minLng)>2)return;
+  var query='[out:json][timeout:15];node["highway"="traffic_signals"]('+minLat+','+minLng+','+maxLat+','+maxLng+');out;';
+  fetch('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(query),{signal:AbortSignal.timeout(15000)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.elements)return;
+      _signalPoints=d.elements.filter(function(e){return e.type==='node'&&e.lat&&e.lon;}).map(function(e){return{lat:e.lat,lng:e.lon};});
+      // ルートから100m以内の信号のみ残す
+      _signalPoints=_signalPoints.filter(function(s){return _distToRoute(s.lat,s.lng)<0.1;});
+      // 既存ターンポイントから30m以内の信号があれば prefix='信号機を' に上書き
+      _turnPoints.forEach(function(tp){
+        if(tp.prefix)return;
+        for(var i=0;i<_signalPoints.length;i++){
+          if(dK(tp.lat,tp.lng,_signalPoints[i].lat,_signalPoints[i].lng)*1000<30){
+            tp.prefix='信号機を';break;
+          }
+        }
+      });
+      console.log('[OSM] signals on route: '+_signalPoints.length);
+    }).catch(function(){_signalsFetched=false;});
+}
 function _drawRoute(result){
   // ステップごとに高速/一般を判定して色分け（高速=オレンジ/一般=青）
   result.routes[0].legs.forEach(leg=>{
     leg.steps.forEach(step=>{
-      var hwy=_isHwyStep(step.instructions||step.html_instructions||'');
+      var html=step.instructions||step.html_instructions||'';
+      var hwy=_isHwyStep(html);
       var col=hwy?'#FF9800':'#2196f3';
       var path=step.path||(step.lat_lngs);
       if(path&&path.length>1){
@@ -769,11 +846,15 @@ function _drawRoute(result){
         else if(step.maneuver==='turn-sharp-right')dir='鋭角右';
         else if(step.maneuver==='turn-sharp-left')dir='鋭角左';
         if(dir){
-          _pushTurnPoint(step.start_location.lat(),step.start_location.lng(),dir);
+          var plain=html.replace(/<[^>]*>/g,'');
+          var prefix=plain.indexOf('信号')>=0?'信号機を':plain.indexOf('交差点')>=0?'交差点を':'';
+          _pushTurnPoint(step.start_location.lat(),step.start_location.lng(),dir,prefix);
         }
       }
     });
   });
+  _extractStraightsFromGoogle(result);
+  _fetchSignalsForRoute();
 }
 // === NASルート検索（Directions APIキャッシュ付き）===
 function _nasRoute(origin,dest,waypoints,avoid,cb){
@@ -829,11 +910,16 @@ function _nasDrawRoute(d,noHwy){
         else if(step.maneuver==='turn-sharp-right')dir='鋭角右';
         else if(step.maneuver==='turn-sharp-left')dir='鋭角左';
         if(dir&&step.start_location){
-          _pushTurnPoint(step.start_location.lat,step.start_location.lng,dir);
+          var html=step.html_instructions||'';
+          var plain=html.replace(/<[^>]*>/g,'');
+          var prefix=plain.indexOf('信号')>=0?'信号機を':plain.indexOf('交差点')>=0?'交差点を':'';
+          _pushTurnPoint(step.start_location.lat,step.start_location.lng,dir,prefix);
         }
       }
     });
   });
+  _extractStraightsFromNas(d);
+  _fetchSignalsForRoute();
 }
 // === 分岐車線案内：解析・事前生成・ローカル保存 ===
 // step.maneuver や html_instructions から分岐情報を抽出
@@ -2958,9 +3044,11 @@ function _showTurnArrow(dir,urgent){
   setTimeout(function(){if(el.parentNode){el.style.transition='opacity 0.5s';el.style.opacity='0';setTimeout(function(){el.remove();var h=document.getElementById('hdr-area');if(h)h.style.visibility='visible';},500);}},urgent?8000:6000);
 }
 var _turnVoiceKeys={'右':'right','左':'left','斜め右':'sright','斜め左':'sleft','鋭角右':'right','鋭角左':'left','Uターン':'left'};
-function _playTurnVoice(dir,urgent){
+function _playTurnVoice(dir,urgent,prefix){
   // spk()キュー経由にして他音声に横入りせず順番に再生
-  spk(urgent?'まもなく'+dir+'なのだ！':'200メートル先、'+dir+'なのだ。');
+  // prefix='信号機を'/'交差点を' があれば付加（NAS動的生成にフォールスルー）
+  var p=prefix||'';
+  spk(urgent?'まもなく'+p+dir+'なのだ！':'200メートル先、'+p+dir+'なのだ。');
 }
 function checkTurns(){
   if(!gLat||_turnPoints.length===0)return;
@@ -2970,17 +3058,33 @@ function checkTurns(){
     var d=dK(gLat,gLng,tp.lat,tp.lng)*1000;// メートル
     if(d<=550&&d>250&&!tp.announced500){
       tp.announced500=true;
-      spk('500メートル先、'+tp.dir+'なのだ。');
+      spk('500メートル先、'+(tp.prefix||'')+tp.dir+'なのだ。');
     } else if(d<=250&&d>100&&!tp.announced200){
       tp.announced200=true;
-      _playTurnVoice(tp.dir,false);// 「200メートル先」音声(実際は100-250m範囲)
+      _playTurnVoice(tp.dir,false,tp.prefix);
     } else if(d<=100&&!tp.announced50){
       tp.announced50=true;
-      _playTurnVoice(tp.dir,true);// 「まもなく」音声(100m以内)
+      _playTurnVoice(tp.dir,true,tp.prefix);
     }
     // 通過後リセット（800m以上離れたら再利用可能に）
     if(d>800&&(tp.announced500||tp.announced200||tp.announced50)){
       tp.announced500=false;tp.announced200=false;tp.announced50=false;
+    }
+  }
+}
+// === 直進区間案内 ===
+// 直進開始点に150m以内入ったら「○km直進なのだ」アナウンス（区間ごとに1回）
+function checkStraights(){
+  if(!gLat||!_straightSegments||_straightSegments.length===0)return;
+  if(zoomMode!==0)return;
+  for(var i=0;i<_straightSegments.length;i++){
+    var s=_straightSegments[i];
+    if(s.announced)continue;
+    var d=dK(gLat,gLng,s.lat,s.lng)*1000;
+    if(d<150){
+      s.announced=true;
+      var km=s.distKm>=10?Math.round(s.distKm):s.distKm.toFixed(1);
+      spk('およそ'+km+'キロ直進なのだ。');
     }
   }
 }
@@ -3291,6 +3395,7 @@ function onGpsUpdate(p,announce_it){
   moveMarker(gLat,gLng);
   checkOrbis();
   checkTurns();
+  checkStraights();
   checkExit();
   checkDistAnnounce();
   checkFuel();
