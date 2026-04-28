@@ -2974,6 +2974,42 @@ function checkTurns(){
     }
   }
 }
+// 高速出口IC案内: 現在向かっているストップが「⬇️ 〇〇IC」かつ高速走行中なら
+// 3km / 1km / 500m / 200m の4段階で音声告知
+var _exitAnn={key:null,a3000:false,a1000:false,a500:false,a200:false};
+function checkExit(){
+  if(!gLat)return;
+  var st=STOPS[cDay];if(!st)return;
+  var ni=fN(st);if(!ni||ni.i==null)return;
+  var s=st[ni.i];if(!s||!s.name)return;
+  // ⬇️で始まる出口ICのみ対象
+  if(s.name.indexOf('⬇️')!==0||s.name.indexOf('IC')<0)return;
+  // 出口手前は高速走行中（noHwy=false）が前提
+  if(s.noHwy)return;
+  var d=dK(gLat,gLng,s.lat,s.lng)*1000;// メートル
+  var key=cDay+':'+ni.i;
+  if(_exitAnn.key!==key){
+    _exitAnn={key:key,a3000:false,a1000:false,a500:false,a200:false};
+  }
+  // 通過後リセット（800m以内→離脱）
+  if(d>5000&&(_exitAnn.a3000||_exitAnn.a1000||_exitAnn.a500||_exitAnn.a200)){
+    _exitAnn={key:key,a3000:false,a1000:false,a500:false,a200:false};
+  }
+  var icName=s.name.replace(/^⬇️\s*/,'');
+  if(d<=3200&&d>2000&&!_exitAnn.a3000){
+    _exitAnn.a3000=true;
+    spk('およそ3キロ先、'+icName+'で降りるのだ。',true);
+  } else if(d<=1100&&d>700&&!_exitAnn.a1000){
+    _exitAnn.a1000=true;
+    spk('およそ1キロ先、'+icName+'で降りるのだ。',true);
+  } else if(d<=600&&d>300&&!_exitAnn.a500){
+    _exitAnn.a500=true;
+    spk('500メートル先、'+icName+'で降りるのだ。',true);
+  } else if(d<=220&&!_exitAnn.a200){
+    _exitAnn.a200=true;
+    spk('まもなく出口なのだ！'+icName+'で降りるのだ！',true);
+  }
+}
 function checkOrbis(){
   if(!gLat)return;
   for(let i=0;i<ORBIS.length;i++){
@@ -3245,6 +3281,7 @@ function onGpsUpdate(p,announce_it){
   moveMarker(gLat,gLng);
   checkOrbis();
   checkTurns();
+  checkExit();
   checkDistAnnounce();
   checkFuel();
   checkRest();
