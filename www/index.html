@@ -3688,7 +3688,6 @@ if(_hdrMode===0&&(cDay==='day1'||cDay==='day2')){
         ${(cDay==='day1'||cDay==='day2')?_db('day1','23')+_db('day2','24'):''}
         ${_zb(0,'🔍')}${_zb(1,'📍')}${_zb(2,'🗺️')}
         <button onclick="toggleRain();event.stopPropagation();" style="${_bs}background:${_rainOn?'var(--ac)':'none'};border-color:${_rainOn?'var(--ac)':'var(--bdr)'};color:${_rainOn?'#000':'var(--txt)'};">☔</button>
-        <button onclick="toggleGas();event.stopPropagation();" style="${_bs}background:${_gasOn?'var(--ylw)':'none'};border-color:${_gasOn?'var(--ylw)':'var(--bdr)'};color:${_gasOn?'#000':'var(--txt)'};">⛽</button>
         <button onclick="toggleSSTR2026();event.stopPropagation();" style="${_bs}background:${_sstr2026Show?'#2196f3':'none'};border-color:#2196f3;color:${_sstr2026Show?'#fff':'#2196f3'};">🗾</button>
         ${cDay==='day1'?'<button onclick="emergGoal();event.stopPropagation();" style="'+_bs+'color:var(--red);border-color:var(--red);">🚨</button>':''}
       </div>`;
