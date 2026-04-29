@@ -1281,7 +1281,7 @@ function initMap(){
   _apiMaps++;
   _nf(NAS_API+'/api/usage/increment',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"maps":1}',signal:AbortSignal.timeout(5000)}).catch(function(){});
   map=new google.maps.Map(document.getElementById('map'),{
-    center:{lat:35.69,lng:139.84},zoom:16,maxZoom:22,
+    center:{lat:35.69,lng:139.84},zoom:16,maxZoom:25,
     mapId:nightMode?MAP_ID_NIGHT:MAP_ID_DAY,// ベクターマップ（setHeading対応・昼夜切替）
     isFractionalZoomEnabled:true,
     disableDefaultUI:true,zoomControl:true,
@@ -1394,7 +1394,7 @@ function applyZoomMode(){
   const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
     // 最大ズーム・現在地中心・ヘディングアップ・3D傾斜
-    map.setZoom(20);map.panTo({lat:gLat,lng:gLng});
+    map.setZoom(25);map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
     map.setTilt(67.5);
   } else if(zoomMode===1){
