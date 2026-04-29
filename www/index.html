@@ -1318,13 +1318,8 @@ function updateMap(lat,lng,stops,nI){
   // Rebuild when nearest stop changes
   if(nI!==lastRouteNI){
     lastRouteNI=nI;
-    // Auto-zoom on stop change based on distance (ストリートモード時のみ。全体/3ストップ先表示を破壊しない)
-    if(zoomMode===0){
-      const tDist=dK(lat,lng,tS.lat,tS.lng);
-      let zoom=18;
-      if(tDist>50)zoom=13;else if(tDist>30)zoom=14;else if(tDist>15)zoom=15;else if(tDist>5)zoom=16;else if(tDist>1)zoom=17;else if(tDist>0.3)zoom=18;
-      map.setZoom(zoom);
-    }
+    // ストリートモード(zoomMode=0)はapplyZoomModeのsetZoom(25)を尊重して上書きしない
+    // (旧: 距離ベースで13-18に強制ダウンしていたが、ユーザー要望でzoom最大化のため削除)
     if(mTgt){mTgt.setMap(null);}
     mStops.forEach(m=>m.setMap(null));mStops=[];
     mPolylines.forEach(p=>{if(p.setMap)p.setMap(null);});mPolylines=[];
