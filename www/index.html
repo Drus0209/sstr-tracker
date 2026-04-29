@@ -137,14 +137,14 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
   <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,6,12,0.0) 0%,rgba(6,6,12,0.15) 50%,rgba(6,6,12,0.7) 100%);"></div>
   <div style="position:absolute;top:14px;left:14px;z-index:2;cursor:pointer;display:flex;align-items:center;gap:8px;" onclick="if(!window._atc)window._atc=0;window._atc++;clearTimeout(window._att);window._att=setTimeout(()=>{window._atc=0;},2000);if(window._atc>=5){window._atc=0;_isAdmin=!_isAdmin;localStorage.setItem('_isAdmin',_isAdmin?'1':'0');_showCards();}" >
     <img src="Touringtracker_transparent.png" style="height:80px;display:block;" alt="ツーリングトラッカー" onerror="this.outerHTML='<div style=\'font-family:Outfit;font-size:14px;font-weight:900;color:#00d4ff;letter-spacing:1px;\'>TOURING TRACKER</div>'">
-    <span id="splashVerLabel" style="font-family:'Outfit';font-size:18px;color:#ff0000;background:#ffff00;padding:4px 8px;letter-spacing:1px;align-self:flex-end;margin-bottom:6px;font-weight:900;">★NEW★ v1.0.27</span>
+    <span id="splashVerLabel" style="font-family:'Outfit';font-size:11px;color:rgba(255,255,255,0.65);letter-spacing:1px;align-self:flex-end;margin-bottom:6px;">v1.0.27</span>
   </div>
   <div style="position:absolute;top:20px;right:20px;z-index:2;text-align:right;"><div id="apiCntSplash"></div><button id="splashAccountBtn" onclick="_showAccount()" style="background:rgba(0,212,255,0.15);border:1px solid var(--ac);border-radius:8px;padding:6px 12px;color:var(--ac);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:6px;">👤 アカウント</button><div id="adminExitBtn" style="display:none;"><button onclick="_isAdmin=false;localStorage.setItem('_isAdmin','0');_showCards();document.getElementById('adminExitBtn').style.display='none';" style="background:rgba(255,68,68,0.15);border:1px solid var(--red);border-radius:8px;padding:6px 12px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;">🔓 管理者解除</button></div></div>
   <div id="cardContainer" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;max-width:360px;margin-top:-170px;">
     <div style="width:100%;display:flex;flex-direction:column;gap:12px;">
       <div id="riderNameBox" style="background:rgba(20,30,50,0.85);border:2px solid var(--org);border-radius:16px;padding:18px 20px;text-align:center;">
-        <div style="font-size:14px;color:var(--txt);font-weight:700;margin-bottom:10px;">ライダー名を入力（ひらがな）</div>
-        <input id="riderNameInput" type="text" placeholder="ひらがな(20文字まで)" value="" maxlength="20" oncompositionend="this.value=this.value.replace(/[^\u3040-\u309F\u30FC]/g,'');" onblur="this.value=this.value.replace(/[^\u3040-\u309F\u30FC]/g,'');" style="background:rgba(255,255,255,0.15);border:2px solid var(--org);border-radius:12px;padding:14px 20px;color:#fff;font-size:18px;font-weight:700;font-family:inherit;width:100%;max-width:280px;text-align:center;outline:none;box-sizing:border-box;">
+        <div style="font-size:14px;color:var(--txt);font-weight:700;margin-bottom:10px;">ライダー名を入力（ひらがな・数字）</div>
+        <input id="riderNameInput" type="text" placeholder="ひらがな(20文字まで)" value="" maxlength="20" oncompositionend="this.value=this.value.replace(/[^\u3040-\u309F\u30FC0-9\uFF10-\uFF19]/g,'');" onblur="this.value=this.value.replace(/[^\u3040-\u309F\u30FC0-9\uFF10-\uFF19]/g,'');" style="background:rgba(255,255,255,0.15);border:2px solid var(--org);border-radius:12px;padding:14px 20px;color:#fff;font-size:18px;font-weight:700;font-family:inherit;width:100%;max-width:280px;text-align:center;outline:none;box-sizing:border-box;">
         <button onclick="_onNameOk()" style="display:block;margin:12px auto 0;background:var(--org);border:none;border-radius:10px;padding:12px 40px;color:#000;font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;">OK</button>
       </div>
 
@@ -1905,7 +1905,7 @@ function _checkAppVersion(){
         window._updateLaterChain=function(){
           var n=document.getElementById('updateNotice');if(n)n.remove();
           if(_myName){
-            spk(_myName+'さん、おかえりなのだ！',true,function(){
+            spk(_voiceName()+'さん、おかえりなのだ！',true,function(){
               if(typeof _playPlanSelect==='function')_playPlanSelect();
             });
           } else if(typeof _playPlanSelect==='function'){
@@ -2064,15 +2064,15 @@ function playEngineSound(onDone){
 function _onNameOk(){
   var inp=document.getElementById('riderNameInput');
   // ひらがな以外を除去・空白圧縮
-  inp.value=inp.value.replace(/[^\u3040-\u309F\u30FC]/g,'');
+  inp.value=inp.value.replace(/[^\u3040-\u309F\u30FC0-9\uFF10-\uFF19]/g,'');
   var v=inp.value.trim();
   if(!v){
     inp.blur();
     setTimeout(function(){
-      var v2=inp.value.replace(/[^\u3040-\u309F\u30FC]/g,'').trim();
+      var v2=inp.value.replace(/[^\u3040-\u309F\u30FC0-9\uFF10-\uFF19]/g,'').trim();
       inp.value=v2;
       if(v2)_onNameOk2(v2);
-      else alert('ひらがなで名前を入力してください');
+      else alert('ひらがなまたは数字で名前を入力してください');
     },300);
     return;
   }
@@ -2083,14 +2083,23 @@ function _onNameOk2(v){
   _stopAllAudio();
   if(window._splashAudio){window._splashAudio.pause();window._splashAudio=null;}
   if(appBgm&&!_bgmFading)appBgm.volume=0.15;
-  _myName=v;localStorage.setItem('_riderName',v);_saveToNas();
-  document.getElementById('riderNameBox').style.display='none';
-  _genWelcomeVoice(v);
-  // エンジン音再生 → 終了後にGPSフロー
-  if(appBgm)appBgm.volume=0.03;
-  playEngineSound(function(){
-    if(appBgm&&!_bgmFading)appBgm.volume=0.15;
-    _firstTimeGps();
+  // 重複名チェック（NAS経由）
+  _checkNameDuplicate(v,function(isDup){
+    if(isDup){
+      alert('この名前は既に他のライダーが使用中です。別の名前を入力してください。');
+      var inp=document.getElementById('riderNameInput');
+      if(inp){inp.value='';inp.focus();}
+      return;
+    }
+    _myName=v;localStorage.setItem('_riderName',v);_saveToNas();
+    document.getElementById('riderNameBox').style.display='none';
+    _genWelcomeVoice(v);
+    // エンジン音再生 → 終了後にGPSフロー
+    if(appBgm)appBgm.volume=0.03;
+    playEngineSound(function(){
+      if(appBgm&&!_bgmFading)appBgm.volume=0.15;
+      _firstTimeGps();
+    });
   });
 }
 
@@ -2134,7 +2143,7 @@ function _startGps(gpsBox,_dotInterval){
             gpsBox.remove();
             if(appBgm)appBgm.volume=0.1;
             _zundaShow(_myName+'さん、ツーリングプランを選択してほしいのだ！');
-            function _paFallback(){spk(_myName+'さん、ツーリングプランを選択してほしいのだ！',true,function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);});}
+            function _paFallback(){spk(_voiceName()+'さん、ツーリングプランを選択してほしいのだ！',true,function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;setTimeout(_zundaHide,1500);});}
             if(window.Capacitor){
               // Android: Audio要素で再生
               var pa=new Audio(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)));
@@ -2186,6 +2195,21 @@ function _genWelcomeVoice(name){
 
 // === NASユーザーデータ管理 ===
 var _myName=localStorage.getItem('_riderName')||'';
+// 音声合成用に名前の数字をひらがな読みに変換
+function _digitsToHiragana(s){
+  var map={'0':'ぜろ','1':'いち','2':'に','3':'さん','4':'よん','5':'ご','6':'ろく','7':'なな','8':'はち','9':'きゅう','０':'ぜろ','１':'いち','２':'に','３':'さん','４':'よん','５':'ご','６':'ろく','７':'なな','８':'はち','９':'きゅう'};
+  return (s||'').replace(/[0-9０-９]/g,function(c){return map[c]||c;});
+}
+function _voiceName(){return _digitsToHiragana(_myName);}
+// 名前の重複チェック（NAS API /api/users で全ライダー取得→ヒットしたら true）
+function _checkNameDuplicate(name,cb){
+  _nf(NAS_API+'/api/users',{signal:AbortSignal.timeout(5000)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var users=(d&&d.users)||[];
+      cb(users.some(function(u){return u.name===name&&u.name!==_myName;}));
+    }).catch(function(){cb(false);});// 取得失敗時は通す
+}
 var _nasPlansCache=null;// NASから取得したプラン（null=未取得）
 function _saveToNas(){
   if(!_myName)return;
@@ -2339,12 +2363,12 @@ function _showSettings(){
       <div style="font-size:12px;color:var(--org);font-weight:700;margin-bottom:4px;">👥 フレンド</div>
       <div id="friendsList" style="font-size:13px;color:var(--txt);margin-bottom:8px;">読み込み中...</div>
       <div style="display:flex;gap:6px;">
-        <input id="addFriendName" type="text" placeholder="フレンド名（ひらがな）" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid var(--org);border-radius:8px;padding:8px;color:#fff;font-size:13px;font-family:inherit;">
+        <input id="addFriendName" type="text" placeholder="フレンド名（ひらがな・数字）" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid var(--org);border-radius:8px;padding:8px;color:#fff;font-size:13px;font-family:inherit;">
         <button onclick="_addFriend()" style="background:var(--org);border:none;border-radius:8px;padding:8px 14px;color:#000;font-size:12px;font-weight:700;cursor:pointer;">追加</button>
       </div>
     </div>
     <div style="display:flex;gap:8px;">
-      <button onclick="var el=document.getElementById('settingsName');var n=el.value.replace(/[^\u3040-\u309F\u30FC]/g,'').trim();if(!n){alert('ひらがなで名前を入力してください');return;}el.value=n;_myName=n;localStorage.setItem('_riderName',n);_genWelcomeVoice(n);document.getElementById('settingsPanel').remove();rnd();" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:10px;color:#000;font-size:14px;font-weight:800;cursor:pointer;">保存</button>
+      <button onclick="var el=document.getElementById('settingsName');var n=el.value.replace(/[^\u3040-\u309F\u30FC0-9\uFF10-\uFF19]/g,'').trim();if(!n){alert('ひらがなまたは数字で名前を入力してください');return;}el.value=n;_myName=n;localStorage.setItem('_riderName',n);_genWelcomeVoice(n);document.getElementById('settingsPanel').remove();rnd();" style="flex:1;background:var(--ac);border:none;border-radius:8px;padding:10px;color:#000;font-size:14px;font-weight:800;cursor:pointer;">保存</button>
       <button onclick="document.getElementById('settingsPanel').remove();" style="flex:1;background:none;border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--txt);font-size:14px;cursor:pointer;">閉じる</button>
     </div>
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);">
@@ -4636,7 +4660,7 @@ function _startSplashAudio(){
     if(_myName&&!_isAdmin){
       function _playPlanSelect(){
         _zundaShow(_myName+'さん、ツーリングプランを選ぶのだ！');
-        function _psFallback(){spk(_myName+'さん、ツーリングプランを選ぶのだ！',true,function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();});}
+        function _psFallback(){spk(_voiceName()+'さん、ツーリングプランを選ぶのだ！',true,function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();});}
         var _planWav=new Audio(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)));
         _setCurrentAudio(_planWav);// _stopAllAudioで止められるよう登録
         _planWav.volume=1.0;_planWav.playbackRate=_voiceSpeed;
@@ -4656,11 +4680,11 @@ function _startSplashAudio(){
           _welcomeWav.onended=function(){if(_currentAudio===_welcomeWav){_currentAudio=null;_playPlanSelect();}};
           _welcomeWav.onerror=function(){
             if(_currentAudio!==_welcomeWav)return;
-            spk(_myName+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});
+            spk(_voiceName()+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});
           };
           _welcomeWav.play().catch(function(){
             if(_currentAudio!==_welcomeWav)return;
-            spk(_myName+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});
+            spk(_voiceName()+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});
           });
         } else if(!window._updateNoticeShown){
           // 戻ってきた時: プラン選択のみ
@@ -4781,9 +4805,10 @@ function _showCards(){
   }
   var d=show?'block':'none';
   var isAPK=!!window.Capacitor;
-  var dApk=(show&&isAPK)?'block':'none';
-  var cs=document.getElementById('cardSstr');if(cs)cs.style.display=dApk;
-  var cn1=document.getElementById('cardNippon1');if(cn1)cn1.style.display=dApk;
+  // SSTR/にっぽん応援カードは「てつにん」専用端末のみ表示（APK限定 × 名前一致）
+  var dOwner=(show&&isAPK&&_myName==='てつにん')?'block':'none';
+  var cs=document.getElementById('cardSstr');if(cs)cs.style.display=dOwner;
+  var cn1=document.getElementById('cardNippon1');if(cn1)cn1.style.display=dOwner;
   var cc=document.getElementById('cardCreate');if(cc)cc.style.display=d;
   // 保存済みカスタムプラン表示
   var cpContainer=document.getElementById('customPlanCards');
