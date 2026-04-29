@@ -5,10 +5,21 @@ sstr-tracker.apk
 *.apk
 .claude/
 
-# ローカル作業用スクリプト
+# ローカル作業用スクリプト・検証用一時ファイル
 _*.py
 _*.ps1
 _*.bat
+_*.js
+_*.png
+
+# 音声・画像比較用の一時出力
+*_compare.png
+*_compare.wav
+compare_*.wav
+nas_voice.wav
+
+# 原本素材（透過版がwww側で使用中）
+www/Touringtracker.png
 
 # OCI secrets
 oci/.env
