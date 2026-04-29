@@ -1840,7 +1840,7 @@ function _checkAppVersion(){
         sessionStorage.setItem('_saidOkaeri','1');
         _finish();
         var btn=isAndroid
-          ?'<a href="'+apkUrl+'" style="display:inline-block;padding:14px 28px;background:#ff9100;color:#000;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;">APKをダウンロード</a>'
+          ?'<button onclick="_doUpdateDownload(\''+apkUrl+'\')" style="padding:14px 28px;background:#ff9100;color:#000;border:none;border-radius:8px;font-weight:bold;font-size:16px;cursor:pointer;">📥 APKをダウンロード</button>'
           :'<button onclick="location.reload(true)" style="padding:14px 28px;background:#ff9100;color:#000;border:none;border-radius:8px;font-weight:bold;font-size:16px;cursor:pointer;">再読込して更新</button>';
         var html='<div style="position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#fff;padding:20px;">'
           +'<div style="max-width:400px;text-align:center;">'
