@@ -1375,7 +1375,7 @@ function updateMap(lat,lng,stops,nI){
   if(zoomMode===0){
     var _hdU=_stableHeading();
     var _baseLat=_snap?_snap.lat:lat,_baseLng=_snap?_snap.lng:lng;
-    var _aheadU=_offsetForward(_baseLat,_baseLng,_hdU,200);
+    var _aheadU=_offsetForward(_baseLat,_baseLng,_hdU,2000);
     map.panTo(_aheadU);
     map.setHeading(_hdU);
     map.setTilt(67.5);
@@ -1412,7 +1412,7 @@ function applyZoomMode(){
   if(zoomMode===0){
     // 自分は画面下、進行方向広く（_offsetForwardで前方60m地点を中央に）
     var _hd=_stableHeading();
-    var _ahead=_offsetForward(gLat,gLng,_hd,200);
+    var _ahead=_offsetForward(gLat,gLng,_hd,2000);
     map.setZoom(22);
     map.panTo(_ahead);
     map.setHeading(_hd);
@@ -3428,7 +3428,7 @@ function moveMarker(lat,lng){
   if(map&&zoomMode===0){
     // 進行方向60m先を画面中央に → 自分は画面下に
     var _hdM=_stableHeading();
-    var _aheadM=_offsetForward(dLat,dLng,_hdM,200);
+    var _aheadM=_offsetForward(dLat,dLng,_hdM,2000);
     map.panTo(_aheadM);
     map.setHeading(_hdM);
   } else if(map){
