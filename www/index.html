@@ -1204,6 +1204,8 @@ fetch('sstr2026_spots.json',{cache:'no-store'}).then(r=>r.json()).then(d=>{
   if(_sstr2026Show)drawSSTR2026Markers();
 }).catch(()=>{});
 let nightMode=false;
+const MAP_ID_DAY='2e05890c66eed0edd93b1b2d';
+const MAP_ID_NIGHT='2e05890c66eed0edb0893ed8';
 const mapStyles={
   day:[{featureType:'poi',stylers:[{visibility:'off'}]}],
   night:[
@@ -1222,14 +1224,14 @@ const mapStyles={
     {featureType:'transit',stylers:[{visibility:'off'}]},
   ]
 };
-function toggleNight(){nightMode=!nightMode;if(map)map.setOptions({styles:mapStyles[nightMode?'night':'day']});rnd();}
+function toggleNight(){nightMode=!nightMode;if(map){map.setMapId(nightMode?MAP_ID_NIGHT:MAP_ID_DAY);applyZoomMode();}rnd();}
 function initMap(){
   if(map)return;
   _apiMaps++;
   _nf(NAS_API+'/api/usage/increment',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"maps":1}',signal:AbortSignal.timeout(5000)}).catch(function(){});
   map=new google.maps.Map(document.getElementById('map'),{
     center:{lat:35.69,lng:139.84},zoom:16,maxZoom:22,
-    mapId:'2e05890c66eed0edd93b1b2d',// ベクターマップ（setHeading対応）
+    mapId:nightMode?MAP_ID_NIGHT:MAP_ID_DAY,// ベクターマップ（setHeading対応・昼夜切替）
     isFractionalZoomEnabled:true,
     disableDefaultUI:true,zoomControl:true,
     styles:mapStyles[nightMode?'night':'day']
