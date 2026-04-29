@@ -1371,14 +1371,15 @@ function updateMap(lat,lng,stops,nI){
     if(typeof mVisits!=='undefined'&&mVisits.length===0)drawVisitMarkers();
     if(_sstr2026Show&&mSSTR2026.length===0)drawSSTR2026Markers();
   }
-  // ストリートモード：自分を画面下に・進行方向を広く
+  // ストリートモード：自分を画面下35%・進行方向を広く（画面ピクセル基準）
   if(zoomMode===0){
     var _hdU=_stableHeading();
     var _baseLat=_snap?_snap.lat:lat,_baseLng=_snap?_snap.lng:lng;
-    var _aheadU=_offsetForward(_baseLat,_baseLng,_hdU,2000);
-    map.panTo(_aheadU);
+    map.panTo({lat:_baseLat,lng:_baseLng});
     map.setHeading(_hdU);
     map.setTilt(67.5);
+    var _mhU=document.getElementById('map').offsetHeight;
+    if(_mhU>0)map.panBy(0,-_mhU*0.35);
   } else {map.setHeading(0);map.setTilt(0);}
 }
 
@@ -1410,13 +1411,14 @@ function applyZoomMode(){
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
-    // 自分は画面下、進行方向広く（_offsetForwardで前方60m地点を中央に）
+    // 自分を画面下35%位置に配置（画面ピクセル基準・zoom/tilt変化に依存しない）
     var _hd=_stableHeading();
-    var _ahead=_offsetForward(gLat,gLng,_hd,2000);
     map.setZoom(22);
-    map.panTo(_ahead);
+    map.panTo({lat:gLat,lng:gLng});
     map.setHeading(_hd);
     map.setTilt(67.5);
+    var _mh=document.getElementById('map').offsetHeight;
+    if(_mh>0)map.panBy(0,-_mh*0.35);
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     var _zEl1=document.getElementById('map');if(_zEl1)_zEl1.style.transform='';
@@ -3426,11 +3428,12 @@ function moveMarker(lat,lng){
     // ヘディングアップなので矢印は常に上向き固定（地図側が回転）
   }
   if(map&&zoomMode===0){
-    // 進行方向60m先を画面中央に → 自分は画面下に
+    // panTo→setHeading→panBy で自分を画面下35%に配置
     var _hdM=_stableHeading();
-    var _aheadM=_offsetForward(dLat,dLng,_hdM,2000);
-    map.panTo(_aheadM);
+    map.panTo({lat:dLat,lng:dLng});
     map.setHeading(_hdM);
+    var _mhM=document.getElementById('map').offsetHeight;
+    if(_mhM>0)map.panBy(0,-_mhM*0.35);
   } else if(map){
     map.setHeading(0);
   }
