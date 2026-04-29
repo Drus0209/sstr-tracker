@@ -3425,10 +3425,14 @@ function moveMarker(lat,lng){
     mMe.setPosition({lat:dLat,lng:dLng});
     // ヘディングアップなので矢印は常に上向き固定（地図側が回転）
   }
-  if(map&&zoomMode===0)map.panTo({lat:dLat,lng:dLng});
-  if(map){
-    if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);}
-    else map.setHeading(0);
+  if(map&&zoomMode===0){
+    // 進行方向60m先を画面中央に → 自分は画面下に
+    var _hdM=_stableHeading();
+    var _aheadM=_offsetForward(dLat,dLng,_hdM,60);
+    map.panTo(_aheadM);
+    map.setHeading(_hdM);
+  } else if(map){
+    map.setHeading(0);
   }
 }
 
