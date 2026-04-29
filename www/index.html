@@ -496,7 +496,7 @@ for(var _n2=1;_n2<=7;_n2++)if(STOPS['nippon2_'+_n2])_autoNoHwy(STOPS['nippon2_'+
 
 function pT(t){if(!t||!t.includes(':'))return 0;const[h,m]=t.split(':').map(Number);return(isNaN(h)?0:h)*60+(isNaN(m)?0:m);}
 // 24+時間形式を「翌HH:MM」表示に整形（nippon1_1のような深夜跨ぎ用）
-function _fmtTime(t){if(!t||!t.includes(':'))return t||'';var p=t.split(':');var h=parseInt(p[0],10);if(isNaN(h)||h<24)return t;return '翌'+('0'+(h-24)).slice(-2)+':'+p[1];}
+function _fmtTime(t){if(!t||!t.includes(':'))return t||'';var p=t.split(':');var h=parseInt(p[0],10);if(isNaN(h))return t;if(h<24)return h+':'+p[1];return '翌'+(h-24)+':'+p[1];}
 // Check if today is the actual rally day for the selected day
 function isRallyDay(){
   if(cDay==='custom')return true;
@@ -2516,7 +2516,7 @@ function _generateAIPlan(){
           +'<div style="width:24px;text-align:center;font-weight:900;color:var(--ac);">'+(i+1)+'</div>'
           +'<div style="flex:1;">'
           +'<div style="font-weight:700;color:#fff;font-size:14px;">'+s.name+(s.area?' <span style="color:var(--sub);font-size:11px;">('+s.area+')</span>':'')+'</div>'
-          +'<div style="font-size:11px;color:var(--sub);margin-top:2px;">⏱ '+(s.time||'')+(s.dur_min?' ・ '+s.dur_min+'分滞在':'')+'</div>'
+          +'<div style="font-size:11px;color:var(--sub);margin-top:2px;">⏱ '+_fmtTime(s.time||'')+(s.dur_min?' ・ '+s.dur_min+'分滞在':'')+'</div>'
           +(s.memo?'<div style="font-size:12px;color:var(--txt);margin-top:4px;">'+s.memo+'</div>':'')
           +'</div></div>';
       }).join('')
@@ -3835,7 +3835,7 @@ if(_hdrMode===0&&(cDay==='day1'||cDay==='day2')){
     document.getElementById('mapWrap').style.display='none';
     const tc2={move:'dv',michi:'dm',noto:'dn',goal:'dg',qk:'dq',gs:'ds',other:'do'};
     let fl=`<div style="padding:0 10px 20px;">`;
-    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';fl+=`<div class="fi ${c}"><div class="dot ${tc2[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}${(cDay.startsWith('nippon1_')||cDay.startsWith('nippon2_'))?'':'<span class="tm">'+s.time+'</span>'}</div>`;});
+    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';fl+=`<div class="fi ${c}"><div class="dot ${tc2[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}${(cDay.startsWith('nippon1_')||cDay.startsWith('nippon2_'))?'':'<span class="tm">'+_fmtTime(s.time)+'</span>'}</div>`;});
     fl+=`</div>`;
     document.getElementById('btm').innerHTML=fl;
     return;
@@ -3917,7 +3917,7 @@ if(_hdrMode===0&&(cDay==='day1'||cDay==='day2')){
     <div id="bi" style="display:${bgm?'block':'none'};text-align:center;font-size:11px;color:var(--pk);padding:2px;"></div>
     ${(cDay==='day1'||cDay==='day2')?'<div class="dtabs"><div class="dtab '+(cDay==='day1'?'act':'')+'" onclick="cDay=\'day1\';rnd();">Day1 (5/23)</div><div class="dtab '+(cDay==='day2'?'act':'')+'" onclick="cDay=\'day2\';rnd();">Day2 (5/24)</div></div>':''}`;
     b+=`<div class="fl ${sFl?'show':''}"><div class="fh">📋 全ストップ</div>`;
-    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';b+=`<div class="fi ${c}"><div class="dot ${tc[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}${(cDay.startsWith('nippon1_')||cDay.startsWith('nippon2_'))?'':'<span class="tm">'+s.time+'</span>'}</div>`;});
+    st.forEach((s,i)=>{let c=gLat?(i<nI?'pst':i===nI?'cur':''):'';b+=`<div class="fi ${c}"><div class="dot ${tc[s.type]||'dv'}"></div><span class="nm">${s.name}</span>${s.pt?'<span class="pt">+'+s.pt+'</span>':''}${(cDay.startsWith('nippon1_')||cDay.startsWith('nippon2_'))?'':'<span class="tm">'+_fmtTime(s.time)+'</span>'}</div>`;});
     b+=`</div>`;
   } else {
     // 地図タブ
