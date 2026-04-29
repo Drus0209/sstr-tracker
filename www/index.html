@@ -1371,11 +1371,11 @@ function updateMap(lat,lng,stops,nI){
     if(typeof mVisits!=='undefined'&&mVisits.length===0)drawVisitMarkers();
     if(_sstr2026Show&&mSSTR2026.length===0)drawSSTR2026Markers();
   }
-  // ストリートモード：自分を画面下35%・進行方向を広く（画面ピクセル基準）
+  // ストリートモード：自分を画面下35%・進行方向を広く（setCenter即時→panBy）
   if(zoomMode===0){
     var _hdU=_stableHeading();
     var _baseLat=_snap?_snap.lat:lat,_baseLng=_snap?_snap.lng:lng;
-    map.panTo({lat:_baseLat,lng:_baseLng});
+    map.setCenter({lat:_baseLat,lng:_baseLng});
     map.setHeading(_hdU);
     map.setTilt(67.5);
     var _mhU=document.getElementById('map').offsetHeight;
@@ -1411,10 +1411,10 @@ function applyZoomMode(){
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
-    // 自分を画面下35%位置に配置（画面ピクセル基準・zoom/tilt変化に依存しない）
+    // 自分を画面下35%位置に配置（setCenter即時→panBy で確実に効かせる）
     var _hd=_stableHeading();
     map.setZoom(25);
-    map.panTo({lat:gLat,lng:gLng});
+    map.setCenter({lat:gLat,lng:gLng});
     map.setHeading(_hd);
     map.setTilt(67.5);
     var _mh=document.getElementById('map').offsetHeight;
@@ -3428,9 +3428,9 @@ function moveMarker(lat,lng){
     // ヘディングアップなので矢印は常に上向き固定（地図側が回転）
   }
   if(map&&zoomMode===0){
-    // panTo→setHeading→panBy で自分を画面下35%に配置
+    // setCenter即時→setHeading→panBy で自分を画面下35%に配置
     var _hdM=_stableHeading();
-    map.panTo({lat:dLat,lng:dLng});
+    map.setCenter({lat:dLat,lng:dLng});
     map.setHeading(_hdM);
     var _mhM=document.getElementById('map').offsetHeight;
     if(_mhM>0)map.panBy(0,-_mhM*0.35);
