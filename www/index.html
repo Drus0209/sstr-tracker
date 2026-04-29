@@ -868,7 +868,7 @@ function _drawRoute(result){
       var col=hwy?'#FF9800':'#2196f3';
       var path=step.path||(step.lat_lngs);
       if(path&&path.length>1){
-        var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
+        var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?12:8,strokeOpacity:0.85});
         mPolylines.push(pl);
       }
       if(step.maneuver){
@@ -913,7 +913,7 @@ function _nasDrawRoute(d,noHwy){
     var path=_decodePoly(route.overview_polyline?route.overview_polyline.points:'');
     if(path.length>1){
       var col=noHwy?'#2196f3':'#FF9800';
-      var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
+      var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?12:8,strokeOpacity:0.85});
       mPolylines.push(pl);
     }
   } else {
@@ -924,7 +924,7 @@ function _nasDrawRoute(d,noHwy){
         var path=_decodePoly(step.polyline?step.polyline.points:'');
         if(path.length>1){
           var col=hwy?'#FF9800':'#2196f3';
-          var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
+          var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?12:8,strokeOpacity:0.85});
           mPolylines.push(pl);
         }
       });
@@ -1384,7 +1384,11 @@ function updateMap(lat,lng,stops,nI){
 }
 
 let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
-function setZoomMode(m){zoomMode=m;applyZoomMode();if(m>=1&&!_rainOn)toggleRain();if(m===0&&_rainOn)toggleRain();rnd();}
+function setZoomMode(m){zoomMode=m;applyZoomMode();
+  // 既存ルートポリラインの太さを zoomMode に追従
+  if(typeof mPolylines!=='undefined')mPolylines.forEach(function(p){p.setOptions({strokeWeight:zoomMode===0?12:8});});
+  if(m>=1&&!_rainOn)toggleRain();if(m===0&&_rainOn)toggleRain();rnd();
+}
 function applyZoomMode(){
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
