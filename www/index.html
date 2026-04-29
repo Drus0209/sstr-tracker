@@ -1258,7 +1258,24 @@ const mapStyles={
     {featureType:'transit',stylers:[{visibility:'off'}]},
   ]
 };
-function toggleNight(){nightMode=!nightMode;if(map){map.setMapId(nightMode?MAP_ID_NIGHT:MAP_ID_DAY);applyZoomMode();}rnd();}
+function toggleNight(){
+  nightMode=!nightMode;
+  if(map){
+    // mapIdは初回レンダリング後に変更不可なため、mapを再生成する
+    var center=map.getCenter(),zoom=map.getZoom();
+    var heading=map.getHeading()||0,tilt=map.getTilt()||0;
+    clearMap();map=null;
+    initMap();
+    if(map){
+      map.setCenter(center);map.setZoom(zoom);
+      map.setHeading(heading);map.setTilt(tilt);
+    }
+    // ルート再描画
+    lastRouteNI=-1;lastNI=-1;
+    if(gLat&&STOPS[cDay]){var _ni=fN(STOPS[cDay]);updateMap(gLat,gLng,STOPS[cDay],_ni.i);}
+  }
+  rnd();
+}
 function initMap(){
   if(map)return;
   _apiMaps++;
@@ -1322,9 +1339,9 @@ function updateMap(lat,lng,stops,nI){
     var _rtAvoid=_routeNoHwy?'tolls|highways':'';
     _nasRoute({lat:lat,lng:lng},{lat:tS.lat,lng:tS.lng},[],_rtAvoid,function(d){
       if(d){
-        _nasDrawRoute(d,_routeNoHwy);
-        // リルート用にパス保存（stepsから高精度取得）
+        // パス保存を先に（_nasDrawRoute内のfetchSignals/Forksが_routePathを使うため）
         _routePath=_routePathFromDirections(d);
+        _nasDrawRoute(d,_routeNoHwy);
         // 分岐車線案内を事前生成＆ローカル保存
         if(typeof _prefetchLaneVoices==='function')_prefetchLaneVoices(d);
       } else{
@@ -1333,8 +1350,9 @@ function updateMap(lat,lng,stops,nI){
           travelMode:google.maps.TravelMode.DRIVING,avoidFerries:true,
           avoidHighways:!!_routeNoHwy,avoidTolls:!!_routeNoHwy},(r,s)=>{
           if(s==='OK'){
-            _drawRoute(r,_routeNoHwy);
+            // パス保存を先に（_drawRoute内のfetchSignals/Forksが_routePathを使うため）
             _routePath=_routePathFromJsApi(r);
+            _drawRoute(r,_routeNoHwy);
           }
         });
       }
@@ -1361,7 +1379,7 @@ function updateMap(lat,lng,stops,nI){
   // Center on user only in street zoom mode (スナップ位置に合わせる)
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat,lng});
   // 近接のみヘディングアップ＋3D傾斜、エリア/全体は北固定＋平面
-  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(60);}
+  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(67.5);}
   else {map.setHeading(0);map.setTilt(0);}
 }
 
@@ -1374,7 +1392,7 @@ function applyZoomMode(){
     // 最大ズーム・現在地中心・ヘディングアップ・3D傾斜
     map.setZoom(19);map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
-    map.setTilt(60);
+    map.setTilt(67.5);
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     // 3ストップ先まで収まるようfitBounds
