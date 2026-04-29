@@ -1413,7 +1413,7 @@ function applyZoomMode(){
   if(zoomMode===0){
     // 自分を画面下35%位置に配置（画面ピクセル基準・zoom/tilt変化に依存しない）
     var _hd=_stableHeading();
-    map.setZoom(22);
+    map.setZoom(25);
     map.panTo({lat:gLat,lng:gLng});
     map.setHeading(_hd);
     map.setTilt(67.5);
