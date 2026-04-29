@@ -1371,16 +1371,9 @@ function updateMap(lat,lng,stops,nI){
     if(typeof mVisits!=='undefined'&&mVisits.length===0)drawVisitMarkers();
     if(_sstr2026Show&&mSSTR2026.length===0)drawSSTR2026Markers();
   }
-  // ストリートモード：自分を画面下35%・進行方向を広く（setCenter即時→panBy）
-  if(zoomMode===0){
-    var _hdU=_stableHeading();
-    var _baseLat=_snap?_snap.lat:lat,_baseLng=_snap?_snap.lng:lng;
-    map.setCenter({lat:_baseLat,lng:_baseLng});
-    map.setHeading(_hdU);
-    map.setTilt(67.5);
-    var _mhU=document.getElementById('map').offsetHeight;
-    if(_mhU>0)map.panBy(0,-_mhU*0.35);
-  } else {map.setHeading(0);map.setTilt(0);}
+  if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng});
+  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(67.5);}
+  else {map.setHeading(0);map.setTilt(0);}
 }
 
 let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
@@ -1411,14 +1404,10 @@ function applyZoomMode(){
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
-    // 自分を画面下35%位置に配置（setCenter即時→panBy で確実に効かせる）
-    var _hd=_stableHeading();
     map.setZoom(25);
-    map.setCenter({lat:gLat,lng:gLng});
-    map.setHeading(_hd);
+    map.panTo({lat:gLat,lng:gLng});
+    if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
     map.setTilt(67.5);
-    var _mh=document.getElementById('map').offsetHeight;
-    if(_mh>0)map.panBy(0,-_mh*0.35);
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     var _zEl1=document.getElementById('map');if(_zEl1)_zEl1.style.transform='';
@@ -3427,15 +3416,10 @@ function moveMarker(lat,lng){
     mMe.setPosition({lat:dLat,lng:dLng});
     // ヘディングアップなので矢印は常に上向き固定（地図側が回転）
   }
-  if(map&&zoomMode===0){
-    // setCenter即時→setHeading→panBy で自分を画面下35%に配置
-    var _hdM=_stableHeading();
-    map.setCenter({lat:dLat,lng:dLng});
-    map.setHeading(_hdM);
-    var _mhM=document.getElementById('map').offsetHeight;
-    if(_mhM>0)map.panBy(0,-_mhM*0.35);
-  } else if(map){
-    map.setHeading(0);
+  if(map&&zoomMode===0)map.panTo({lat:dLat,lng:dLng});
+  if(map){
+    if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);}
+    else map.setHeading(0);
   }
 }
 
