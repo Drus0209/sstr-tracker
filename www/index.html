@@ -1301,6 +1301,12 @@ function initMap(){
       _gasFetchTimer=setTimeout(fetchGasStations,500);
     });}
   }
+  // コンビニも常時表示（営業中のみ・地図移動1km以上で再取得）
+  fetchConvenienceStores();
+  if(!_cvsIdleListener){_cvsIdleListener=map.addListener('idle',function(){
+    if(_cvsFetchTimer)clearTimeout(_cvsFetchTimer);
+    _cvsFetchTimer=setTimeout(fetchConvenienceStores,500);
+  });}
 }
 let lastRouteNI=-1;
 function updateMap(lat,lng,stops,nI){
@@ -1416,7 +1422,7 @@ function applyZoomMode(){
     map.setZoom(30);
     map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
-    map.setTilt(67.5);
+    map.setTilt(50);
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     var _zEl1=document.getElementById('map');if(_zEl1)_zEl1.style.transform='';
@@ -3025,6 +3031,64 @@ function fetchGasStations(){
         }).open(map,mk);
       });
       _gasMarkers.push(mk);
+    });
+  });
+}
+
+// === コンビニ常時表示（営業中のみ）===
+var _cvsMarkers=[];
+var _cvsLastFetchPos=null;
+var _cvsFetchTimer=null;
+var _cvsIdleListener=null;
+function _cvsIconFor(name){
+  // チェーン別の色（背景・絵文字統一）
+  var n=(name||'').toLowerCase();
+  if(/seven|セブン|7-eleven|7イレブン/.test(n))return{c:'#ff6600',l:'7'};
+  if(/family ?mart|ファミリーマート|ファミマ/.test(n))return{c:'#0066cc',l:'F'};
+  if(/lawson|ローソン/.test(n))return{c:'#0099ff',l:'L'};
+  if(/mini ?stop|ミニストップ/.test(n))return{c:'#ffcc00',l:'M'};
+  if(/daily|デイリー|デイリーヤマザキ/.test(n))return{c:'#cc0000',l:'D'};
+  if(/seicomart|セイコーマート/.test(n))return{c:'#ff9900',l:'S'};
+  return{c:'#666',l:'🏪'};
+}
+function fetchConvenienceStores(){
+  if(!map||!google.maps.places)return;
+  var c=map.getCenter();if(!c)return;
+  var lat=c.lat(),lng=c.lng();
+  if(_cvsLastFetchPos&&dK(lat,lng,_cvsLastFetchPos.lat,_cvsLastFetchPos.lng)<1)return;
+  _cvsLastFetchPos={lat:lat,lng:lng};
+  var svc=new google.maps.places.PlacesService(map);
+  svc.nearbySearch({
+    location:{lat:lat,lng:lng},
+    radius:2000,
+    type:'convenience_store'
+  },function(results,status){
+    if(status!==google.maps.places.PlacesServiceStatus.OK||!results)return;
+    _cvsMarkers.forEach(function(m){m.setMap(null);});_cvsMarkers=[];
+    results.forEach(function(p){
+      if(!p.geometry||!p.geometry.location)return;
+      // 営業中のみ表示。opening_hours.open_now が undefined の店舗（情報なし）はそのまま表示
+      var open=p.opening_hours&&p.opening_hours.open_now;
+      if(open===false)return;// 営業時間外は表示しない
+      var ic=_cvsIconFor(p.name);
+      var mk=new google.maps.Marker({
+        position:p.geometry.location,map:map,zIndex:35,
+        label:{text:ic.l,fontSize:'12px',fontWeight:'bold',color:'#fff'},
+        icon:{path:google.maps.SymbolPath.CIRCLE,scale:10,fillColor:ic.c,fillOpacity:0.95,strokeColor:'#fff',strokeWeight:1.5},
+        title:p.name||'コンビニ'
+      });
+      mk.addListener('click',function(){
+        var openTxt=open===true?'<span style="color:#4caf50;">営業中</span>':'';
+        var rating=p.rating?'★'+p.rating.toFixed(1)+'('+(p.user_ratings_total||0)+')':'';
+        new google.maps.InfoWindow({
+          content:'<div style="font-family:sans-serif;color:#000;min-width:180px;">'
+            +'<div style="font-weight:700;font-size:14px;margin-bottom:4px;">🏪 '+(p.name||'コンビニ')+'</div>'
+            +(p.vicinity?'<div style="font-size:12px;color:#555;margin-bottom:4px;">'+p.vicinity+'</div>':'')
+            +'<div style="font-size:12px;">'+openTxt+(rating?' '+rating:'')+'</div>'
+            +'</div>'
+        }).open(map,mk);
+      });
+      _cvsMarkers.push(mk);
     });
   });
 }
