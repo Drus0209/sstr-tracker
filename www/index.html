@@ -1265,7 +1265,13 @@ function toggleNight(){
     // mapIdは初回レンダリング後に変更不可なため、mapを再生成する
     var center=map.getCenter(),zoom=map.getZoom();
     var heading=map.getHeading()||0,tilt=map.getTilt()||0;
-    clearMap();map=null;
+    clearMap();
+    // 旧mapに紐づくリスナー・状態を全クリア（新mapで再初期化させる）
+    _gasIdleListener=null;_gasOn=false;_gasLastFetchPos=null;
+    _gasMarkers.forEach(function(m){if(m.setMap)m.setMap(null);});_gasMarkers=[];
+    _cvsIdleListener=null;_cvsLastFetchPos=null;
+    _cvsMarkers.forEach(function(m){if(m.setMap)m.setMap(null);});_cvsMarkers=[];
+    map=null;
     initMap();
     if(map){
       map.setCenter(center);map.setZoom(zoom);
