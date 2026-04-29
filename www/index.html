@@ -731,7 +731,9 @@ var _turnPoints=[];// {lat,lng,dir,prefix:''|'信号機を'|'交差点を',annou
 var _turnPointsOld=[];
 var _straightSegments=[];// 長距離直進区間 {lat,lng,distKm,announced}
 var _signalPoints=[];// OSM信号機座標 [{lat,lng}]
-function _resetTurnPoints(){_turnPointsOld=_turnPoints.slice();_turnPoints=[];_straightSegments=[];_signalPoints=[];_signalsFetched=false;}
+var _forkNodes=[];// OSM物理分岐ノード(motorway_junction等) [{lat,lng,name}]
+var _forksFetched=false;
+function _resetTurnPoints(){_turnPointsOld=_turnPoints.slice();_turnPoints=[];_straightSegments=[];_signalPoints=[];_signalsFetched=false;_forkNodes=[];_forksFetched=false;}
 function _pushTurnPoint(lat,lng,dir,prefix){
   for(var j=0;j<_turnPoints.length;j++){
     if(dK(lat,lng,_turnPoints[j].lat,_turnPoints[j].lng)*1000<50){
@@ -827,6 +829,36 @@ function _fetchSignalsForRoute(){
       console.log('[OSM] signals on route: '+_signalPoints.length);
     }).catch(function(){_signalsFetched=false;});
 }
+// === OSM Overpass で分岐ノード取得（JCT/IC等）→ 直進誤案内を抑制 ===
+function _fetchForksForRoute(){
+  if(_forksFetched||!_routePath||_routePath.length<2)return;
+  _forksFetched=true;
+  var minLat=90,maxLat=-90,minLng=180,maxLng=-180;
+  _routePath.forEach(function(p){
+    if(p.lat<minLat)minLat=p.lat;if(p.lat>maxLat)maxLat=p.lat;
+    if(p.lng<minLng)minLng=p.lng;if(p.lng>maxLng)maxLng=p.lng;
+  });
+  if((maxLat-minLat)>2||(maxLng-minLng)>2)return;
+  var query='[out:json][timeout:15];node["highway"="motorway_junction"]('+minLat+','+minLng+','+maxLat+','+maxLng+');out;';
+  fetch('https://overpass-api.de/api/interpreter?data='+encodeURIComponent(query),{signal:AbortSignal.timeout(15000)})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.elements)return;
+      _forkNodes=d.elements.filter(function(e){return e.type==='node'&&e.lat&&e.lon;}).map(function(e){
+        return{lat:e.lat,lng:e.lon,name:(e.tags&&(e.tags.name||e.tags.ref))||''};
+      });
+      _forkNodes=_forkNodes.filter(function(f){return _distToRoute(f.lat,f.lng)<0.05;});// ルート50m以内のみ
+      // 直進区間の開始点が分岐ノード100m以内にあれば除外（誤直進案内防止）
+      var before=_straightSegments.length;
+      _straightSegments=_straightSegments.filter(function(s){
+        for(var i=0;i<_forkNodes.length;i++){
+          if(dK(s.lat,s.lng,_forkNodes[i].lat,_forkNodes[i].lng)*1000<100)return false;
+        }
+        return true;
+      });
+      console.log('[OSM] forks on route: '+_forkNodes.length+' (filtered straights: '+before+'→'+_straightSegments.length+')');
+    }).catch(function(){_forksFetched=false;});
+}
 function _drawRoute(result){
   // ステップごとに高速/一般を判定して色分け（高速=オレンジ/一般=青）
   result.routes[0].legs.forEach(leg=>{
@@ -855,6 +887,7 @@ function _drawRoute(result){
   });
   _extractStraightsFromGoogle(result);
   _fetchSignalsForRoute();
+  _fetchForksForRoute();
 }
 // === NASルート検索（Directions APIキャッシュ付き）===
 function _nasRoute(origin,dest,waypoints,avoid,cb){
@@ -920,6 +953,7 @@ function _nasDrawRoute(d,noHwy){
   });
   _extractStraightsFromNas(d);
   _fetchSignalsForRoute();
+  _fetchForksForRoute();
 }
 // === 分岐車線案内：解析・事前生成・ローカル保存 ===
 // step.maneuver や html_instructions から分岐情報を抽出
