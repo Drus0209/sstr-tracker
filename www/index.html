@@ -868,7 +868,7 @@ function _drawRoute(result){
       var col=hwy?'#FF9800':'#2196f3';
       var path=step.path||(step.lat_lngs);
       if(path&&path.length>1){
-        var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?16:8,strokeOpacity:0.85});
+        var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
         mPolylines.push(pl);
       }
       if(step.maneuver){
@@ -913,7 +913,7 @@ function _nasDrawRoute(d,noHwy){
     var path=_decodePoly(route.overview_polyline?route.overview_polyline.points:'');
     if(path.length>1){
       var col=noHwy?'#2196f3':'#FF9800';
-      var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?16:8,strokeOpacity:0.85});
+      var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
       mPolylines.push(pl);
     }
   } else {
@@ -924,7 +924,7 @@ function _nasDrawRoute(d,noHwy){
         var path=_decodePoly(step.polyline?step.polyline.points:'');
         if(path.length>1){
           var col=hwy?'#FF9800':'#2196f3';
-          var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?16:8,strokeOpacity:0.85});
+          var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:8,strokeOpacity:0.85});
           mPolylines.push(pl);
         }
       });
@@ -1372,14 +1372,14 @@ function updateMap(lat,lng,stops,nI){
     if(_sstr2026Show&&mSSTR2026.length===0)drawSSTR2026Markers();
   }
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng});
-  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(0);}
+  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(67.5);}
   else {map.setHeading(0);map.setTilt(0);}
 }
 
 let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
 function setZoomMode(m){zoomMode=m;applyZoomMode();
   // 既存ルートポリラインの太さを zoomMode に追従
-  if(typeof mPolylines!=='undefined')mPolylines.forEach(function(p){p.setOptions({strokeWeight:zoomMode===0?16:8});});
+  if(typeof mPolylines!=='undefined')mPolylines.forEach(function(p){p.setOptions({strokeWeight:8});});
   if(m>=1&&!_rainOn)toggleRain();if(m===0&&_rainOn)toggleRain();rnd();
 }
 // 進行方向にmeters分だけ進んだ点を計算（自分を画面下に配置するため）
@@ -1407,7 +1407,7 @@ function applyZoomMode(){
     map.setZoom(30);
     map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
-    map.setTilt(0);
+    map.setTilt(67.5);
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     var _zEl1=document.getElementById('map');if(_zEl1)_zEl1.style.transform='';
@@ -3761,6 +3761,7 @@ if(_hdrMode===0&&(cDay==='day1'||cDay==='day2')){
         ${_zb(0,'🔍')}${_zb(1,'📍')}${_zb(2,'🗺️')}
         <button onclick="toggleRain();event.stopPropagation();" style="${_bs}background:${_rainOn?'var(--ac)':'none'};border-color:${_rainOn?'var(--ac)':'var(--bdr)'};color:${_rainOn?'#000':'var(--txt)'};">☔</button>
         <button onclick="toggleSSTR2026();event.stopPropagation();" style="${_bs}background:${_sstr2026Show?'#2196f3':'none'};border-color:#2196f3;color:${_sstr2026Show?'#fff':'#2196f3'};">🗾</button>
+        <button onclick="toggleGas();event.stopPropagation();" style="${_bs}background:${_gasOn?'var(--ylw)':'none'};border-color:${_gasOn?'var(--ylw)':'var(--bdr)'};color:${_gasOn?'#000':'var(--txt)'};">⛽</button>
         ${cDay==='day1'?'<button onclick="emergGoal();event.stopPropagation();" style="'+_bs+'color:var(--red);border-color:var(--red);">🚨</button>':''}
       </div>`;
     if(map)google.maps.event.trigger(map,'resize');
