@@ -1371,11 +1371,15 @@ function updateMap(lat,lng,stops,nI){
     if(typeof mVisits!=='undefined'&&mVisits.length===0)drawVisitMarkers();
     if(_sstr2026Show&&mSSTR2026.length===0)drawSSTR2026Markers();
   }
-  // Center on user only in street zoom mode (スナップ位置に合わせる)
-  if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng});
-  // 近接のみヘディングアップ＋3D傾斜、エリア/全体は北固定＋平面
-  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(67.5);}
-  else {map.setHeading(0);map.setTilt(0);}
+  // ストリートモード：自分を画面下に・進行方向を広く
+  if(zoomMode===0){
+    var _hdU=_stableHeading();
+    var _baseLat=_snap?_snap.lat:lat,_baseLng=_snap?_snap.lng:lng;
+    var _aheadU=_offsetForward(_baseLat,_baseLng,_hdU,60);
+    map.panTo(_aheadU);
+    map.setHeading(_hdU);
+    map.setTilt(67.5);
+  } else {map.setHeading(0);map.setTilt(0);}
 }
 
 let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
@@ -1392,19 +1396,27 @@ function _offsetForward(lat,lng,heading,meters){
   var lng2=lng1+Math.atan2(Math.sin(h)*Math.sin(d)*Math.cos(lat1),Math.cos(d)-Math.sin(lat1)*Math.sin(lat2));
   return{lat:lat2*180/Math.PI,lng:lng2*180/Math.PI};
 }
+// ナビ視点用：最後に取れた有効heading保持（停車中も維持）+ 平滑化
+var _lastHeading=0;
+function _stableHeading(){
+  if(typeof gHeading==='number'&&!isNaN(gHeading)){
+    // 角度差を-180..180で計算してから低周波フィルタ（ジッタ抑制）
+    var diff=((gHeading-_lastHeading+540)%360)-180;
+    _lastHeading=(_lastHeading+diff*0.4+360)%360;
+  }
+  return _lastHeading;
+}
 function applyZoomMode(){
-  // CSS hack 撤去（overlay/黒帯の副作用回避）
-  var _mapEl=document.getElementById('map');
-  if(_mapEl){_mapEl.style.transform='';_mapEl.style.outline='';}
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
-    // 安定状態：自分中央・最大ズーム・最大傾斜（CSS scaleは文字も大きくなるため不採用）
-    map.setZoom(22);
-    map.panTo({lat:gLat,lng:gLng});
-    if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
+    // 自分は画面下、進行方向広く（_offsetForwardで前方60m地点を中央に）
+    var _hd=_stableHeading();
+    var _ahead=_offsetForward(gLat,gLng,_hd,60);
+    map.setZoom(20);
+    map.panTo(_ahead);
+    map.setHeading(_hd);
     map.setTilt(67.5);
-    var _zEl=document.getElementById('map');if(_zEl)_zEl.style.transform='';
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     var _zEl1=document.getElementById('map');if(_zEl1)_zEl1.style.transform='';
