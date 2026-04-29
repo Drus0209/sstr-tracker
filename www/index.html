@@ -1372,7 +1372,7 @@ function updateMap(lat,lng,stops,nI){
     if(_sstr2026Show&&mSSTR2026.length===0)drawSSTR2026Markers();
   }
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng});
-  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(67.5);}
+  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(0);}
   else {map.setHeading(0);map.setTilt(0);}
 }
 
@@ -1407,7 +1407,7 @@ function applyZoomMode(){
     map.setZoom(30);
     map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
-    map.setTilt(67.5);
+    map.setTilt(0);
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     var _zEl1=document.getElementById('map');if(_zEl1)_zEl1.style.transform='';
