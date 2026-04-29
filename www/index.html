@@ -4398,19 +4398,56 @@ function _confirmSavePlan(){
     plans.push(planData);
   }
   _savePlans(plans);
-  // WAV事前生成（バックグラウンド）
-  _nf(NAS_API+'/api/voice/generate',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
-    body:JSON.stringify({text:name+'が選択されたのだ！',key:'selected_'+name}),
-    signal:AbortSignal.timeout(15000)}).catch(function(){});
-  var _psAudio=new Audio(_nasAudio('/api/voice/plan_saved'));
-  _psAudio.volume=1.0;_psAudio.playbackRate=_voiceSpeed;
-  _zundaShow('プランを保存したのだ！');_zundaMouthStart();
-  _psAudio.onended=function(){_zundaMouthStop();_zundaHide();};
-  _psAudio.onerror=function(){_zundaMouthStop();_zundaHide();};
-  _psAudio.play().catch(function(){_psAudio.onerror();});
-  alert('「'+name+'」を保存しました！');
-  _tempPlanStops=null;
-  location.reload();
+  var savedStops=planData.stops;
+  // 進捗オーバーレイ
+  var ov=document.createElement('div');ov.id='planProgress';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;padding:20px;';
+  ov.innerHTML='<div style="font-size:48px;margin-bottom:14px;">🛣️</div>'
+    +'<div style="font-size:20px;font-weight:900;margin-bottom:12px;color:var(--ac);">ルートを検索して作成するのだ...</div>'
+    +'<div id="planProgressDetail" style="font-size:13px;opacity:0.8;text-align:center;">行先音声: 0/'+savedStops.length+'<br>ルート計算: 0/'+Math.max(0,savedStops.length-1)+'</div>'
+    +'<div style="width:80%;max-width:300px;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden;margin-top:14px;"><div id="planProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,var(--ac),#9c27b0);transition:width 0.3s;"></div></div>';
+  document.body.appendChild(ov);
+  // 「ルートを検索して作成するのだ」音声
+  _zundaShow('ルートを検索して作成するのだ');
+  spk('ルートを検索して作成するのだ',true);
+  var voiceDone=0,routeDone=0;
+  var totalVoice=savedStops.length,totalRoute=Math.max(0,savedStops.length-1);
+  function _planProgressUpdate(){
+    var det=document.getElementById('planProgressDetail');
+    if(det)det.innerHTML='行先音声: '+voiceDone+'/'+totalVoice+'<br>ルート計算: '+routeDone+'/'+totalRoute;
+    var pct=Math.round((voiceDone+routeDone)/(totalVoice+totalRoute||1)*100);
+    var bar=document.getElementById('planProgressBar');if(bar)bar.style.width=pct+'%';
+  }
+  function _planProgressDone(){
+    if(voiceDone<totalVoice||routeDone<totalRoute)return;
+    var ov2=document.getElementById('planProgress');if(ov2)ov2.remove();
+    _zundaHide();
+    _tempPlanStops=null;
+    // カスタムプランとしてロード→ナビ画面へ
+    STOPS.custom=savedStops;
+    cDay='custom';
+    _customPlanName=name;
+    startApp('custom');
+  }
+  // 各ストップ向け行先音声を NAS で事前生成
+  savedStops.forEach(function(s){
+    var key='dest_'+_hashStr(s.name);
+    _nf(NAS_API+'/api/voice/generate',{method:'POST',headers:{'Content-Type':'application/json; charset=utf-8'},
+      body:JSON.stringify({text:s.name+'に向かうのだ',key:key}),
+      signal:AbortSignal.timeout(20000)})
+      .then(function(){voiceDone++;_planProgressUpdate();_planProgressDone();})
+      .catch(function(){voiceDone++;_planProgressUpdate();_planProgressDone();});
+  });
+  // 各セグメントのルート事前計算（NAS経由）
+  for(var ri=0;ri<savedStops.length-1;ri++){
+    (function(ri){
+      var o=savedStops[ri],d=savedStops[ri+1];
+      var avoid=o.noHwy?'tolls|highways':'';
+      _nasRoute({lat:o.lat,lng:o.lng},{lat:d.lat,lng:d.lng},[],avoid,function(){
+        routeDone++;_planProgressUpdate();_planProgressDone();
+      });
+    })(ri);
+  }
 }
 function _deletePlan(idx){
   if(!confirm('このプランを削除しますか？'))return;
