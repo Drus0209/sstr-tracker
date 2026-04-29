@@ -1399,13 +1399,12 @@ function applyZoomMode(){
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
-    // 安定状態：自分中央・最大ズーム・最大傾斜＋CSS scale で実質ズーム上乗せ
+    // 安定状態：自分中央・最大ズーム・最大傾斜（CSS scaleは文字も大きくなるため不採用）
     map.setZoom(22);
     map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
     map.setTilt(67.5);
-    var _zEl=document.getElementById('map');
-    if(_zEl)_zEl.style.transform='scale(1.8)';
+    var _zEl=document.getElementById('map');if(_zEl)_zEl.style.transform='';
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     var _zEl1=document.getElementById('map');if(_zEl1)_zEl1.style.transform='';
