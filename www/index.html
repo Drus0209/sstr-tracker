@@ -1295,7 +1295,7 @@ function initMap(){
   drawVisitMarkers();
   drawSSTR2026Markers();
   // 【診断】initMap完了後に強制で scale 適用
-  setTimeout(function(){var _e=document.getElementById('map');if(_e){_e.style.transform='scale(3) rotateX(27.5deg)';_e.style.outline='';console.log('[diag] forced scale on initMap. el=',_e,' transform=',getComputedStyle(_e).transform);}},500);
+  setTimeout(function(){var _e=document.getElementById('map');if(_e){_e.style.transform='perspective(600px) rotateX(27.5deg) scale(2)';_e.style.outline='';console.log('[diag] forced scale on initMap. el=',_e,' transform=',getComputedStyle(_e).transform);}},500);
 }
 let lastRouteNI=-1;
 function updateMap(lat,lng,stops,nI){
@@ -1391,7 +1391,7 @@ function applyZoomMode(){
   // 【診断】常に適用してCSS scale自体が効くか確認
   var _mapEl=document.getElementById('map');
   if(_mapEl){
-    _mapEl.style.transform='scale(3) rotateX(27.5deg)';
+    _mapEl.style.transform='perspective(600px) rotateX(27.5deg) scale(2)';
     _mapEl.style.transformOrigin='center';
     _mapEl.style.outline='';// 診断用緑枠は除去
     console.log('[zoom] forced scale applied. transform=',getComputedStyle(_mapEl).transform,'outline=',getComputedStyle(_mapEl).outline);
