@@ -1388,9 +1388,19 @@ function setZoomMode(m){zoomMode=m;applyZoomMode();
 function applyZoomMode(){
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
-  // CSS scale切替（zoomMode=0だけ視覚的に2倍拡大）
+  // CSS scale切替（zoomMode=0だけ視覚的に拡大）
   var _mapEl=document.getElementById('map');
-  if(_mapEl){if(zoomMode===0)_mapEl.classList.add('zoomed-2x');else _mapEl.classList.remove('zoomed-2x');}
+  if(_mapEl){
+    if(zoomMode===0){
+      _mapEl.style.transform='scale(3)';
+      _mapEl.style.transformOrigin='center';
+      _mapEl.style.outline='3px solid red';// 効いてるか視覚確認用（後で削除）
+      console.log('[zoom] scale(3) applied. transform=',getComputedStyle(_mapEl).transform);
+    } else {
+      _mapEl.style.transform='';
+      _mapEl.style.outline='';
+    }
+  }
   if(zoomMode===0){
     // 最大ズーム・現在地中心・ヘディングアップ・3D傾斜
     map.setZoom(25);map.panTo({lat:gLat,lng:gLng});
