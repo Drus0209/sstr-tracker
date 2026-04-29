@@ -1361,7 +1361,7 @@ function updateMap(lat,lng,stops,nI){
   // Center on user only in street zoom mode (スナップ位置に合わせる)
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat,lng});
   // 近接のみヘディングアップ＋3D傾斜、エリア/全体は北固定＋平面
-  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(45);}
+  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(60);}
   else {map.setHeading(0);map.setTilt(0);}
 }
 
@@ -1374,7 +1374,7 @@ function applyZoomMode(){
     // 最大ズーム・現在地中心・ヘディングアップ・3D傾斜
     map.setZoom(19);map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
-    map.setTilt(45);
+    map.setTilt(60);
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     // 3ストップ先まで収まるようfitBounds
