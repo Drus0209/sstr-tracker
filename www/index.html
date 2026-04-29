@@ -1388,7 +1388,7 @@ function updateMap(lat,lng,stops,nI){
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng});
   if(zoomMode===0){
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
-    map.setTilt(50);// tilt を維持（GPS更新で消えないように）
+    map.setTilt(60);// tilt を維持（GPS更新で消えないように）
   } else {map.setHeading(0);map.setTilt(0);}
 }
 
@@ -1423,7 +1423,7 @@ function applyZoomMode(){
     map.setZoom(30);
     map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
-    map.setTilt(50);
+    map.setTilt(60);
     // 自分を画面下方向に600px移動（地理座標は中心、表示位置は下）
     map.panBy(0,-600);
   } else if(zoomMode===1){
