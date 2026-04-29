@@ -1386,21 +1386,21 @@ function setZoomMode(m){zoomMode=m;applyZoomMode();
   if(m>=1&&!_rainOn)toggleRain();if(m===0&&_rainOn)toggleRain();rnd();
 }
 function applyZoomMode(){
-  if(!map||!gLat)return;
-  const st=STOPS[cDay],ni=fN(st);
-  // CSS scale切替（zoomMode=0だけ視覚的に拡大）
+  // CSS scale切替（GPS未取得でも適用するため早期returnの前に実行）
   var _mapEl=document.getElementById('map');
   if(_mapEl){
     if(zoomMode===0){
       _mapEl.style.transform='scale(3)';
       _mapEl.style.transformOrigin='center';
       _mapEl.style.outline='3px solid red';// 効いてるか視覚確認用（後で削除）
-      console.log('[zoom] scale(3) applied. transform=',getComputedStyle(_mapEl).transform);
+      console.log('[zoom] scale(3) applied. transform=',getComputedStyle(_mapEl).transform,'gLat=',gLat);
     } else {
       _mapEl.style.transform='';
       _mapEl.style.outline='';
     }
   }
+  if(!map||!gLat)return;
+  const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
     // 最大ズーム・現在地中心・ヘディングアップ・3D傾斜
     map.setZoom(25);map.panTo({lat:gLat,lng:gLng});
