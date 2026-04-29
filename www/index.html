@@ -49,7 +49,8 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .pc .pb{display:flex;justify-content:center;margin-top:10px;}
 .pc .ptb{background:#1a2a1a;border:1px solid var(--grn);color:var(--grn);padding:4px 16px;border-radius:20px;font-weight:800;font-family:'Outfit';font-size:16px;}
 #mapWrap{display:none;margin:8px 10px;border-radius:14px;overflow:hidden;border:2px solid var(--bdr);position:relative;}
-#map{height:80vh;width:100%;background:#e8e8e8;}
+#map{height:80vh;width:100%;background:#e8e8e8;transition:transform 0.3s ease;}
+#map.zoomed-2x{transform:scale(2);}
 .pn{background:var(--card);border:1px solid var(--bdr);padding:14px 16px;display:flex;align-items:center;gap:12px;}
 .pn .ar{font-size:28px;color:var(--txt);flex-shrink:0;}
 .pn .lb{font-size:11px;color:var(--txt);letter-spacing:2px;margin-bottom:2px;}
@@ -1387,6 +1388,9 @@ function setZoomMode(m){zoomMode=m;applyZoomMode();
 function applyZoomMode(){
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
+  // CSS scale切替（zoomMode=0だけ視覚的に2倍拡大）
+  var _mapEl=document.getElementById('map');
+  if(_mapEl){if(zoomMode===0)_mapEl.classList.add('zoomed-2x');else _mapEl.classList.remove('zoomed-2x');}
   if(zoomMode===0){
     // 最大ズーム・現在地中心・ヘディングアップ・3D傾斜
     map.setZoom(25);map.panTo({lat:gLat,lng:gLng});
