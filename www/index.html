@@ -1294,6 +1294,8 @@ function initMap(){
   drawOrbisMarkers();
   drawVisitMarkers();
   drawSSTR2026Markers();
+  // 【診断】initMap完了後に強制で scale 適用
+  setTimeout(function(){var _e=document.getElementById('map');if(_e){_e.style.transform='scale(1.5)';_e.style.outline='5px solid lime';console.log('[diag] forced scale on initMap. el=',_e,' transform=',getComputedStyle(_e).transform);}},500);
 }
 let lastRouteNI=-1;
 function updateMap(lat,lng,stops,nI){
@@ -1386,18 +1388,15 @@ function setZoomMode(m){zoomMode=m;applyZoomMode();
   if(m>=1&&!_rainOn)toggleRain();if(m===0&&_rainOn)toggleRain();rnd();
 }
 function applyZoomMode(){
-  // CSS scale切替（GPS未取得でも適用するため早期returnの前に実行）
+  // 【診断】常に適用してCSS scale自体が効くか確認
   var _mapEl=document.getElementById('map');
   if(_mapEl){
-    if(zoomMode===0){
-      _mapEl.style.transform='scale(3)';
-      _mapEl.style.transformOrigin='center';
-      _mapEl.style.outline='3px solid red';// 効いてるか視覚確認用（後で削除）
-      console.log('[zoom] scale(3) applied. transform=',getComputedStyle(_mapEl).transform,'gLat=',gLat);
-    } else {
-      _mapEl.style.transform='';
-      _mapEl.style.outline='';
-    }
+    _mapEl.style.transform='scale(1.5)';
+    _mapEl.style.transformOrigin='center';
+    _mapEl.style.outline='5px solid lime';// 派手な緑枠
+    console.log('[zoom] forced scale applied. transform=',getComputedStyle(_mapEl).transform,'outline=',getComputedStyle(_mapEl).outline);
+  } else {
+    console.log('[zoom] _mapEl NOT FOUND');
   }
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
