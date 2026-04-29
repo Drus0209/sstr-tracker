@@ -1311,7 +1311,11 @@ function initMap(){
     });}
   }
   // コンビニも常時表示（営業中のみ・地図移動1km以上で再取得）
-  fetchConvenienceStores();
+  // map準備完了後にfetch（getCenter()が確実に有効に）
+  google.maps.event.addListenerOnce(map,'idle',function(){
+    console.log('[CVS] map idle, initial fetch');
+    fetchConvenienceStores();
+  });
   if(!_cvsIdleListener){_cvsIdleListener=map.addListener('idle',function(){
     if(_cvsFetchTimer)clearTimeout(_cvsFetchTimer);
     _cvsFetchTimer=setTimeout(fetchConvenienceStores,500);
@@ -1398,6 +1402,7 @@ function updateMap(lat,lng,stops,nI){
   if(zoomMode===0){
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
     map.setTilt(60);// tilt を維持（GPS更新で消えないように）
+    map.panBy(0,-600);// 自分を画面下方向に表示（GPS更新で維持）
   } else {map.setHeading(0);map.setTilt(0);}
 }
 
@@ -3064,17 +3069,19 @@ function _cvsIconFor(name){
   return{c:'#666',l:'🏪'};
 }
 function fetchConvenienceStores(){
-  if(!map||!google.maps.places)return;
-  var c=map.getCenter();if(!c)return;
+  if(!map||!google.maps.places){console.log('[CVS] skip: map or places API not ready');return;}
+  var c=map.getCenter();if(!c){console.log('[CVS] skip: no map center');return;}
   var lat=c.lat(),lng=c.lng();
-  if(_cvsLastFetchPos&&dK(lat,lng,_cvsLastFetchPos.lat,_cvsLastFetchPos.lng)<1)return;
+  if(_cvsLastFetchPos&&dK(lat,lng,_cvsLastFetchPos.lat,_cvsLastFetchPos.lng)<1){console.log('[CVS] skip: <1km move');return;}
   _cvsLastFetchPos={lat:lat,lng:lng};
+  console.log('[CVS] fetching at',lat,lng);
   var svc=new google.maps.places.PlacesService(map);
   svc.nearbySearch({
     location:{lat:lat,lng:lng},
     radius:2000,
     type:'convenience_store'
   },function(results,status){
+    console.log('[CVS] nearbySearch status='+status+' count='+(results?results.length:0));
     if(status!==google.maps.places.PlacesServiceStatus.OK||!results)return;
     _cvsMarkers.forEach(function(m){m.setMap(null);});_cvsMarkers=[];
     results.forEach(function(p){
@@ -3786,13 +3793,13 @@ function rnd(){
     // timeが空（カスタムプラン等）: 現在時刻を表示
     eta=nowMin;
   }
-  const _etaSec=Math.floor(eta*60);const _etaMod=((_etaSec%(1440*60))+(1440*60))%(1440*60);const eH=Math.floor(_etaMod/3600).toString().padStart(2,'0'),eM=Math.floor((_etaMod%3600)/60).toString().padStart(2,'0'),eS=(_etaMod%60).toString().padStart(2,'0');
+  const _etaSec=Math.floor(eta*60);const _etaMod=((_etaSec%(1440*60))+(1440*60))%(1440*60);const eH=Math.floor(_etaMod/3600).toString(),eM=Math.floor((_etaMod%3600)/60).toString().padStart(2,'0'),eS=(_etaMod%60).toString().padStart(2,'0');
   const xI=Math.min(cI+1,st.length-1),xS=st[xI],xD=gLat?dK(gLat,gLng,xS.lat,xS.lng):0;
   let pPt=0;st.forEach((s,i)=>{if(gLat&&i<nI)pPt+=s.pt;});
   let tPt=0;st.forEach(s=>tPt+=s.pt);
   const cDur=cS.dur||0;
   const depM=Math.floor(eta)+cDur;
-  const _depSec=Math.floor(depM*60);const _depMod=((_depSec%(1440*60))+(1440*60))%(1440*60);const depH=Math.floor(_depMod/3600).toString().padStart(2,'0'),depMn=Math.floor((_depMod%3600)/60).toString().padStart(2,'0'),depS=(_depMod%60).toString().padStart(2,'0');
+  const _depSec=Math.floor(depM*60);const _depMod=((_depSec%(1440*60))+(1440*60))%(1440*60);const depH=Math.floor(_depMod/3600).toString(),depMn=Math.floor((_depMod%3600)/60).toString().padStart(2,'0'),depS=(_depMod%60).toString().padStart(2,'0');
   const tc={move:'dv',michi:'dm',noto:'dn',goal:'dg',qk:'dq',gs:'ds',other:'do'};
 
   // Header
