@@ -1386,9 +1386,10 @@ function updateMap(lat,lng,stops,nI){
     if(_sstr2026Show&&mSSTR2026.length===0)drawSSTR2026Markers();
   }
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng});
-  // setTilt は applyZoomMode（mode切替時）のみで設定し、ここでは触らない（手動ズーム保持のため）
-  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);}
-  else {map.setHeading(0);}
+  if(zoomMode===0){
+    if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
+    map.setTilt(50);// tilt を維持（GPS更新で消えないように）
+  } else {map.setHeading(0);map.setTilt(0);}
 }
 
 let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
