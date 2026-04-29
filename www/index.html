@@ -869,7 +869,7 @@ function _drawRoute(result){
       var col=hwy?'#FF9800':'#2196f3';
       var path=step.path||(step.lat_lngs);
       if(path&&path.length>1){
-        var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?12:8,strokeOpacity:0.85});
+        var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?16:8,strokeOpacity:0.85});
         mPolylines.push(pl);
       }
       if(step.maneuver){
@@ -914,7 +914,7 @@ function _nasDrawRoute(d,noHwy){
     var path=_decodePoly(route.overview_polyline?route.overview_polyline.points:'');
     if(path.length>1){
       var col=noHwy?'#2196f3':'#FF9800';
-      var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?12:8,strokeOpacity:0.85});
+      var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?16:8,strokeOpacity:0.85});
       mPolylines.push(pl);
     }
   } else {
@@ -925,7 +925,7 @@ function _nasDrawRoute(d,noHwy){
         var path=_decodePoly(step.polyline?step.polyline.points:'');
         if(path.length>1){
           var col=hwy?'#FF9800':'#2196f3';
-          var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?12:8,strokeOpacity:0.85});
+          var pl=new google.maps.Polyline({path:path,map:map,strokeColor:col,strokeWeight:zoomMode===0?16:8,strokeOpacity:0.85});
           mPolylines.push(pl);
         }
       });
@@ -1295,7 +1295,7 @@ function initMap(){
   drawVisitMarkers();
   drawSSTR2026Markers();
   // 【診断】initMap完了後に強制で scale 適用
-  setTimeout(function(){var _e=document.getElementById('map');if(_e){_e.style.transform='scale(2.5) rotateX(12.5deg)';_e.style.outline='';console.log('[diag] forced scale on initMap. el=',_e,' transform=',getComputedStyle(_e).transform);}},500);
+  setTimeout(function(){var _e=document.getElementById('map');if(_e){_e.style.transform='scale(3) rotateX(27.5deg)';_e.style.outline='';console.log('[diag] forced scale on initMap. el=',_e,' transform=',getComputedStyle(_e).transform);}},500);
 }
 let lastRouteNI=-1;
 function updateMap(lat,lng,stops,nI){
@@ -1384,14 +1384,14 @@ function updateMap(lat,lng,stops,nI){
 let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
 function setZoomMode(m){zoomMode=m;applyZoomMode();
   // 既存ルートポリラインの太さを zoomMode に追従
-  if(typeof mPolylines!=='undefined')mPolylines.forEach(function(p){p.setOptions({strokeWeight:zoomMode===0?12:8});});
+  if(typeof mPolylines!=='undefined')mPolylines.forEach(function(p){p.setOptions({strokeWeight:zoomMode===0?16:8});});
   if(m>=1&&!_rainOn)toggleRain();if(m===0&&_rainOn)toggleRain();rnd();
 }
 function applyZoomMode(){
   // 【診断】常に適用してCSS scale自体が効くか確認
   var _mapEl=document.getElementById('map');
   if(_mapEl){
-    _mapEl.style.transform='scale(2.5) rotateX(12.5deg)';
+    _mapEl.style.transform='scale(3) rotateX(27.5deg)';
     _mapEl.style.transformOrigin='center';
     _mapEl.style.outline='';// 診断用緑枠は除去
     console.log('[zoom] forced scale applied. transform=',getComputedStyle(_mapEl).transform,'outline=',getComputedStyle(_mapEl).outline);
