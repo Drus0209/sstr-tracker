@@ -1374,8 +1374,10 @@ function updateMap(lat,lng,stops,nI){
   // Center on user only in street zoom mode (スナップ位置に合わせる)
   if(zoomMode===0){
     var _base=_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng};
-    var _aheadPan=(gHeading!==null&&!isNaN(gHeading))?_offsetForward(_base.lat,_base.lng,gHeading,60):_base;
-    map.panTo(_aheadPan);
+    map.panTo(_base);
+    // 自分の位置を画面下1/4に配置（panBy で地図を上方向に押し上げ）
+    var _mh=document.getElementById('map').offsetHeight;
+    if(_mh>0)map.panBy(0,-_mh/4);
   }
   // 近接のみヘディングアップ＋3D傾斜、エリア/全体は北固定＋平面
   if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(67.5);}
@@ -1403,12 +1405,16 @@ function applyZoomMode(){
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
-    // 最大ズーム・進行方向に約60mオフセット（自分は画面下1/3に・前方が広く見える）
+    // 最大ズーム・自分の位置を画面下1/4に配置（panBy で地図を上方向に押し上げ）
     map.setZoom(20);
-    var ahead=(gHeading!==null&&!isNaN(gHeading))?_offsetForward(gLat,gLng,gHeading,60):{lat:gLat,lng:gLng};
-    map.panTo(ahead);
+    map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
     map.setTilt(67.5);
+    // panTo処理後にpanByで下寄せ（tilt適用済みでも screen pixel で動く）
+    setTimeout(function(){
+      var mh=document.getElementById('map').offsetHeight;
+      if(mh>0&&map)map.panBy(0,-mh/4);
+    },150);
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     // 3ストップ先まで収まるようfitBounds
@@ -3416,8 +3422,9 @@ function moveMarker(lat,lng){
     // ヘディングアップなので矢印は常に上向き固定（地図側が回転）
   }
   if(map&&zoomMode===0){
-    var _ah=(gHeading!==null&&!isNaN(gHeading))?_offsetForward(dLat,dLng,gHeading,60):{lat:dLat,lng:dLng};
-    map.panTo(_ah);
+    map.panTo({lat:dLat,lng:dLng});
+    var _mh3=document.getElementById('map').offsetHeight;
+    if(_mh3>0)map.panBy(0,-_mh3/4);
   }
   if(map){
     if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);}
