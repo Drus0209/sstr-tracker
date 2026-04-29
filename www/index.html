@@ -1295,7 +1295,7 @@ function initMap(){
   drawVisitMarkers();
   drawSSTR2026Markers();
   // 【診断】initMap完了後に強制で scale 適用
-  setTimeout(function(){var _e=document.getElementById('map');if(_e){_e.style.transform='scale(3)';_e.style.outline='5px solid lime';console.log('[diag] forced scale on initMap. el=',_e,' transform=',getComputedStyle(_e).transform);}},500);
+  setTimeout(function(){var _e=document.getElementById('map');if(_e){_e.style.transform='scale(2.5)';_e.style.outline='';console.log('[diag] forced scale on initMap. el=',_e,' transform=',getComputedStyle(_e).transform);}},500);
 }
 let lastRouteNI=-1;
 function updateMap(lat,lng,stops,nI){
@@ -1377,7 +1377,7 @@ function updateMap(lat,lng,stops,nI){
   // Center on user only in street zoom mode (スナップ位置に合わせる)
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat,lng});
   // 近接のみヘディングアップ＋3D傾斜、エリア/全体は北固定＋平面
-  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(45);}
+  if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(67.5);}
   else {map.setHeading(0);map.setTilt(0);}
 }
 
@@ -1391,9 +1391,9 @@ function applyZoomMode(){
   // 【診断】常に適用してCSS scale自体が効くか確認
   var _mapEl=document.getElementById('map');
   if(_mapEl){
-    _mapEl.style.transform='scale(3)';
+    _mapEl.style.transform='scale(2.5)';
     _mapEl.style.transformOrigin='center';
-    _mapEl.style.outline='5px solid lime';// 派手な緑枠
+    _mapEl.style.outline='';// 診断用緑枠は除去
     console.log('[zoom] forced scale applied. transform=',getComputedStyle(_mapEl).transform,'outline=',getComputedStyle(_mapEl).outline);
   } else {
     console.log('[zoom] _mapEl NOT FOUND');
@@ -1404,7 +1404,7 @@ function applyZoomMode(){
     // 最大ズーム・現在地中心・ヘディングアップ・3D傾斜
     map.setZoom(25);map.panTo({lat:gLat,lng:gLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
-    map.setTilt(45);
+    map.setTilt(67.5);
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     // 3ストップ先まで収まるようfitBounds
