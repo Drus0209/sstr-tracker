@@ -48,9 +48,8 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .pc.custom .st .l{font-size:16px;}
 .pc .pb{display:flex;justify-content:center;margin-top:10px;}
 .pc .ptb{background:#1a2a1a;border:1px solid var(--grn);color:var(--grn);padding:4px 16px;border-radius:20px;font-weight:800;font-family:'Outfit';font-size:16px;}
-#mapWrap{display:none;margin:8px 10px;border-radius:14px;overflow:hidden;border:2px solid var(--bdr);position:relative;perspective:1200px;}
-#map{height:80vh;width:100%;background:#e8e8e8;transition:transform 0.3s ease;}
-#map.zoomed-2x{transform:scale(2);}
+#mapWrap{display:none;margin:8px 10px;border-radius:14px;overflow:hidden;border:2px solid var(--bdr);position:relative;}
+#map{height:80vh;width:100%;background:#e8e8e8;}
 .pn{background:var(--card);border:1px solid var(--bdr);padding:14px 16px;display:flex;align-items:center;gap:12px;}
 .pn .ar{font-size:28px;color:var(--txt);flex-shrink:0;}
 .pn .lb{font-size:11px;color:var(--txt);letter-spacing:2px;margin-bottom:2px;}
@@ -1294,8 +1293,6 @@ function initMap(){
   drawOrbisMarkers();
   drawVisitMarkers();
   drawSSTR2026Markers();
-  // 【診断】initMap完了後に強制で scale 適用
-  setTimeout(function(){var _e=document.getElementById('map');if(_e){_e.style.transform='perspective(400px) rotateX(60deg) scale(1.5)';_e.style.outline='';console.log('[diag] forced scale on initMap. el=',_e,' transform=',getComputedStyle(_e).transform);}},500);
 }
 let lastRouteNI=-1;
 function updateMap(lat,lng,stops,nI){
@@ -1375,7 +1372,11 @@ function updateMap(lat,lng,stops,nI){
     if(_sstr2026Show&&mSSTR2026.length===0)drawSSTR2026Markers();
   }
   // Center on user only in street zoom mode (スナップ位置に合わせる)
-  if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat,lng});
+  if(zoomMode===0){
+    var _base=_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng};
+    var _aheadPan=(gHeading!==null&&!isNaN(gHeading))?_offsetForward(_base.lat,_base.lng,gHeading,60):_base;
+    map.panTo(_aheadPan);
+  }
   // 近接のみヘディングアップ＋3D傾斜、エリア/全体は北固定＋平面
   if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);map.setTilt(67.5);}
   else {map.setHeading(0);map.setTilt(0);}
@@ -1387,22 +1388,25 @@ function setZoomMode(m){zoomMode=m;applyZoomMode();
   if(typeof mPolylines!=='undefined')mPolylines.forEach(function(p){p.setOptions({strokeWeight:zoomMode===0?16:8});});
   if(m>=1&&!_rainOn)toggleRain();if(m===0&&_rainOn)toggleRain();rnd();
 }
+// 進行方向にmeters分だけ進んだ点を計算（自分を画面下に配置するため）
+function _offsetForward(lat,lng,heading,meters){
+  var R=6371000,d=meters/R,h=(heading||0)*Math.PI/180;
+  var lat1=lat*Math.PI/180,lng1=lng*Math.PI/180;
+  var lat2=Math.asin(Math.sin(lat1)*Math.cos(d)+Math.cos(lat1)*Math.sin(d)*Math.cos(h));
+  var lng2=lng1+Math.atan2(Math.sin(h)*Math.sin(d)*Math.cos(lat1),Math.cos(d)-Math.sin(lat1)*Math.sin(lat2));
+  return{lat:lat2*180/Math.PI,lng:lng2*180/Math.PI};
+}
 function applyZoomMode(){
-  // 【診断】常に適用してCSS scale自体が効くか確認
+  // CSS hack 撤去（overlay/黒帯の副作用回避）
   var _mapEl=document.getElementById('map');
-  if(_mapEl){
-    _mapEl.style.transform='perspective(400px) rotateX(60deg) scale(1.5)';
-    _mapEl.style.transformOrigin='center';
-    _mapEl.style.outline='';// 診断用緑枠は除去
-    console.log('[zoom] forced scale applied. transform=',getComputedStyle(_mapEl).transform,'outline=',getComputedStyle(_mapEl).outline);
-  } else {
-    console.log('[zoom] _mapEl NOT FOUND');
-  }
+  if(_mapEl){_mapEl.style.transform='';_mapEl.style.outline='';}
   if(!map||!gLat)return;
   const st=STOPS[cDay],ni=fN(st);
   if(zoomMode===0){
-    // 最大ズーム・現在地中心・ヘディングアップ・3D傾斜
-    map.setZoom(25);map.panTo({lat:gLat,lng:gLng});
+    // 最大ズーム・進行方向に約60mオフセット（自分は画面下1/3に・前方が広く見える）
+    map.setZoom(20);
+    var ahead=(gHeading!==null&&!isNaN(gHeading))?_offsetForward(gLat,gLng,gHeading,60):{lat:gLat,lng:gLng};
+    map.panTo(ahead);
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
     map.setTilt(67.5);
   } else if(zoomMode===1){
@@ -3411,7 +3415,10 @@ function moveMarker(lat,lng){
     mMe.setPosition({lat:dLat,lng:dLng});
     // ヘディングアップなので矢印は常に上向き固定（地図側が回転）
   }
-  if(map&&zoomMode===0)map.panTo({lat:dLat,lng:dLng});
+  if(map&&zoomMode===0){
+    var _ah=(gHeading!==null&&!isNaN(gHeading))?_offsetForward(dLat,dLng,gHeading,60):{lat:dLat,lng:dLng};
+    map.panTo(_ah);
+  }
   if(map){
     if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);}
     else map.setHeading(0);
