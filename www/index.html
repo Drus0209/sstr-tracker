@@ -1266,12 +1266,15 @@ function toggleNight(){
     var center=map.getCenter(),zoom=map.getZoom();
     var heading=map.getHeading()||0,tilt=map.getTilt()||0;
     clearMap();
-    // 旧mapに紐づくリスナー・状態を全クリア（新mapで再初期化させる）
     _gasIdleListener=null;_gasOn=false;_gasLastFetchPos=null;
     _gasMarkers.forEach(function(m){if(m.setMap)m.setMap(null);});_gasMarkers=[];
     _cvsIdleListener=null;_cvsLastFetchPos=null;
     _cvsMarkers.forEach(function(m){if(m.setMap)m.setMap(null);});_cvsMarkers=[];
+    // 旧 map の DOM を完全クリア（残留要素を除去して新map を確実にレンダリング）
+    var _mapDivClear=document.getElementById('map');
+    if(_mapDivClear)_mapDivClear.innerHTML='';
     map=null;
+    console.log('[toggleNight] nightMode='+nightMode+' creating new map with mapId='+(nightMode?MAP_ID_NIGHT:MAP_ID_DAY));
     initMap();
     if(map){
       map.setCenter(center);map.setZoom(zoom);
