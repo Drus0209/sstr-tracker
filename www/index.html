@@ -2232,9 +2232,9 @@ function _parseCsvLine(line){
 }
 function _toBool(s){return s==='true'||s==='True'||s==='1';}
 function _fetchPlansCsv(){
-  var today=new Date().toISOString().slice(0,10);// YYYY-MM-DD
-  var last=localStorage.getItem('_plansCsvDate');
-  if(last===today)return;// 今日既に更新済み
+  var year=new Date().getFullYear().toString();// YYYY
+  var last=localStorage.getItem('_plansCsvYear');
+  if(last===year)return;// 今年既に更新済み（年1回更新）
   fetch('data/plans.csv?t='+Date.now(),{cache:'no-store'})
     .then(function(r){if(!r.ok)throw new Error('csv not found');return r.text();})
     .then(function(txt){
@@ -2268,7 +2268,7 @@ function _fetchPlansCsv(){
         var sorted=groups[p].sort(function(a,b){return a._o-b._o;}).map(function(x){return x.s;});
         STOPS[p]=sorted;
       });
-      localStorage.setItem('_plansCsvDate',today);
+      localStorage.setItem('_plansCsvYear',year);
       localStorage.setItem('_plansCsvData',JSON.stringify(groups));
       console.log('[plansCsv] updated '+Object.keys(groups).length+' plans');
     }).catch(function(e){console.warn('[plansCsv] fetch failed:',e.message);});
