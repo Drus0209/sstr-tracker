@@ -1404,7 +1404,7 @@ function updateMap(lat,lng,stops,nI){
   if(zoomMode===0){
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
     map.setTilt(60);// tilt を維持（GPS更新で消えないように）
-    map.panBy(0,-300);// 自分を画面下方向に表示（GPS更新で維持）
+    map.panBy(0,-150);// 自分を画面下方向に表示（GPS更新で維持）
   } else {map.setHeading(0);map.setTilt(0);}
 }
 
@@ -1442,7 +1442,7 @@ function applyZoomMode(){
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
     map.setTilt(60);
     // 自分を画面下方向に600px移動（地理座標は中心、表示位置は下）
-    map.panBy(0,-300);
+    map.panBy(0,-150);
   } else if(zoomMode===1){
     map.setHeading(0);map.setTilt(0);// エリアは北固定・平面
     var _zEl1=document.getElementById('map');if(_zEl1)_zEl1.style.transform='';
@@ -3653,7 +3653,7 @@ function moveMarker(lat,lng){
   if(map&&zoomMode===0){
     map.panTo({lat:dLat,lng:dLng});
     if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
-    map.panBy(0,-300);// 自分を画面下方向に表示（GPS更新ごと維持）
+    map.panBy(0,-150);// 自分を画面下方向に表示（GPS更新ごと維持）
   } else if(map){
     map.setHeading(0);
   }
