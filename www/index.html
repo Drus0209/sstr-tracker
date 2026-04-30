@@ -665,7 +665,9 @@ function clearMap(){
 function drawSSTR2026Markers(){
   if(!map||!_sstr2026Spots)return;
   mSSTR2026.forEach(m=>m.setMap(null));mSSTR2026=[];
-  if(!_sstr2026Show)return;
+  // SSTR当日(day1/day2)は強制表示・他プランは _sstr2026Show トグルに従う
+  var _sstrForce=(cDay==='day1'||cDay==='day2');
+  if(!_sstr2026Show&&!_sstrForce)return;
   var cols={shitei:'#2196f3',fukko:'#ff9100',kyoryoku:'#4caf50'};
   var emojis={shitei:'🗾',fukko:'🌸',kyoryoku:'🤝'};
   _sstr2026Spots.forEach(function(s){
@@ -1237,7 +1239,8 @@ var _sstr2026Show=localStorage.getItem('_sstr2026Show')==='1';
 // SSTR2026公式スポットJSONロード
 fetch('sstr2026_spots.json',{cache:'no-store'}).then(r=>r.json()).then(d=>{
   _sstr2026Spots=d.spots||[];
-  if(_sstr2026Show)drawSSTR2026Markers();
+  // 当日(day1/day2)は自動描画。他プランは _sstr2026Show 任意
+  if(_sstr2026Show||cDay==='day1'||cDay==='day2')drawSSTR2026Markers();
 }).catch(()=>{});
 let nightMode=false;
 const MAP_ID_DAY='2e05890c66eed0edd93b1b2d';
@@ -1398,7 +1401,7 @@ function updateMap(lat,lng,stops,nI){
     // Redraw orbis/visit/sstr2026 markers after clearMap (リルート時等)
     if(mOrbis.length===0)drawOrbisMarkers();
     if(typeof mVisits!=='undefined'&&mVisits.length===0)drawVisitMarkers();
-    if(_sstr2026Show&&mSSTR2026.length===0)drawSSTR2026Markers();
+    if((_sstr2026Show||cDay==='day1'||cDay==='day2')&&mSSTR2026.length===0)drawSSTR2026Markers();
   }
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng});
   if(zoomMode===0){
