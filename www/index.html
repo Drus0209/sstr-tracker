@@ -639,6 +639,7 @@ function _checkReroute(){
   var now=Date.now();
   if(dist>_rerouteThreshold&&now-_lastRerouteTime>30000){
     _lastRerouteTime=now;
+    if(typeof _logEvent==='function')_logEvent('nav',{action:'reroute',distKm:dist,lat:gLat,lng:gLng});
     console.log('[Reroute] Off route by '+dist.toFixed(2)+'km, rerouting...');
     spk('ルートから外れたのだ。リルートするのだ。',true);
     // ルートを再描画
@@ -1261,6 +1262,7 @@ const mapStyles={
 };
 function toggleNight(){
   nightMode=!nightMode;
+  if(typeof _logEvent==='function')_logEvent('nav',{action:'nightMode',value:nightMode});
   if(map){
     // mapIdは初回レンダリング後に変更不可なため、mapを再生成する
     var center=map.getCenter(),zoom=map.getZoom();
@@ -1408,6 +1410,7 @@ function updateMap(lat,lng,stops,nI){
 
 let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
 function setZoomMode(m){zoomMode=m;applyZoomMode();
+  if(typeof _logEvent==='function')_logEvent('nav',{action:'zoomMode',value:m});
   // 既存ルートポリラインの太さを zoomMode に追従
   if(typeof mPolylines!=='undefined')mPolylines.forEach(function(p){p.setOptions({strokeWeight:8});});
   if(m>=1&&!_rainOn)toggleRain();if(m===0&&_rainOn)toggleRain();rnd();
@@ -2215,6 +2218,62 @@ function _genWelcomeVoice(name){
       signal:AbortSignal.timeout(120000)});
   }).catch(function(){});
 }
+
+// === 開発ログ（buffer→WiFi接続時にNASへ同期）===
+var _logBuf=null;// 起動時に localStorage から復元
+function _logLoadBuf(){
+  if(_logBuf!==null)return _logBuf;
+  try{_logBuf=JSON.parse(localStorage.getItem('_appLogBuf')||'[]');}catch(e){_logBuf=[];}
+  return _logBuf;
+}
+function _logSaveBuf(){
+  try{localStorage.setItem('_appLogBuf',JSON.stringify(_logBuf||[]));}catch(e){}
+}
+function _logEvent(type,data){
+  var buf=_logLoadBuf();
+  buf.push({ts:Date.now(),type:type,rider:_myName||'',plan:cDay||'',data:data||{}});
+  // バッファ上限：5000件超えたら古いの削除（メモリ・localStorage圧迫防止）
+  if(buf.length>5000)buf.splice(0,buf.length-5000);
+  _logSaveBuf();
+}
+var _gpsLogTimer=null,_gpsLogInterval=5000;// 5秒
+function _logGpsTick(){
+  if(typeof gLat!=='number'||isNaN(gLat))return;
+  _logEvent('gps',{lat:gLat,lng:gLng,speed:gSpeed||0,heading:gHeading,acc:window._gpsAccuracy||null});
+}
+// JS エラーキャッチ
+window.addEventListener('error',function(e){
+  _logEvent('error',{msg:e.message||'',src:e.filename||'',line:e.lineno||0,col:e.colno||0,stack:(e.error&&e.error.stack)||''});
+});
+window.addEventListener('unhandledrejection',function(e){
+  _logEvent('error',{msg:'unhandledrejection',reason:String(e.reason).slice(0,500)});
+});
+// NASへの同期（成功時バッファクリア）
+var _logSyncing=false;
+function _syncLogsToNas(){
+  if(_logSyncing)return;
+  var buf=_logLoadBuf();
+  if(buf.length===0)return;
+  _logSyncing=true;
+  var batch=buf.slice();// 全件まとめて送信
+  _nf(NAS_API+'/api/log/upload',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({events:batch}),signal:AbortSignal.timeout(15000)})
+    .then(function(r){
+      if(!r.ok)throw new Error('http '+r.status);
+      // 成功したら送信済み件数だけバッファから削除（途中で追加されたイベントを残す）
+      _logBuf.splice(0,batch.length);
+      _logSaveBuf();
+      console.log('[log] synced '+batch.length+' events to NAS');
+    })
+    .catch(function(e){console.warn('[log] sync failed:',e.message);})
+    .finally(function(){_logSyncing=false;});
+}
+// 起動時に1回・フォアグラウンド復帰時・5分ごとに同期試行
+setTimeout(_syncLogsToNas,3000);// 起動3秒後
+setInterval(_syncLogsToNas,300000);// 5分ごと
+document.addEventListener('visibilitychange',function(){if(!document.hidden)_syncLogsToNas();});
+// GPS定期記録（initMap呼出後にgLatが入った後）
+setInterval(_logGpsTick,_gpsLogInterval);
 
 // === プランCSV 毎日更新 (www/data/plans.csv) ===
 function _parseCsvLine(line){
