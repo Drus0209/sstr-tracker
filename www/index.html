@@ -2216,6 +2216,65 @@ function _genWelcomeVoice(name){
   }).catch(function(){});
 }
 
+// === プランCSV 毎日更新 (www/data/plans.csv) ===
+function _parseCsvLine(line){
+  var r=[],cur='',inQ=false;
+  for(var i=0;i<line.length;i++){
+    var ch=line[i];
+    if(ch==='"'){
+      if(inQ&&line[i+1]==='"'){cur+='"';i++;}
+      else inQ=!inQ;
+    } else if(ch===','&&!inQ){r.push(cur);cur='';}
+    else cur+=ch;
+  }
+  r.push(cur);
+  return r;
+}
+function _toBool(s){return s==='true'||s==='True'||s==='1';}
+function _fetchPlansCsv(){
+  var today=new Date().toISOString().slice(0,10);// YYYY-MM-DD
+  var last=localStorage.getItem('_plansCsvDate');
+  if(last===today)return;// 今日既に更新済み
+  fetch('data/plans.csv?t='+Date.now(),{cache:'no-store'})
+    .then(function(r){if(!r.ok)throw new Error('csv not found');return r.text();})
+    .then(function(txt){
+      var lines=txt.split(/\r?\n/).filter(function(l){return l.trim().length>0;});
+      if(lines.length<2)return;
+      var headers=_parseCsvLine(lines[0]).map(function(h){return h.trim();});
+      var idxOf={};headers.forEach(function(h,i){idxOf[h]=i;});
+      var groups={};
+      for(var i=1;i<lines.length;i++){
+        var f=_parseCsvLine(lines[i]);
+        var plan=f[idxOf.plan];if(!plan)continue;
+        var stop={
+          time:f[idxOf.time]||'',
+          name:f[idxOf.name]||'',
+          lat:parseFloat(f[idxOf.lat]),
+          lng:parseFloat(f[idxOf.lng]),
+          pt:parseInt(f[idxOf.pt]||'0',10)||0,
+          type:f[idxOf.type]||'other',
+          memo:f[idxOf.memo]||''
+        };
+        if(idxOf.dur!==undefined&&f[idxOf.dur]!==''&&!isNaN(parseInt(f[idxOf.dur],10)))stop.dur=parseInt(f[idxOf.dur],10);
+        if(idxOf.startNoHwy!==undefined&&f[idxOf.startNoHwy])stop.startNoHwy=_toBool(f[idxOf.startNoHwy]);
+        if(idxOf.noHwy!==undefined&&f[idxOf.noHwy])stop.noHwy=_toBool(f[idxOf.noHwy]);
+        if(idxOf.hasGoalTime!==undefined&&f[idxOf.hasGoalTime])stop.hasGoalTime=_toBool(f[idxOf.hasGoalTime]);
+        if(!groups[plan])groups[plan]=[];
+        var ord=parseInt(f[idxOf.order]||'0',10)||0;
+        groups[plan].push({_o:ord,s:stop});
+      }
+      // order ソートして STOPS に反映
+      Object.keys(groups).forEach(function(p){
+        var sorted=groups[p].sort(function(a,b){return a._o-b._o;}).map(function(x){return x.s;});
+        STOPS[p]=sorted;
+      });
+      localStorage.setItem('_plansCsvDate',today);
+      localStorage.setItem('_plansCsvData',JSON.stringify(groups));
+      console.log('[plansCsv] updated '+Object.keys(groups).length+' plans');
+    }).catch(function(e){console.warn('[plansCsv] fetch failed:',e.message);});
+}
+_fetchPlansCsv();// 起動時即実行（async・既存STOPSをCSVで上書き）
+
 // === NASユーザーデータ管理 ===
 var _myName=localStorage.getItem('_riderName')||'';
 // 音声合成用に名前の数字をひらがな読みに変換
