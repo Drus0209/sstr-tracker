@@ -661,28 +661,20 @@ function clearMap(){
   mSSTR2026.forEach(m=>m.setMap(null));mSSTR2026=[];
   if(typeof mVisits!=='undefined'){mVisits.forEach(m=>m.setMap(null));mVisits=[];}
 }
-// SSTR2026公式スポット全69をマップ表示（カテゴリ色分け）
+// SSTR2026公式スポット全69をマップ表示（軽量版：CIRCLE icon）
 function drawSSTR2026Markers(){
   if(!map||!_sstr2026Spots)return;
   mSSTR2026.forEach(m=>m.setMap(null));mSSTR2026=[];
-  // SSTR当日(day1/day2)は強制表示・他プランは _sstr2026Show トグルに従う
   var _sstrForce=(cDay==='day1'||cDay==='day2');
   if(!_sstr2026Show&&!_sstrForce)return;
   var cols={shitei:'#2196f3',fukko:'#ff9100',kyoryoku:'#4caf50'};
-  var emojis={shitei:'🗾',fukko:'🌸',kyoryoku:'🤝'};
   _sstr2026Spots.forEach(function(s){
     if(typeof s.lat!=='number'||typeof s.lng!=='number')return;
     var col=cols[s.category]||'#666';
-    var em=emojis[s.category]||'📍';
-    var svg='<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">'
-      +'<circle cx="15" cy="15" r="12" fill="'+col+'" stroke="#fff" stroke-width="2"/>'
-      +'<text x="15" y="20" text-anchor="middle" font-size="14">'+em+'</text>'
-      +'</svg>';
     var mk=new google.maps.Marker({
       position:{lat:s.lat,lng:s.lng},map:map,zIndex:70,
-      icon:{url:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg),
-        scaledSize:new google.maps.Size(30,30),anchor:new google.maps.Point(15,15)},
-      title:em+' '+s.name+' ('+s.pref+' '+s.pt+'pt)'
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:7,fillColor:col,fillOpacity:0.9,strokeColor:'#fff',strokeWeight:2},
+      title:s.name+' ('+s.pref+' '+s.pt+'pt)'
     });
     mk.addListener('click',function(){_showSSTR2026Detail(s);});
     mSSTR2026.push(mk);
@@ -1302,7 +1294,7 @@ function initMap(){
     disableDefaultUI:true,zoomControl:true,
     styles:mapStyles[nightMode?'night':'day']
   });
-  new google.maps.TrafficLayer().setMap(map);
+  // TrafficLayer は描画負荷大（Graphics 30MB+）のため削除。Directions API の渋滞反映で十分。
   fetchTraffic();
   fetchWeather();
   drawOrbisMarkers();
@@ -1405,10 +1397,14 @@ function updateMap(lat,lng,stops,nI){
   }
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng});
   if(zoomMode===0){
-    if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
-    map.setTilt(60);// tilt を維持（GPS更新で消えないように）
-    map.panBy(0,-150);// 自分を画面下方向に表示（GPS更新で維持）
-  } else {map.setHeading(0);map.setTilt(0);}
+    // heading/tilt 変化時のみ呼出（冗長なAPIコール削減・サーマル対策）
+    if(gHeading!==null&&!isNaN(gHeading)&&Math.abs((map.getHeading()||0)-gHeading)>1)map.setHeading(gHeading);
+    if((map.getTilt()||0)!==60)map.setTilt(60);
+    map.panBy(0,-150);
+  } else {
+    if((map.getHeading()||0)!==0)map.setHeading(0);
+    if((map.getTilt()||0)!==0)map.setTilt(0);
+  }
 }
 
 let zoomMode=0; // 0=ストリート 1=3ストップ先 2=全体
