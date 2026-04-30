@@ -3650,10 +3650,12 @@ function moveMarker(lat,lng){
     mMe.setPosition({lat:dLat,lng:dLng});
     // ヘディングアップなので矢印は常に上向き固定（地図側が回転）
   }
-  if(map&&zoomMode===0)map.panTo({lat:dLat,lng:dLng});
-  if(map){
-    if(zoomMode===0){if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);}
-    else map.setHeading(0);
+  if(map&&zoomMode===0){
+    map.panTo({lat:dLat,lng:dLng});
+    if(gHeading!==null&&!isNaN(gHeading))map.setHeading(gHeading);
+    map.panBy(0,-600);// 自分を画面下方向に表示（GPS更新ごと維持）
+  } else if(map){
+    map.setHeading(0);
   }
 }
 
