@@ -660,7 +660,44 @@ function clearMap(){
   mPolylines.forEach(p=>p.setMap(null));mPolylines=[];
   mOrbis.forEach(m=>m.setMap(null));mOrbis=[];
   mSSTR2026.forEach(m=>m.setMap(null));mSSTR2026=[];
+  if(typeof mNippon2026!=='undefined'){mNippon2026.forEach(m=>m.setMap(null));mNippon2026=[];}
   if(typeof mVisits!=='undefined'){mVisits.forEach(m=>m.setMap(null));mVisits=[];}
+}
+// にっぽん応援ツーリング2026 公式スポット表示（nippon* プランのみ）
+function drawNippon2026Markers(){
+  if(!map||!_nippon2026Spots)return;
+  mNippon2026.forEach(m=>m.setMap(null));mNippon2026=[];
+  // にっぽん応援プラン(nippon1_*, nippon2_*)のみ表示
+  if(!cDay||cDay.indexOf('nippon')!==0)return;
+  var cols={pole_main:'#ff4444',pole_area:'#ff9100',tourism:'#9c27b0'};
+  _nippon2026Spots.forEach(function(s){
+    if(typeof s.lat!=='number'||typeof s.lng!=='number')return;
+    var col=cols[s.category]||'#9c27b0';
+    // 4極点は強調表示・観光応援は小さめ
+    var sz=s.category==='pole_main'?9:s.category==='pole_area'?8:5;
+    var mk=new google.maps.Marker({
+      position:{lat:s.lat,lng:s.lng},map:map,zIndex:s.category==='pole_main'?80:s.category==='pole_area'?75:60,
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:sz,fillColor:col,fillOpacity:0.85,strokeColor:'#fff',strokeWeight:1.5},
+      title:s.name+' ('+s.pref+(s.subtype?' '+s.subtype:'')+')'
+    });
+    mk.addListener('click',function(){_showNippon2026Detail(s);});
+    mNippon2026.push(mk);
+  });
+}
+function _showNippon2026Detail(s){
+  var ex=document.getElementById('nippon2026Detail');if(ex)ex.remove();
+  var catName={pole_main:'🔴 本土4極点',pole_area:'🟠 エリア4極点',tourism:'🟣 観光応援'};
+  var div=document.createElement('div');div.id='nippon2026Detail';
+  div.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10002;background:#111118;border:2px solid #9c27b0;border-radius:16px;padding:20px;min-width:300px;max-width:90vw;';
+  div.innerHTML='<div style="font-size:11px;color:var(--sub);margin-bottom:4px;">'+(catName[s.category]||'')+(s.subtype?' / '+s.subtype:'')+'</div>'
+    +'<div style="font-size:16px;font-weight:900;color:#fff;margin-bottom:8px;">'+s.name+'</div>'
+    +'<div style="font-size:11px;color:var(--sub);margin-bottom:8px;">📍 '+s.pref+'</div>'
+    +'<div style="font-size:10px;color:#666;margin-bottom:12px;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;">'+s.addr+'</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button onclick="window.open(\'https://www.google.com/maps/dir/?api=1&destination='+s.lat+','+s.lng+'&travelmode=driving\',\'_blank\')" style="flex:1;background:var(--org);border:none;border-radius:8px;padding:10px;color:#000;font-size:12px;font-weight:800;cursor:pointer;">🧭 ナビ</button>'
+    +'<button onclick="document.getElementById(\'nippon2026Detail\').remove();" style="background:none;border:1px solid var(--bdr);border-radius:8px;padding:10px 14px;color:var(--txt);font-size:12px;cursor:pointer;">閉じる</button>'
+    +'</div>';
+  document.body.appendChild(div);
 }
 // SSTR2026公式スポット全69をマップ表示（軽量版：CIRCLE icon）
 function drawSSTR2026Markers(){
@@ -1229,11 +1266,16 @@ function fetchGoogleRoute(stops){
 let map=null,mMe=null,mTgt=null,mStops=[],mOrbis=[],mSSTR2026=[];
 var _sstr2026Spots=null;
 var _sstr2026Show=localStorage.getItem('_sstr2026Show')==='1';
+var _nippon2026Spots=null,mNippon2026=[];
 // SSTR2026公式スポットJSONロード
 fetch('sstr2026_spots.json',{cache:'no-store'}).then(r=>r.json()).then(d=>{
   _sstr2026Spots=d.spots||[];
-  // 当日(day1/day2)は自動描画。他プランは _sstr2026Show 任意
   if(_sstr2026Show||cDay==='day1'||cDay==='day2')drawSSTR2026Markers();
+}).catch(()=>{});
+// にっぽん応援ツーリング 2026 公式スポットJSONロード
+fetch('nippon2026_spots.json',{cache:'no-store'}).then(r=>r.json()).then(d=>{
+  _nippon2026Spots=d.spots||[];
+  if(typeof drawNippon2026Markers==='function'&&cDay&&(cDay.indexOf('nippon')===0))drawNippon2026Markers();
 }).catch(()=>{});
 let nightMode=false;
 const MAP_ID_DAY='2e05890c66eed0edd93b1b2d';
@@ -1281,6 +1323,7 @@ function initMap(){
   drawOrbisMarkers();
   drawVisitMarkers();
   drawSSTR2026Markers();
+  drawNippon2026Markers();
   // ガソリンスタンドは常時表示（ボタン廃止・自動取得＋移動で再取得）
   if(!_gasOn){_gasOn=true;fetchGasStations();
     if(!_gasIdleListener){_gasIdleListener=map.addListener('idle',function(){
@@ -1375,6 +1418,7 @@ function updateMap(lat,lng,stops,nI){
     if(mOrbis.length===0)drawOrbisMarkers();
     if(typeof mVisits!=='undefined'&&mVisits.length===0)drawVisitMarkers();
     if((_sstr2026Show||cDay==='day1'||cDay==='day2')&&mSSTR2026.length===0)drawSSTR2026Markers();
+    if(cDay&&cDay.indexOf('nippon')===0&&mNippon2026.length===0)drawNippon2026Markers();
   }
   if(zoomMode===0)map.panTo(_snap?{lat:_snap.lat,lng:_snap.lng}:{lat:lat,lng:lng});
   if(zoomMode===0){
