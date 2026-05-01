@@ -1801,26 +1801,24 @@ function _bgmPlay(){
   appBgm.loop=true;appBgm.volume=0.15;appBgm.play().catch(function(){});
 }
 function playAppBgm(){
-  if(appBgm&&!appBgm.paused)return;
-  // 外部音楽（Amazon Music等）が再生中ならBGMをスキップ
-  var AF=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AudioFocus;
-  if(AF&&AF.isMusicActive){
-    AF.isMusicActive().then(function(r){
-      if(r&&r.active){console.log('[BGM] skip: external music active');return;}
-      _startBgmAudio();
-    }).catch(_startBgmAudio);
-  } else {
-    _startBgmAudio();
-  }
-}
-function _startBgmAudio(){
-  if(appBgm&&!appBgm.paused)return;
   var pick=_bgmList[_bgmIdx];
-  if(!appBgm){
-    appBgm=new Audio(new URL(pick,window.location.href).href);
-    appBgm.loop=true;appBgm.volume=0.15;
+  var url=new URL(pick,window.location.href).href;
+  var AF=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AudioFocus;
+  if(AF&&AF.playBgm){
+    AF.playBgm({url:url,volume:0.15}).catch(function(e){console.warn('[BGM] plugin failed',e);});
+    var _bgmState={_v:0.15,paused:false,_isPlugin:true,
+      pause:function(){this.paused=true;if(AF.stopBgm)AF.stopBgm();},
+      play:function(){this.paused=false;AF.playBgm({url:url,volume:this._v});}};
+    Object.defineProperty(_bgmState,'volume',{
+      get:function(){return _bgmState._v;},
+      set:function(v){_bgmState._v=v;if(AF.setBgmVolume)AF.setBgmVolume({volume:v});}
+    });
+    appBgm=_bgmState;
+  } else {
+    if(appBgm&&!appBgm.paused)return;
+    if(!appBgm){appBgm=new Audio(url);appBgm.loop=true;appBgm.volume=0.15;}
+    appBgm.play().catch(function(){appBgm=null;});
   }
-  appBgm.play().catch(function(){appBgm=null;});
 }
 function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 

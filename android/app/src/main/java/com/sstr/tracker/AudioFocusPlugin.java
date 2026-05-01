@@ -23,6 +23,7 @@ public class AudioFocusPlugin extends Plugin {
     private AudioFocusRequest focusRequest;
     private MediaPlayer currentPlayer;
     private String currentToken;
+    private MediaPlayer bgmPlayer;
 
     @Override
     public void load() {
@@ -127,6 +128,59 @@ public class AudioFocusPlugin extends Plugin {
             try { currentPlayer.release(); } catch (Exception ignored) {}
             currentPlayer = null;
             currentToken = null;
+        }
+    }
+
+    @PluginMethod
+    public void playBgm(PluginCall call) {
+        String url = call.getString("url");
+        Float volume = call.getFloat("volume", 0.15f);
+        if (url == null || url.isEmpty()) { call.reject("url required"); return; }
+        try {
+            stopBgmInternal();
+            final MediaPlayer mp = new MediaPlayer();
+            bgmPlayer = mp;
+            AudioAttributes attrs = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build();
+            mp.setAudioAttributes(attrs);
+            mp.setVolume(volume, volume);
+            mp.setLooping(true);
+            mp.setDataSource(url);
+            mp.setOnPreparedListener(p -> p.start());
+            mp.setOnErrorListener((p, what, extra) -> {
+                if (bgmPlayer == p) { bgmPlayer = null; }
+                p.release();
+                return true;
+            });
+            mp.prepareAsync();
+            call.resolve();
+        } catch (Exception e) {
+            call.reject(e.getMessage() != null ? e.getMessage() : "bgm play failed");
+        }
+    }
+
+    @PluginMethod
+    public void stopBgm(PluginCall call) {
+        stopBgmInternal();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void setBgmVolume(PluginCall call) {
+        Float v = call.getFloat("volume", 0.15f);
+        if (bgmPlayer != null) {
+            try { bgmPlayer.setVolume(v, v); } catch (Exception ignored) {}
+        }
+        call.resolve();
+    }
+
+    private void stopBgmInternal() {
+        if (bgmPlayer != null) {
+            try { if (bgmPlayer.isPlaying()) bgmPlayer.stop(); } catch (Exception ignored) {}
+            try { bgmPlayer.release(); } catch (Exception ignored) {}
+            bgmPlayer = null;
         }
     }
 
