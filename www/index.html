@@ -50,8 +50,9 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .pc .ptb{background:#1a2a1a;border:1px solid var(--grn);color:var(--grn);padding:4px 16px;border-radius:20px;font-weight:800;font-family:'Outfit';font-size:16px;}
 #mapWrap{display:none;margin:8px 10px;border-radius:14px;overflow:hidden;border:2px solid var(--bdr);position:relative;}
 #map{height:80vh;width:100%;background:#e8e8e8;}
-/* 夜モード: フィルタが効かない端末向けに pseudo要素で半透明ダークオーバーレイ */
-#mapWrap.night::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:999;background:linear-gradient(to bottom,rgba(0,15,40,0.55),rgba(0,5,20,0.65));}
+/* 夜モード: 実DOM要素で半透明ダークオーバーレイ（疑似要素より確実） */
+#mapNightOverlay{position:absolute;inset:0;pointer-events:none;z-index:999;background:linear-gradient(to bottom,rgba(0,15,40,0.6),rgba(0,5,20,0.7));display:none;}
+#mapWrap.night #mapNightOverlay{display:block;}
 .pn{background:var(--card);border:1px solid var(--bdr);padding:14px 16px;display:flex;align-items:center;gap:12px;}
 .pn .ar{font-size:28px;color:var(--txt);flex-shrink:0;}
 .pn .lb{font-size:11px;color:var(--txt);letter-spacing:2px;margin-bottom:2px;}
@@ -175,7 +176,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 <div id="hdr-area"></div>
 <div id="top"></div>
 <div id="zundaOverlay"><div class="bubble" id="zundaBubble"></div><div class="avatar-wrap"><img id="zundaMouthClose" src="zundamon_close.png"><img id="zundaMouthOpen" src="zundamon_open.png" style="opacity:0;"></div></div>
-<div id="mapWrap"><div id="map"></div></div>
+<div id="mapWrap"><div id="map"></div><div id="mapNightOverlay"></div></div>
 <div id="btm"></div>
 <script>
 // === ナビゲーションスタック ===
