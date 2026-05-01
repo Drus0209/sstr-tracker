@@ -131,6 +131,17 @@ public class AudioFocusPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void isMusicActive(PluginCall call) {
+        boolean active = false;
+        if (audioManager != null) {
+            try { active = audioManager.isMusicActive(); } catch (Exception ignored) {}
+        }
+        JSObject ret = new JSObject();
+        ret.put("active", active);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
     public void abandonFocus(PluginCall call) {
         if (audioManager != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && focusRequest != null) {

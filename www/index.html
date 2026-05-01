@@ -1686,12 +1686,26 @@ function _spkFallback(t){
     .then(function(d){
       if(gen!==_audioGen)return;
       if(d&&d.ok){
-        var savedKey=d.key||key;// サーバー正規化後のキーを使う
-        var a=new Audio(_nasAudio('/api/voice/'+savedKey));
-        _setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
-        a.onended=function(){if(_currentAudio!==a)return;_currentAudio=null;_zundaMouthStop();setTimeout(_spkNext,800);};
-        a.onerror=function(){if(_currentAudio!==a)return;_currentAudio=null;_spkTts(t);};
-        a.play().catch(function(){if(_currentAudio!==a)return;try{a.pause();a.src='';}catch(e){}_currentAudio=null;_spkTts(t);});
+        var savedKey=d.key||key;
+        var url=_nasAudio('/api/voice/'+savedKey);
+        var AF=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AudioFocus;
+        if(AF&&AF.play){
+          // ネイティブMediaPlayer経由（NAVIGATION_GUIDANCE属性で他アプリとの並存可）
+          var token='spk_'+(_audioGen)+'_'+Date.now();
+          var hEnd=null,hErr=null;
+          function _cleanup(){try{if(hEnd&&hEnd.remove)hEnd.remove();}catch(e){}try{if(hErr&&hErr.remove)hErr.remove();}catch(e){}}
+          AF.addListener('playEnded',function(ev){if(ev&&ev.token===token){_cleanup();_currentAudio=null;_zundaMouthStop();setTimeout(_spkNext,800);}}).then(function(h){hEnd=h;});
+          AF.addListener('playError',function(ev){if(ev&&ev.token===token){_cleanup();_currentAudio=null;_spkTts(t);}}).then(function(h){hErr=h;});
+          _setCurrentAudio({_token:token,pause:function(){AF.stop&&AF.stop();}});
+          AF.play({url:url,token:token,volume:1.0}).catch(function(){_cleanup();_currentAudio=null;_spkTts(t);});
+        } else {
+          // 旧式 HTML5 Audio（プラグインなし環境のフォールバック）
+          var a=new Audio(url);
+          _setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
+          a.onended=function(){if(_currentAudio!==a)return;_currentAudio=null;_zundaMouthStop();setTimeout(_spkNext,800);};
+          a.onerror=function(){if(_currentAudio!==a)return;_currentAudio=null;_spkTts(t);};
+          a.play().catch(function(){if(_currentAudio!==a)return;try{a.pause();a.src='';}catch(e){}_currentAudio=null;_spkTts(t);});
+        }
       } else if(attempt<3){
         setTimeout(function(){_tryGen(attempt+1);},1000*attempt);
       } else {_spkTts(t);}
@@ -1766,13 +1780,26 @@ function _bgmPlay(){
   appBgm.loop=true;appBgm.volume=0.15;appBgm.play().catch(function(){});
 }
 function playAppBgm(){
-  if(appBgm&&!appBgm.paused)return;// 再生中なら何もしない
+  if(appBgm&&!appBgm.paused)return;
+  // 外部音楽（Amazon Music等）が再生中ならBGMをスキップ
+  var AF=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AudioFocus;
+  if(AF&&AF.isMusicActive){
+    AF.isMusicActive().then(function(r){
+      if(r&&r.active){console.log('[BGM] skip: external music active');return;}
+      _startBgmAudio();
+    }).catch(_startBgmAudio);
+  } else {
+    _startBgmAudio();
+  }
+}
+function _startBgmAudio(){
+  if(appBgm&&!appBgm.paused)return;
   var pick=_bgmList[_bgmIdx];
   if(!appBgm){
     appBgm=new Audio(new URL(pick,window.location.href).href);
     appBgm.loop=true;appBgm.volume=0.15;
   }
-  appBgm.play().catch(function(){appBgm=null;});// 失敗したらリセット
+  appBgm.play().catch(function(){appBgm=null;});
 }
 function stopAppBgm(){if(appBgm){appBgm.pause();appBgm=null;}}
 
