@@ -1291,10 +1291,11 @@ function toggleNight(){
   nightMode=!nightMode;
   if(typeof _logEvent==='function')_logEvent('nav',{action:'nightMode',value:nightMode});
   var mw=document.getElementById('mapWrap');
-  if(mw){
-    if(nightMode)mw.classList.add('night');else mw.classList.remove('night');
-    console.log('[night] class='+mw.className+' nightMode='+nightMode);
-  }
+  var ov=document.getElementById('mapNightOverlay');
+  if(mw){if(nightMode)mw.classList.add('night');else mw.classList.remove('night');}
+  // CSS が効かない端末向け：JS で直接 display 切替
+  if(ov)ov.style.display=nightMode?'block':'none';
+  console.log('[night] nightMode='+nightMode+' overlay='+(ov?ov.style.display:'no_overlay_div'));
   rnd();
 }
 function initMap(){
