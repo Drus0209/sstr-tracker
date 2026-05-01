@@ -23,8 +23,8 @@ public class AudioFocusPlugin extends Plugin {
     @Override
     public void load() {
         audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
-        // 起動時に長期 focus 取得（ナビ用途として宣言）
-        requestNavFocusInternal();
+        // 起動時の auto focus 取得は撤去（他アプリの再生を阻害するため）
+        // JS から requestNavFocus() を音声再生時のみ呼ぶ運用に切替
     }
 
     private void requestNavFocusInternal() {
