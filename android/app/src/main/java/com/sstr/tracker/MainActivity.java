@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(ApkInstaller.class);
+        registerPlugin(AudioFocusPlugin.class);
         super.onCreate(savedInstanceState);
         WebView webView = getBridge().getWebView();
         WebSettings settings = webView.getSettings();
