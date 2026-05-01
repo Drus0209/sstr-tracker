@@ -5,8 +5,13 @@ import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Build;
 import com.getcapacitor.JSObject;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -64,13 +69,57 @@ public class AudioFocusPlugin extends Plugin {
 
     @PluginMethod
     public void play(PluginCall call) {
-        String url = call.getString("url");
-        String token = call.getString("token", String.valueOf(System.currentTimeMillis()));
-        Float volume = call.getFloat("volume", 1.0f);
+        final String url = call.getString("url");
+        final String token = call.getString("token", String.valueOf(System.currentTimeMillis()));
+        final Float volume = call.getFloat("volume", 1.0f);
         if (url == null || url.isEmpty()) {
             call.reject("url required");
             return;
         }
+        // バックグラウンドでダウンロードしてローカル再生（HTTPS/認証問題回避）
+        new Thread(() -> {
+            try {
+                File cacheFile = downloadToCache(url);
+                getActivity().runOnUiThread(() -> startMediaPlayer(cacheFile.getAbsolutePath(), token, volume));
+                JSObject ret = new JSObject();
+                ret.put("token", token);
+                call.resolve(ret);
+            } catch (Exception e) {
+                JSObject ev = new JSObject();
+                ev.put("token", token);
+                ev.put("error", "download_failed: " + e.getMessage());
+                notifyListeners("playError", ev);
+                call.reject(e.getMessage() != null ? e.getMessage() : "download failed");
+            }
+        }).start();
+    }
+
+    private File downloadToCache(String urlStr) throws Exception {
+        File cacheDir = new File(getContext().getCacheDir(), "audio_focus_plugin");
+        if (!cacheDir.exists()) cacheDir.mkdirs();
+        String fname = "p_" + Math.abs(urlStr.hashCode()) + ".tmp";
+        File outFile = new File(cacheDir, fname);
+        // 既存キャッシュは再利用（同URLの再ダウンロード回避）
+        if (outFile.exists() && outFile.length() > 0) return outFile;
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(15000);
+        conn.setInstanceFollowRedirects(true);
+        conn.setRequestProperty("X-API-Key", "sstr2026_k4w4s4k1_zx4r");
+        conn.connect();
+        int code = conn.getResponseCode();
+        if (code != 200) throw new Exception("HTTP " + code);
+        try (java.io.InputStream is = conn.getInputStream(); FileOutputStream os = new FileOutputStream(outFile)) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = is.read(buf)) > 0) os.write(buf, 0, n);
+        }
+        conn.disconnect();
+        return outFile;
+    }
+
+    private void startMediaPlayer(String localPath, String token, Float volume) {
         try {
             stopCurrentInternal();
             final MediaPlayer mp = new MediaPlayer();
@@ -82,17 +131,14 @@ public class AudioFocusPlugin extends Plugin {
                 .build();
             mp.setAudioAttributes(attrs);
             mp.setVolume(volume, volume);
-            mp.setDataSource(url);
+            mp.setDataSource(localPath);
             mp.setOnPreparedListener(p -> p.start());
             mp.setOnCompletionListener(p -> {
                 JSObject ev = new JSObject();
                 ev.put("token", token);
                 ev.put("ended", true);
                 notifyListeners("playEnded", ev);
-                if (currentPlayer == p) {
-                    currentPlayer = null;
-                    currentToken = null;
-                }
+                if (currentPlayer == p) { currentPlayer = null; currentToken = null; }
                 p.release();
             });
             mp.setOnErrorListener((p, what, extra) -> {
@@ -100,19 +146,16 @@ public class AudioFocusPlugin extends Plugin {
                 ev.put("token", token);
                 ev.put("error", "what=" + what + " extra=" + extra);
                 notifyListeners("playError", ev);
-                if (currentPlayer == p) {
-                    currentPlayer = null;
-                    currentToken = null;
-                }
+                if (currentPlayer == p) { currentPlayer = null; currentToken = null; }
                 p.release();
                 return true;
             });
             mp.prepareAsync();
-            JSObject ret = new JSObject();
-            ret.put("token", token);
-            call.resolve(ret);
         } catch (Exception e) {
-            call.reject(e.getMessage() != null ? e.getMessage() : "play failed");
+            JSObject ev = new JSObject();
+            ev.put("token", token);
+            ev.put("error", e.getMessage() != null ? e.getMessage() : "start failed");
+            notifyListeners("playError", ev);
         }
     }
 
