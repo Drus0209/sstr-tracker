@@ -1290,12 +1290,23 @@ const mapStyles={
 function toggleNight(){
   nightMode=!nightMode;
   if(typeof _logEvent==='function')_logEvent('nav',{action:'nightMode',value:nightMode});
-  var mw=document.getElementById('mapWrap');
-  var ov=document.getElementById('mapNightOverlay');
-  if(mw){if(nightMode)mw.classList.add('night');else mw.classList.remove('night');}
-  // CSS が効かない端末向け：JS で直接 display 切替
-  if(ov)ov.style.display=nightMode?'block':'none';
-  console.log('[night] nightMode='+nightMode+' overlay='+(ov?ov.style.display:'no_overlay_div'));
+  // Google Maps の本物の Dark スタイルに切替（Cloud Console の Dark style を MAP_ID_NIGHT に紐付け済み前提）
+  if(map){
+    var center=map.getCenter(),zoom=map.getZoom();
+    var heading=map.getHeading()||0,tilt=map.getTilt()||0;
+    clearMap();
+    _gasIdleListener=null;_gasOn=false;_gasLastFetchPos=null;
+    _cvsIdleListener=null;_cvsLastFetchPos=null;
+    var _md=document.getElementById('map');if(_md)_md.innerHTML='';
+    map=null;
+    initMap();
+    if(map){
+      map.setCenter(center);map.setZoom(zoom);
+      map.setHeading(heading);map.setTilt(tilt);
+    }
+    lastRouteNI=-1;lastNI=-1;
+    if(gLat&&STOPS[cDay]){var _ni=fN(STOPS[cDay]);updateMap(gLat,gLng,STOPS[cDay],_ni.i);}
+  }
   rnd();
 }
 function initMap(){
