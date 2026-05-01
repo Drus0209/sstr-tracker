@@ -1382,7 +1382,7 @@ function updateMap(lat,lng,stops,nI){
       if(d){
         // パス保存を先に（_nasDrawRoute内のfetchSignals/Forksが_routePathを使うため）
         _routePath=_routePathFromDirections(d);
-        _nasDrawRoute(d,_routeNoHwy);
+        _nasDrawRoute(d);// per-step色分けに任せる（高速/一般道を実際の経路に応じて色分け）
         // 分岐車線案内を事前生成＆ローカル保存
         if(typeof _prefetchLaneVoices==='function')_prefetchLaneVoices(d);
       } else{
