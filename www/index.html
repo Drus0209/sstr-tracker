@@ -1287,7 +1287,7 @@ const mapStyles={
 function toggleNight(){
   nightMode=!nightMode;
   if(typeof _logEvent==='function')_logEvent('nav',{action:'nightMode',value:nightMode});
-  // Google Maps の本物の Dark スタイルに切替（Cloud Console の Dark style を MAP_ID_NIGHT に紐付け済み前提）
+  // colorScheme は constructor option のため再生成して反映
   if(map){
     var center=map.getCenter(),zoom=map.getZoom();
     var heading=map.getHeading()||0,tilt=map.getTilt()||0;
@@ -1312,7 +1312,8 @@ function initMap(){
   _nf(NAS_API+'/api/usage/increment',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"maps":1}',signal:AbortSignal.timeout(5000)}).catch(function(){});
   map=new google.maps.Map(document.getElementById('map'),{
     center:{lat:35.69,lng:139.84},zoom:16,maxZoom:30,
-    mapId:nightMode?MAP_ID_NIGHT:MAP_ID_DAY,// ベクターマップ（setHeading対応・昼夜切替）
+    mapId:MAP_ID_DAY,// ベクターマップ単一・colorScheme で昼夜切替
+    colorScheme:nightMode?'DARK':'LIGHT',
     isFractionalZoomEnabled:true,
     disableDefaultUI:true,zoomControl:true,
     styles:mapStyles[nightMode?'night':'day']
