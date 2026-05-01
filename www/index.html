@@ -50,6 +50,7 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 .pc .ptb{background:#1a2a1a;border:1px solid var(--grn);color:var(--grn);padding:4px 16px;border-radius:20px;font-weight:800;font-family:'Outfit';font-size:16px;}
 #mapWrap{display:none;margin:8px 10px;border-radius:14px;overflow:hidden;border:2px solid var(--bdr);position:relative;}
 #map{height:80vh;width:100%;background:#e8e8e8;}
+#mapWrap.night #map{filter:invert(0.88) hue-rotate(180deg) saturate(1.15) brightness(0.95);}
 .pn{background:var(--card);border:1px solid var(--bdr);padding:14px 16px;display:flex;align-items:center;gap:12px;}
 .pn .ar{font-size:28px;color:var(--txt);flex-shrink:0;}
 .pn .lb{font-size:11px;color:var(--txt);letter-spacing:2px;margin-bottom:2px;}
@@ -1258,36 +1259,9 @@ const mapStyles={
 function toggleNight(){
   nightMode=!nightMode;
   if(typeof _logEvent==='function')_logEvent('nav',{action:'nightMode',value:nightMode});
-  if(map){
-    // mapIdは初回レンダリング後に変更不可なため、mapを再生成する
-    var center=map.getCenter(),zoom=map.getZoom();
-    var heading=map.getHeading()||0,tilt=map.getTilt()||0;
-    clearMap();
-    _gasIdleListener=null;_gasOn=false;_gasLastFetchPos=null;
-    _gasMarkers.forEach(function(m){if(m.setMap)m.setMap(null);});_gasMarkers=[];
-    _cvsIdleListener=null;_cvsLastFetchPos=null;
-    _cvsMarkers.forEach(function(m){if(m.setMap)m.setMap(null);});_cvsMarkers=[];
-    // 旧 map の DOM を完全クリア（残留要素を除去して新map を確実にレンダリング）
-    var _mapDivClear=document.getElementById('map');
-    if(_mapDivClear)_mapDivClear.innerHTML='';
-    map=null;
-    var _newMapId=nightMode?MAP_ID_NIGHT:MAP_ID_DAY;
-    console.log('[toggleNight] nightMode='+nightMode+' creating new map with mapId='+_newMapId);
-    if(typeof _logEvent==='function')_logEvent('night',{toggled:nightMode,mapId:_newMapId});
-    initMap();
-    if(map&&map.get){
-      var _actual=map.get('mapId');
-      console.log('[toggleNight] map.get(mapId)='+_actual+' matches='+(_actual===_newMapId));
-      if(typeof _logEvent==='function')_logEvent('night',{actualMapId:_actual,matches:_actual===_newMapId});
-    }
-    if(map){
-      map.setCenter(center);map.setZoom(zoom);
-      map.setHeading(heading);map.setTilt(tilt);
-    }
-    // ルート再描画
-    lastRouteNI=-1;lastNI=-1;
-    if(gLat&&STOPS[cDay]){var _ni=fN(STOPS[cDay]);updateMap(gLat,gLng,STOPS[cDay],_ni.i);}
-  }
+  // CSS filter方式（map再生成せず即時切替・Cloud Console設定不要）
+  var mw=document.getElementById('mapWrap');
+  if(mw){if(nightMode)mw.classList.add('night');else mw.classList.remove('night');}
   rnd();
 }
 function initMap(){
@@ -3218,11 +3192,9 @@ function fetchConvenienceStores(){
     if(typeof _logEvent==='function')_logEvent('cvs',{step:'result',status:status,count:results?results.length:0});
     if(status!==google.maps.places.PlacesServiceStatus.OK||!results)return;
     _cvsMarkers.forEach(function(m){m.setMap(null);});_cvsMarkers=[];
-    var _filtered=0;
     results.forEach(function(p){
       if(!p.geometry||!p.geometry.location)return;
-      var open=p.opening_hours&&p.opening_hours.open_now;
-      if(open===false){_filtered++;return;}
+      // open_now フィルタは Places API new で取得不可のため一旦撤廃。全表示。
       var ic=_cvsIconFor(p.name);
       var mk=new google.maps.Marker({
         position:p.geometry.location,map:map,zIndex:35,
@@ -3243,8 +3215,8 @@ function fetchConvenienceStores(){
       });
       _cvsMarkers.push(mk);
     });
-    console.log('[CVS] markers placed='+_cvsMarkers.length+' filtered_closed='+_filtered);
-    if(typeof _logEvent==='function')_logEvent('cvs',{step:'placed',markers:_cvsMarkers.length,filtered_closed:_filtered});
+    console.log('[CVS] markers placed='+_cvsMarkers.length);
+    if(typeof _logEvent==='function')_logEvent('cvs',{step:'placed',markers:_cvsMarkers.length});
   });
 }
 
