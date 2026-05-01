@@ -1503,25 +1503,33 @@ var _currentAudio=null;// 現在再生中のAudio要素
 var _audioGen=0;// 音声世代トークン: _stopAllAudio毎に+1、古い世代は再生しない
 // 新しい音声を _currentAudio にセットする時は必ずこれを通す（古い再生を確実に停止）
 // Audio オブジェクト互換ラッパー：AudioFocusプラグイン(MediaPlayer+NAV_GUIDANCE)経由で再生
+// プラグイン失敗時は HTML5 Audio にフォールバック（音楽停止するが音声は鳴る）
+function _playNavAudioHtml5(url,opts){
+  var a=new Audio(url);
+  if(opts.volume!=null)a.volume=opts.volume;else a.volume=1.0;
+  if(opts.playbackRate)a.playbackRate=opts.playbackRate;
+  if(opts.onended)a.onended=opts.onended;
+  if(opts.onerror)a.onerror=opts.onerror;
+  a.play().catch(function(){if(opts.onerror)opts.onerror({error:'play_failed'});});
+  return a;
+}
 function _playNavAudio(url,opts){
   opts=opts||{};
   var AF=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AudioFocus;
-  if(!AF||!AF.play){
-    var a=new Audio(url);
-    if(opts.volume!=null)a.volume=opts.volume;else a.volume=1.0;
-    if(opts.playbackRate)a.playbackRate=opts.playbackRate;
-    if(opts.onended)a.onended=opts.onended;
-    if(opts.onerror)a.onerror=opts.onerror;
-    a.play().catch(function(){if(opts.onerror)opts.onerror({error:'play_failed'});});
-    return a;
-  }
+  if(!AF||!AF.play)return _playNavAudioHtml5(url,opts);
   var token='_p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-  var stopped=false,hEnd=null,hErr=null;
+  var stopped=false,hEnd=null,hErr=null,fallbackDone=false;
+  var wrapper={_token:token,pause:function(){stopped=true;cleanup();try{if(AF.stop)AF.stop();}catch(e){}},src:''};
   function cleanup(){try{if(hEnd&&hEnd.remove)hEnd.remove();}catch(e){}try{if(hErr&&hErr.remove)hErr.remove();}catch(e){}}
+  function fallback(reason){
+    if(fallbackDone||stopped)return;fallbackDone=true;cleanup();
+    console.warn('[NavAudio] plugin failed, fallback to HTML5:',reason);
+    _playNavAudioHtml5(url,opts);
+  }
   AF.addListener('playEnded',function(ev){if(ev&&ev.token===token){cleanup();if(!stopped&&opts.onended)opts.onended();}}).then(function(h){hEnd=h;});
-  AF.addListener('playError',function(ev){if(ev&&ev.token===token){cleanup();if(!stopped&&opts.onerror)opts.onerror({error:ev.error||'play_error'});}}).then(function(h){hErr=h;});
-  AF.play({url:url,token:token,volume:opts.volume!=null?opts.volume:1.0}).catch(function(e){cleanup();if(!stopped&&opts.onerror)opts.onerror({error:(e&&e.message)||'play_failed'});});
-  return{_token:token,pause:function(){stopped=true;cleanup();try{if(AF.stop)AF.stop();}catch(e){}},src:''};
+  AF.addListener('playError',function(ev){if(ev&&ev.token===token)fallback(ev.error||'play_error');}).then(function(h){hErr=h;});
+  AF.play({url:url,token:token,volume:opts.volume!=null?opts.volume:1.0}).catch(function(e){fallback((e&&e.message)||'play_failed');});
+  return wrapper;
 }
 function _setCurrentAudio(a){
   if(_currentAudio&&_currentAudio!==a){try{_currentAudio.pause();_currentAudio.src='';}catch(e){}}
