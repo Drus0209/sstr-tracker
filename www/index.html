@@ -3226,9 +3226,8 @@ function fetchConvenienceStores(){
   // rankBy:DISTANCE で近距離順・キーワード併用で取りこぼし防止
   svc.nearbySearch({
     location:{lat:lat,lng:lng},
-    radius:3000,
-    type:'convenience_store',
-    keyword:'コンビニ'
+    rankBy:google.maps.places.RankBy.DISTANCE,
+    type:'convenience_store'
   },function(results,status){
     console.log('[CVS] nearbySearch status='+status+' count='+(results?results.length:0));
     if(typeof _logEvent==='function')_logEvent('cvs',{step:'result',status:status,count:results?results.length:0});
