@@ -4940,11 +4940,8 @@ function startApp(mode){
       a.onended=_done;a.onerror=function(){spk(title+'が選択されたのだ。',true,cb);};
       a.play().catch(function(){a.onerror();});
     } else if(mode==='nippon1'||mode==='nippon2'){
-      // にっぽん応援: ローカルWAV
-      var a=new Audio(new URL('voice/nippon1_selected.wav',window.location.href).href);
-      _setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
-      a.onended=_done;a.onerror=function(){spk(title+'が選択されたのだ。',true,cb);};
-      a.play().catch(function(){a.onerror();});
+      // にっぽん応援: 選択音声は抑制（ユーザー要望）→ 即次画面へ
+      _done();
     } else if(mode==='custom'){
       // カスタム: NAS WAV（保存時に事前生成済み）
       var a=new Audio(_nasAudio('/api/voice/'+encodeURIComponent('selected_'+title)));
