@@ -1502,34 +1502,25 @@ const _spkQ=[];let _spkBusy=false;
 var _currentAudio=null;// 現在再生中のAudio要素
 var _audioGen=0;// 音声世代トークン: _stopAllAudio毎に+1、古い世代は再生しない
 // 新しい音声を _currentAudio にセットする時は必ずこれを通す（古い再生を確実に停止）
-// Audio オブジェクト互換ラッパー：AudioFocusプラグイン(MediaPlayer+NAV_GUIDANCE)経由で再生
-// プラグイン失敗時は HTML5 Audio にフォールバック（音楽停止するが音声は鳴る）
-function _playNavAudioHtml5(url,opts){
-  var a=new Audio(url);
-  if(opts.volume!=null)a.volume=opts.volume;else a.volume=1.0;
-  if(opts.playbackRate)a.playbackRate=opts.playbackRate;
-  if(opts.onended)a.onended=opts.onended;
-  if(opts.onerror)a.onerror=opts.onerror;
-  a.play().catch(function(){if(opts.onerror)opts.onerror({error:'play_failed'});});
-  return a;
-}
+// AudioFocusプラグイン(MediaPlayer+NAV_GUIDANCE)経由で再生・他アプリの音楽と並存可
 function _playNavAudio(url,opts){
   opts=opts||{};
   var AF=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.AudioFocus;
-  if(!AF||!AF.play)return _playNavAudioHtml5(url,opts);
-  var token='_p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-  var stopped=false,hEnd=null,hErr=null,fallbackDone=false;
-  var wrapper={_token:token,pause:function(){stopped=true;cleanup();try{if(AF.stop)AF.stop();}catch(e){}},src:''};
-  function cleanup(){try{if(hEnd&&hEnd.remove)hEnd.remove();}catch(e){}try{if(hErr&&hErr.remove)hErr.remove();}catch(e){}}
-  function fallback(reason){
-    if(fallbackDone||stopped)return;fallbackDone=true;cleanup();
-    console.warn('[NavAudio] plugin failed, fallback to HTML5:',reason);
-    _playNavAudioHtml5(url,opts);
+  if(!AF||!AF.play){
+    var a=new Audio(url);
+    if(opts.volume!=null)a.volume=opts.volume;else a.volume=1.0;
+    if(opts.onended)a.onended=opts.onended;
+    if(opts.onerror)a.onerror=opts.onerror;
+    a.play().catch(function(){if(opts.onerror)opts.onerror({error:'play_failed'});});
+    return a;
   }
+  var token='_p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+  var stopped=false,hEnd=null,hErr=null;
+  function cleanup(){try{if(hEnd&&hEnd.remove)hEnd.remove();}catch(e){}try{if(hErr&&hErr.remove)hErr.remove();}catch(e){}}
   AF.addListener('playEnded',function(ev){if(ev&&ev.token===token){cleanup();if(!stopped&&opts.onended)opts.onended();}}).then(function(h){hEnd=h;});
-  AF.addListener('playError',function(ev){if(ev&&ev.token===token)fallback(ev.error||'play_error');}).then(function(h){hErr=h;});
-  AF.play({url:url,token:token,volume:opts.volume!=null?opts.volume:1.0}).catch(function(e){fallback((e&&e.message)||'play_failed');});
-  return wrapper;
+  AF.addListener('playError',function(ev){if(ev&&ev.token===token){cleanup();if(!stopped&&opts.onerror)opts.onerror({error:ev.error||'play_error'});}}).then(function(h){hErr=h;});
+  AF.play({url:url,token:token,volume:opts.volume!=null?opts.volume:1.0}).catch(function(e){cleanup();if(!stopped&&opts.onerror)opts.onerror({error:(e&&e.message)||'play_failed'});});
+  return{_token:token,pause:function(){stopped=true;cleanup();try{if(AF.stop)AF.stop();}catch(e){}},src:''};
 }
 function _setCurrentAudio(a){
   if(_currentAudio&&_currentAudio!==a){try{_currentAudio.pause();_currentAudio.src='';}catch(e){}}
@@ -4024,7 +4015,7 @@ function rnd(){
     document.getElementById('hdr-area').innerHTML=`<div class="hdr">
       <div onclick="goHome()" style="cursor:pointer;display:flex;align-items:center;gap:8px;">${cDay==='custom'?'<span style="font-size:20px;">🛣️</span>':(cDay.startsWith('nippon1')||cDay.startsWith('nippon2'))?'<img src="greenlabel_logo.png" style="height:22px;opacity:0.9;" onerror="this.outerHTML=\'<span style=font-size:14px;font-weight:900;color:#4caf50>にっぽん応援</span>\'">':'<img src="https://sstr.jp/wp-content/uploads/2019/11/logo.png" style="height:22px;opacity:0.9;" onerror="this.outerHTML=\'<h1>SSTR</h1>\'">'}</div>
       <div style="text-align:center;flex:1;padding:0 8px;height:70px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;">
-        ${gLat&&rally&&(cDay!=='custom'||(cS&&cS.hasGoalTime))&&pT(cS.time)>0?`${(()=>{const schM=pT(cS.time);const diffM=schM-nwM;const absDiff=Math.abs(diffM);const ahead=diffM>=0;const dh=Math.floor(absDiff/60).toString();const dm=Math.floor(absDiff%60).toString().padStart(2,'0');const now=new Date();const ds=now.getSeconds().toString().padStart(2,'0');const col=ahead?'var(--ac)':'var(--red)';const lbl=ahead?'余裕':'遅れ';const sign=ahead?'':'+';return `<div style="font-family:'Outfit';font-size:10px;color:${col};letter-spacing:1px;">${lbl}</div><div style="font-family:'Outfit';font-size:45px;font-weight:900;color:${col};line-height:1;letter-spacing:2px;">${sign}${dh}:${dm}:${ds}</div>`;})()}`:(gLat?`${(()=>{
+        ${gLat&&rally&&(cDay!=='custom'||(cS&&cS.hasGoalTime))&&pT(cS.time)>0?`${(()=>{const schM=pT(cS.time);const diffM=schM-nwM;const absDiff=Math.abs(diffM);const ahead=diffM>=0;const dh=Math.floor(absDiff/60).toString();const dm=Math.floor(absDiff%60).toString().padStart(2,'0');const now=new Date();const ds=now.getSeconds().toString().padStart(2,'0');const col=ahead?'var(--ac)':'var(--red)';const lbl='遅れ';const sign=ahead?'-':'+';return `<div style="font-family:'Outfit';font-size:10px;color:${col};letter-spacing:1px;">${lbl}</div><div style="font-family:'Outfit';font-size:45px;font-weight:900;color:${col};line-height:1;letter-spacing:2px;">${sign}${dh}:${dm}:${ds}</div>`;})()}`:(gLat?`${(()=>{
 if(_hdrMode===0&&(cDay==='day1'||cDay==='day2')){
   const now=new Date();const goal=new Date(2026,4,23,19,0,0);let remS=Math.floor((goal-now)/1000);const over=remS<0;if(over)remS=Math.abs(remS);const rd=Math.floor(remS/86400),rh=Math.floor((remS%86400)/3600),rm=Math.floor((remS%3600)/60),rs=remS%60;const col=over?'var(--red)':remS<3600?'var(--ylw)':'var(--grn)';const lbl=over?'超過':rd>0?'5/23 19:00まで':'19:00まで';const timeStr=rd>0?rd+'日'+rh+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0'):(over?'-':'')+rh+':'+rm.toString().padStart(2,'0')+':'+rs.toString().padStart(2,'0');
   return '<div style="font-family:Outfit;font-size:10px;color:'+col+';letter-spacing:1px;">'+lbl+'</div><div style="font-family:Outfit;font-size:'+(rd>0?'32':'45')+'px;font-weight:900;color:'+col+';line-height:1;letter-spacing:2px;">'+timeStr+'</div>';
@@ -4940,8 +4931,10 @@ function startApp(mode){
       a.onended=_done;a.onerror=function(){spk(title+'が選択されたのだ。',true,cb);};
       a.play().catch(function(){a.onerror();});
     } else if(mode==='nippon1'||mode==='nippon2'){
-      // にっぽん応援: 選択音声は抑制（ユーザー要望）→ 即次画面へ
-      _done();
+      var a=new Audio(new URL('voice/nippon1_selected.wav',window.location.href).href);
+      _setCurrentAudio(a);a.volume=1.0;a.playbackRate=_voiceSpeed;
+      a.onended=_done;a.onerror=function(){spk(title+'が選択されたのだ。',true,cb);};
+      a.play().catch(function(){a.onerror();});
     } else if(mode==='custom'){
       // カスタム: NAS WAV（保存時に事前生成済み）
       var a=new Audio(_nasAudio('/api/voice/'+encodeURIComponent('selected_'+title)));
@@ -4988,12 +4981,12 @@ function _startSplashAudio(){
       function _playPlanSelect(){
         _zundaShow(_myName+'さん、ツーリングプランを選ぶのだ！');
         function _psFallback(){spk(_voiceName()+'さん、ツーリングプランを選ぶのだ！',true,function(){if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();});}
-        var _planWav=_playNavAudio(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)),{
-          volume:1.0,
-          onended:function(){if(_currentAudio===_planWav)_currentAudio=null;if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();},
-          onerror:function(){if(_currentAudio!==_planWav)return;_psFallback();}
-        });
+        var _planWav=new Audio(_nasAudio('/api/voice/plan_'+encodeURIComponent(_myName)));
         _setCurrentAudio(_planWav);
+        _planWav.volume=1.0;_planWav.playbackRate=_voiceSpeed;
+        _planWav.onended=function(){if(_currentAudio===_planWav)_currentAudio=null;if(appBgm&&!_bgmFading)appBgm.volume=0.15;_zundaHide();};
+        _planWav.onerror=function(){if(_currentAudio!==_planWav)return;_psFallback();};
+        _planWav.play().catch(function(){if(_currentAudio!==_planWav)return;_psFallback();});
       }
       // バージョンチェック完了を待ってから「おかえり」判定（更新通知が先に流れる）
       (window._versionCheckPromise||Promise.resolve()).then(function(){
@@ -5001,12 +4994,12 @@ function _startSplashAudio(){
           // アプリ起動1回目: おかえり → プラン選択
           sessionStorage.setItem('_saidOkaeri','1');
           _zundaShow(_myName+'さん、おかえりなのだ！');
-          var _welcomeWav=_playNavAudio(_nasAudio('/api/voice/welcome_'+encodeURIComponent(_myName)),{
-            volume:1.0,
-            onended:function(){if(_currentAudio===_welcomeWav){_currentAudio=null;_playPlanSelect();}},
-            onerror:function(){if(_currentAudio!==_welcomeWav)return;spk(_voiceName()+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});}
-          });
+          var _welcomeWav=new Audio(_nasAudio('/api/voice/welcome_'+encodeURIComponent(_myName)));
           _setCurrentAudio(_welcomeWav);
+          _welcomeWav.volume=1.0;_welcomeWav.playbackRate=_voiceSpeed;
+          _welcomeWav.onended=function(){if(_currentAudio===_welcomeWav){_currentAudio=null;_playPlanSelect();}};
+          _welcomeWav.onerror=function(){if(_currentAudio!==_welcomeWav)return;spk(_voiceName()+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});};
+          _welcomeWav.play().catch(function(){if(_currentAudio!==_welcomeWav)return;spk(_voiceName()+'さん、おかえりなのだ！',true,function(){_playPlanSelect();});});
         } else if(!window._updateNoticeShown){
           // 戻ってきた時: プラン選択のみ
           _playPlanSelect();

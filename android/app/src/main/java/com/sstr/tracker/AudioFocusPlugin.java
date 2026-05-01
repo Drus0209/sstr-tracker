@@ -76,22 +76,51 @@ public class AudioFocusPlugin extends Plugin {
             call.reject("url required");
             return;
         }
-        // バックグラウンドでダウンロードしてローカル再生（HTTPS/認証問題回避）
         new Thread(() -> {
             try {
-                File cacheFile = downloadToCache(url);
-                getActivity().runOnUiThread(() -> startMediaPlayer(cacheFile.getAbsolutePath(), token, volume));
+                String localPath = resolveUrl(url);
+                getActivity().runOnUiThread(() -> startMediaPlayer(localPath, token, volume));
                 JSObject ret = new JSObject();
                 ret.put("token", token);
                 call.resolve(ret);
             } catch (Exception e) {
                 JSObject ev = new JSObject();
                 ev.put("token", token);
-                ev.put("error", "download_failed: " + e.getMessage());
+                ev.put("error", "resolve_failed: " + e.getMessage());
                 notifyListeners("playError", ev);
-                call.reject(e.getMessage() != null ? e.getMessage() : "download failed");
+                call.reject(e.getMessage() != null ? e.getMessage() : "resolve failed");
             }
         }).start();
+    }
+
+    private String resolveUrl(String urlStr) throws Exception {
+        // localhost URL（Capacitor asset）は assets から cache にコピー→ローカルパス返却
+        if (urlStr.contains("://localhost/") || urlStr.contains("://10.0.2.2/")) {
+            int idx = urlStr.indexOf("://");
+            String afterScheme = urlStr.substring(idx + 3);
+            int slash = afterScheme.indexOf('/');
+            String assetPath = "public" + (slash >= 0 ? afterScheme.substring(slash) : "/");
+            // クエリパラメータ除去
+            int q = assetPath.indexOf('?');
+            if (q >= 0) assetPath = assetPath.substring(0, q);
+            return copyAssetToCache(assetPath).getAbsolutePath();
+        }
+        // それ以外（NAS等）は HTTP DL してキャッシュ
+        return downloadToCache(urlStr).getAbsolutePath();
+    }
+
+    private File copyAssetToCache(String assetPath) throws Exception {
+        File cacheDir = new File(getContext().getCacheDir(), "audio_focus_plugin");
+        if (!cacheDir.exists()) cacheDir.mkdirs();
+        String tail = assetPath.substring(assetPath.lastIndexOf('/') + 1);
+        File outFile = new File(cacheDir, "asset_" + Math.abs(assetPath.hashCode()) + "_" + tail);
+        if (outFile.exists() && outFile.length() > 0) return outFile;
+        try (java.io.InputStream is = getContext().getAssets().open(assetPath); FileOutputStream os = new FileOutputStream(outFile)) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = is.read(buf)) > 0) os.write(buf, 0, n);
+        }
+        return outFile;
     }
 
     private File downloadToCache(String urlStr) throws Exception {
@@ -176,9 +205,21 @@ public class AudioFocusPlugin extends Plugin {
 
     @PluginMethod
     public void playBgm(PluginCall call) {
-        String url = call.getString("url");
-        Float volume = call.getFloat("volume", 0.15f);
+        final String url = call.getString("url");
+        final Float volume = call.getFloat("volume", 0.15f);
         if (url == null || url.isEmpty()) { call.reject("url required"); return; }
+        new Thread(() -> {
+            try {
+                String localPath = resolveUrl(url);
+                getActivity().runOnUiThread(() -> startBgmPlayer(localPath, volume));
+                call.resolve();
+            } catch (Exception e) {
+                call.reject(e.getMessage() != null ? e.getMessage() : "bgm play failed");
+            }
+        }).start();
+    }
+
+    private void startBgmPlayer(String localPath, Float volume) {
         try {
             stopBgmInternal();
             final MediaPlayer mp = new MediaPlayer();
@@ -190,18 +231,15 @@ public class AudioFocusPlugin extends Plugin {
             mp.setAudioAttributes(attrs);
             mp.setVolume(volume, volume);
             mp.setLooping(true);
-            mp.setDataSource(url);
+            mp.setDataSource(localPath);
             mp.setOnPreparedListener(p -> p.start());
             mp.setOnErrorListener((p, what, extra) -> {
-                if (bgmPlayer == p) { bgmPlayer = null; }
+                if (bgmPlayer == p) bgmPlayer = null;
                 p.release();
                 return true;
             });
             mp.prepareAsync();
-            call.resolve();
-        } catch (Exception e) {
-            call.reject(e.getMessage() != null ? e.getMessage() : "bgm play failed");
-        }
+        } catch (Exception ignored) {}
     }
 
     @PluginMethod
