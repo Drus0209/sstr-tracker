@@ -3919,9 +3919,13 @@ function rnd(){
   const nH=nw.getHours().toString(),nM=nw.getMinutes().toString().padStart(2,'0');
   let nwM=nw.getHours()*60+nw.getMinutes();
   // 深夜跨ぎプラン対応: stopsに24+時間が含まれ、現在が早朝（最大時間mod1440より前）なら+1440補正
+  // ただしプラン開始日当日(5/1朝のnippon1_1等)はプランがまだ始まっていないので補正しない
   if(st&&st.some&&st.some(function(s){var p=s.time&&s.time.split(':');return p&&parseInt(p[0],10)>=24;})){
     var _firstStopM=pT(st[0].time);
-    if(_firstStopM>=18*60&&nwM<12*60)nwM+=1440;// 18:00以降開始かつ現在12:00前→翌日とみなす
+    var _planStartMmdd={day1:'0523',day2:'0524',nippon1_1:'0501',nippon1_2:'0503',nippon1_3:'0504',nippon1_4:'0505',nippon1_5:'0506',nippon2_1:'0714',nippon2_2:'0715',nippon2_3:'0716',nippon2_4:'0717',nippon2_5:'0718',nippon2_6:'0719',nippon2_7:'0720'};
+    var _todayMmdd=('0'+(nw.getMonth()+1)).slice(-2)+('0'+nw.getDate()).slice(-2);
+    var _isPlanStartDay=_planStartMmdd[cDay]===_todayMmdd;
+    if(_firstStopM>=18*60&&nwM<12*60&&!_isPlanStartDay)nwM+=1440;// 18:00以降開始かつ現在12:00前→翌日とみなす（開始日当日の朝は除外）
   }
   const ni=fN(st),nI=gLat?ni.i:0,nD=gLat?ni.d:0;
   const pl=pT(st[nI].time),df=gLat&&isRallyDay()?(nwM-pl):0;
