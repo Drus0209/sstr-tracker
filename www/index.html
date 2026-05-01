@@ -51,8 +51,8 @@ body{font-family:'Noto Sans JP','Outfit',sans-serif;background:var(--bg);color:v
 #mapWrap{display:none;margin:8px 10px;border-radius:14px;overflow:hidden;border:2px solid var(--bdr);position:relative;}
 #map{height:80vh;width:100%;background:#e8e8e8;}
 /* 夜モード: 実DOM要素で半透明ダークオーバーレイ（疑似要素より確実） */
-#mapNightOverlay{position:absolute;inset:0;pointer-events:none;z-index:999;background:linear-gradient(to bottom,rgba(0,15,40,0.6),rgba(0,5,20,0.7));display:none;}
-#mapWrap.night #mapNightOverlay{display:block;}
+#mapNightOverlay{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:9999;background:linear-gradient(to bottom,rgba(0,15,40,0.6),rgba(0,5,20,0.7));display:none;}
+#mapWrap.night #mapNightOverlay{display:block !important;}
 .pn{background:var(--card);border:1px solid var(--bdr);padding:14px 16px;display:flex;align-items:center;gap:12px;}
 .pn .ar{font-size:28px;color:var(--txt);flex-shrink:0;}
 .pn .lb{font-size:11px;color:var(--txt);letter-spacing:2px;margin-bottom:2px;}
